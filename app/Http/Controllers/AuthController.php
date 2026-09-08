@@ -25,14 +25,19 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
         $user = $request->user();
-        if (!in_array($user->role ?? 'admin', ['admin', 'manager'], true)) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            return back()->withErrors(['email' => 'This account is not authorized for administration.'])->withInput($request->only('email'));
+
+        if (in_array($user->role, ['admin', 'manager'], true)) {
+            return redirect()->intended(route('admin.dashboard'));
         }
 
-        return redirect()->intended(route('admin.dashboard'));
+        if (in_array($user->role, ['pupil', 'parent', 'sponsor'], true)) {
+            return redirect()->intended(route('portal.dashboard'));
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return back()->withErrors(['email' => 'This account does not have an active portal role.'])->withInput($request->only('email'));
     }
 
     public function logout(Request $request)
