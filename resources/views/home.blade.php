@@ -1,17 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>School Manager</title>
-    <style>
-        body{font-family:system-ui,sans-serif;margin:0;color:#172033;background:#f7f9fc}nav{padding:20px 7%;display:flex;gap:24px;background:#fff}nav a{text-decoration:none;color:#172033}.hero{padding:90px 7%;background:#eaf1ff}.hero h1{font-size:48px;margin:0 0 16px}.hero p{max-width:700px;font-size:20px;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;padding:50px 7%}.card{background:#fff;padding:28px;border-radius:14px;box-shadow:0 5px 20px #0000000d}footer{padding:30px 7%;background:#172033;color:#fff}
-    </style>
-</head>
-<body>
-<nav><a href="{{ route('home') }}"><strong>School Manager</strong></a><a href="{{ route('about') }}">About</a><a href="{{ route('academics') }}">Academics</a><a href="{{ route('admissions') }}">Admissions</a><a href="{{ route('contact') }}">Contact</a></nav>
-<section class="hero"><h1>Welcome to Our School</h1><p>A modern school website and management platform connecting the school, students and parents with admissions, information and secure M-Pesa payments.</p></section>
-<section class="grid"><div class="card"><h2>Admissions</h2><p>View requirements and submit an admission enquiry online.</p></div><div class="card"><h2>Academics</h2><p>Explore programmes, departments, facilities and school life.</p></div><div class="card"><h2>M-Pesa Payments</h2><p>Pay school charges securely using Safaricom M-Pesa.</p></div><div class="card"><h2>School Updates</h2><p>Keep up with news, announcements, events and gallery updates.</p></div></section>
-<footer>School Manager &mdash; School Website & Management Platform</footer>
-</body>
-</html>
+@extends('layouts.app')
+@section('title', 'Home | School Manager')
+@section('body')
+<nav class="nav"><a class="brand" href="{{ route('home') }}">School Manager</a><div class="navlinks"><a href="{{ route('about') }}">About</a><a href="{{ route('academics') }}">Academics</a><a href="{{ route('admissions') }}">Admissions</a><a href="{{ route('contact') }}">Contact</a><a class="btn" href="{{ route('login') }}">Admin Login</a></div></nav>
+<section class="hero"><div class="container"><p><strong>WELCOME TO OUR SCHOOL</strong></p><h1>Growing confident learners for tomorrow.</h1><p>A modern digital school platform giving families easy access to admissions, academic information, school updates and secure payment services.</p><a class="btn" href="{{ route('admissions') }}">Apply for Admission</a> <a class="btn secondary" href="{{ route('about') }}">Discover Our School</a></div></section>
+<section class="section"><div class="container"><h2>Everything families need</h2><p class="muted">A professional online presence connected to practical school management tools.</p><div class="grid"><div class="card"><h3>Online Admissions</h3><p>Submit an admission application from your phone or computer and receive confirmation.</p></div><div class="card"><h3>Academics</h3><p>Explore programmes, learning areas, facilities and the school's approach to education.</p></div><div class="card"><h3>M-Pesa Ready</h3><p>Designed for secure school fee and other school-charge payments through M-Pesa.</p></div><div class="card"><h3>School Updates</h3><p>Keep parents informed with announcements, events, news and important notices.</p></div></div></div></section>
+<section class="section"><div class="container"><div class="card"><h2>Ready to join our school?</h2><p class="muted">Start the admission process online. The school administration will review your application and contact you.</p><a class="btn" href="{{ route('admissions') }}">Start Application</a></div></div></section>
+<footer class="footer"><div class="container footer-grid"><div><h3>School Manager</h3><p>A complete school website and management foundation.</p></div><div><h4>Explore</h4><p><a href="{{ route('about') }}">About</a><br><a href="{{ route('academics') }}">Academics</a><br><a href="{{ route('admissions') }}">Admissions</a></p></div><div><h4>Contact</h4><p>Call the school office for assistance.</p></div></div></footer>
+@endsection
