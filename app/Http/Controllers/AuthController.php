@@ -30,7 +30,7 @@ class AuthController extends Controller
             return redirect()->intended(route('admin.dashboard'));
         }
 
-        if (in_array($user->role, ['pupil', 'parent', 'sponsor'], true)) {
+        if (in_array($user->role, ['pupil', 'parent', 'sponsor', 'teacher'], true)) {
             return redirect()->intended(route('portal.dashboard'));
         }
 
