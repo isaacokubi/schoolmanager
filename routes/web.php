@@ -13,6 +13,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PortalAuthController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\PortalPaymentController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ReportCardController;
 
@@ -61,5 +62,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
+    Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
+    Route::post('/payments/mpesa', [PortalPaymentController::class, 'pay'])->middleware('throttle:5,1')->name('portal.payments.pay');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
 });
