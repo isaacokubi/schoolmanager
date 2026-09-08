@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MpesaController;
+use App\Http\Controllers\PortalAuthController;
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\PublicController;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
@@ -23,6 +25,8 @@ Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+    Route::get('/register', [PortalAuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [PortalAuthController::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
 });
 
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
@@ -49,4 +53,9 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::delete('/operations/{id}', [OperationsController::class, 'destroy'])->name('admin.operations.destroy');
     Route::post('/operations/attendance', [OperationsController::class, 'attendance'])->name('admin.operations.attendance');
     Route::post('/operations/results', [OperationsController::class, 'result'])->name('admin.operations.results');
+});
+
+Route::middleware(['auth', 'portal.role:pupil,parent,sponsor'])->prefix('portal')->group(function () {
+    Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
+    Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
 });
