@@ -20,8 +20,9 @@ class PortalAuthController extends Controller
             'name' => 'required|string|max:120',
             'email' => 'required|email|max:150|unique:users,email',
             'phone' => 'nullable|string|max:30',
-            'portal_type' => 'required|in:pupil,parent,sponsor',
+            'portal_type' => 'required|in:pupil,parent,sponsor,teacher',
             'admission_number' => 'nullable|string|max:100',
+            'employee_number' => 'nullable|string|max:50',
             'relationship' => 'nullable|string|max:50',
             'password' => 'required|string|min:8|max:255|confirmed',
         ]);
@@ -30,8 +31,27 @@ class PortalAuthController extends Controller
             return back()->withErrors(['admission_number' => 'Pupils must provide their admission number.'])->withInput();
         }
 
+        if (in_array($data['portal_type'], ['parent', 'sponsor'], true) && empty($data['admission_number'])) {
+            return back()->withErrors(['admission_number' => 'Please provide the pupil admission number linked to this account.'])->withInput();
+        }
+
+        if ($data['portal_type'] === 'teacher' && empty($data['employee_number'])) {
+            return back()->withErrors(['employee_number' => 'Teachers must provide their employee number.'])->withInput();
+        }
+
         if (!empty($data['admission_number']) && !DB::table('students')->where('admission_number', $data['admission_number'])->exists()) {
             return back()->withErrors(['admission_number' => 'The admission number could not be found. Please contact the school.'])->withInput();
+        }
+
+        $teacher = null;
+        if ($data['portal_type'] === 'teacher') {
+            $teacher = DB::table('teachers')->where('employee_number', $data['employee_number'])->first();
+            if (!$teacher) {
+                return back()->withErrors(['employee_number' => 'The employee number could not be found. Please contact the school administrator.'])->withInput();
+            }
+            if ($teacher->email && strcasecmp($teacher->email, $data['email']) !== 0) {
+                return back()->withErrors(['email' => 'The email does not match the teacher record. Please use the school email on file.'])->withInput();
+            }
         }
 
         $userId = DB::table('users')->insertGetId([
