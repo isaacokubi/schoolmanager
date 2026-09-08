@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class PortalAuthController extends Controller
 {
@@ -16,9 +17,15 @@ class PortalAuthController extends Controller
 
     public function register(Request $request)
     {
+        $portalType = $request->input('portal_type');
+        $emailRules = ['required', 'email', 'max:150'];
+        if ($portalType !== 'teacher') {
+            $emailRules[] = Rule::unique('users', 'email');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:120',
-            'email' => 'required|email|max:150|unique:users,email',
+            'email' => $emailRules,
             'phone' => 'nullable|string|max:30',
             'portal_type' => 'required|in:pupil,parent,sponsor,teacher',
             'admission_number' => 'nullable|string|max:100',
@@ -51,6 +58,21 @@ class PortalAuthController extends Controller
             }
             if ($teacher->email && strcasecmp($teacher->email, $data['email']) !== 0) {
                 return back()->withErrors(['email' => 'The email does not match the teacher record. Please use the school email on file.'])->withInput();
+            }
+            if (DB::table('users')->where('email', $data['email'])->where('role', 'teacher')->exists()) {
+                $userId = DB::table('users')->where('email', $data['email'])->where('role', 'teacher')->value('id');
+                DB::table('users')->where('id', $userId)->update([
+                    'name' => $teacher->name,
+                    'password' => Hash::make($data['password']),
+                    'updated_at' => now(),
+                ]);
+                DB::table('portal_profiles')->updateOrInsert(
+                    ['user_id' => $userId],
+                    ['portal_type' => 'teacher', 'phone' => $data['phone'] ?: $teacher->phone, 'relationship' => null, 'admission_number' => null, 'active' => true, 'created_at' => now(), 'updated_at' => now()]
+                );
+                Auth::loginUsingId($userId);
+                $request->session()->regenerate();
+                return redirect()->route('portal.dashboard');
             }
         }
 
