@@ -8,6 +8,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // Application demo/initial data seeders can be called here.
+        $this->call(DemoSchoolSeeder::class);
     }
 }
