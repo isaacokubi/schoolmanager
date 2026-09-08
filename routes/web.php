@@ -39,6 +39,8 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])->name('admin.payments.mpesa');
     Route::get('/operations', [OperationsController::class, 'index'])->name('admin.operations');
     Route::post('/operations', [OperationsController::class, 'store'])->name('admin.operations.store');
+    Route::put('/operations/{id}', [OperationsController::class, 'update'])->name('admin.operations.update');
+    Route::delete('/operations/{id}', [OperationsController::class, 'destroy'])->name('admin.operations.destroy');
     Route::post('/operations/attendance', [OperationsController::class, 'attendance'])->name('admin.operations.attendance');
     Route::post('/operations/results', [OperationsController::class, 'result'])->name('admin.operations.results');
 });
