@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -13,6 +14,9 @@ return new class extends Migration {
             $table->unsignedTinyInteger('achievement_points')->nullable()->after('achievement_level');
             $table->index(['exam_id', 'student_id', 'assessment_status']);
         });
+
+        DB::statement("UPDATE results SET achievement_level = CASE WHEN marks >= 90 THEN 'EE1' WHEN marks >= 75 THEN 'EE2' WHEN marks >= 58 THEN 'ME1' WHEN marks >= 41 THEN 'ME2' WHEN marks >= 31 THEN 'AE1' WHEN marks >= 21 THEN 'AE2' WHEN marks >= 11 THEN 'BE1' ELSE 'BE2' END, achievement_points = CASE WHEN marks >= 90 THEN 8 WHEN marks >= 75 THEN 7 WHEN marks >= 58 THEN 6 WHEN marks >= 41 THEN 5 WHEN marks >= 31 THEN 4 WHEN marks >= 21 THEN 3 WHEN marks >= 11 THEN 2 ELSE 1 END");
+        DB::table('results')->whereNotNull('marks')->update(['grade' => DB::raw('achievement_level')]);
 
         Schema::create('report_cards', function (Blueprint $table) {
             $table->id();
