@@ -9,7 +9,8 @@
         <a class="{{ request()->routeIs('academics') ? 'active' : '' }}" href="{{ route('academics') }}">Academics</a>
         <a class="{{ request()->routeIs('admissions') ? 'active' : '' }}" href="{{ route('admissions') }}">Admissions</a>
         <a class="{{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">Contact</a>
-        <a class="btn" href="{{ route('login') }}">Admin Portal</a>
+        <a class="btn secondary" href="{{ route('login') }}">Portal Login</a>
+        <a class="btn" href="{{ route('register') }}">Register</a>
     </div>
 </nav>
 <main>@yield('content')</main>
@@ -18,7 +19,7 @@
         <div><h3>{{ $site['school_name'] }}</h3><p>{{ $site['vision'] ?? 'Building confident learners through knowledge, character and opportunity.' }}</p><a class="btn secondary" href="{{ route('admissions') }}">Start an application</a></div>
         <div><h4>Explore</h4><p><a href="{{ route('home') }}">Home</a><br><a href="{{ route('about') }}">About us</a><br><a href="{{ route('academics') }}">Academics</a><br><a href="{{ route('admissions') }}">Admissions</a></p></div>
         <div><h4>School office</h4><p>{{ $site['school_address'] ?: 'Contact the school office for location details.' }}<br><br>{{ $site['school_phone'] ?: 'Phone not configured' }}<br>{{ $site['school_email'] ?: 'Email not configured' }}</p></div>
-        <div><h4>Parents & families</h4><p>Stay informed about admissions, learning programmes and school activities.</p><a href="{{ route('contact') }}">Contact the school →</a></div>
+        <div><h4>Parents & families</h4><p>Access your school portal to follow learner information, school updates and account activity.</p><a href="{{ route('login') }}">Open school portal →</a></div>
     </div>
     <div class="container footer-bottom"><span>© {{ date('Y') }} {{ $site['school_name'] }}. All rights reserved.</span><span>School website & management platform</span></div>
 </footer>
