@@ -17,6 +17,9 @@ class SettingsController extends Controller
         'academic_term' => '',
         'currency' => 'KES',
         'timezone' => 'Africa/Nairobi',
+        'mission' => 'To provide a safe, inclusive and inspiring learning environment where every learner can develop academically, socially and creatively.',
+        'vision' => 'To nurture responsible, confident and capable young people prepared to contribute positively to society.',
+        'values' => 'Integrity, respect, excellence, responsibility, teamwork and lifelong learning.',
     ];
 
     public function index()
@@ -36,15 +39,18 @@ class SettingsController extends Controller
             'academic_term' => 'nullable|string|max:50',
             'currency' => 'required|string|size:3',
             'timezone' => 'required|string|max:100',
+            'mission' => 'nullable|string|max:2000',
+            'vision' => 'nullable|string|max:2000',
+            'values' => 'nullable|string|max:2000',
         ]);
 
         foreach ($data as $key => $value) {
-            DB::table('settings')->updateOrInsert(
-                ['key' => $key],
-                ['value' => (string) $value, 'updated_at' => now(), 'created_at' => now()]
-            );
+            $exists = DB::table('settings')->where('key', $key)->exists();
+            $payload = ['value' => (string) $value, 'updated_at' => now()];
+            if (!$exists) $payload['created_at'] = now();
+            DB::table('settings')->updateOrInsert(['key' => $key], $payload);
         }
-        return back()->with('success', 'School settings saved successfully.');
+        return back()->with('success', 'School settings saved successfully. Public pages now use these values.');
     }
 
     private function values()
