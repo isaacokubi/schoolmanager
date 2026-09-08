@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', ucfirst($user->role).' Dashboard | School Manager')
+@section('title', ucfirst($user->role).' Dashboard | '.config('app.name'))
 @section('body')
 <div class="admin-shell">
     <header class="admin-top">
         <div>
-            <div style="font-size:22px;font-weight:900;letter-spacing:-.03em">School Manager</div>
+            <div style="font-size:22px;font-weight:900;letter-spacing:-.03em">{{ config('app.name') }}</div>
             <div style="font-size:13px;opacity:.72">{{ ucfirst($profile->portal_type ?? $user->role) }} Portal</div>
         </div>
         <form method="post" action="{{ route('portal.logout') }}">
@@ -99,7 +99,7 @@
             </section>
         @endif
 
-        @if($recentResults->isNotEmpty() || $profile && in_array($profile->portal_type, ['pupil','parent','sponsor','teacher'], true))
+        @if($recentResults->isNotEmpty() || ($profile && in_array($profile->portal_type, ['pupil','parent','sponsor','teacher'], true)))
             <section class="card" style="margin-bottom:24px">
                 <div class="section-head">
                     <div><p class="eyebrow">Academic activity</p><h2>Recent results</h2></div>
