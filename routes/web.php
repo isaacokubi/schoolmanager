@@ -11,13 +11,14 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MpesaController;
+use App\Http\Controllers\PublicController;
 
-Route::view('/', 'home')->name('home');
-Route::view('/about', 'pages.about')->name('about');
-Route::view('/academics', 'pages.academics')->name('academics');
-Route::view('/admissions', 'pages.admissions')->name('admissions');
+Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/about', [PublicController::class, 'about'])->name('about');
+Route::get('/academics', [PublicController::class, 'academics'])->name('academics');
+Route::get('/admissions', [PublicController::class, 'admissions'])->name('admissions');
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
-Route::view('/contact', 'pages.contact')->name('contact');
+Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
