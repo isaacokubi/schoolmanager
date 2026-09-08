@@ -28,19 +28,6 @@ class CbcReportCardService
         return $this->level($marks)['label'];
     }
 
-    public function syncResultLevel(int $resultId): void
-    {
-        $result = DB::table('results')->find($resultId);
-        if (!$result) return;
-        $level = $this->level($result->marks === null ? null : (float) $result->marks);
-        DB::table('results')->where('id', $resultId)->update([
-            'achievement_level' => $level['code'] === 'MISSED' ? null : $level['code'],
-            'achievement_points' => $level['points'],
-            'grade' => $level['code'],
-            'updated_at' => now(),
-        ]);
-    }
-
     public function build(int $studentId, int $examId): ?array
     {
         $student = DB::table('students')->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
@@ -51,22 +38,19 @@ class CbcReportCardService
 
         $results = DB::table('results')->join('subjects', 'subjects.id', '=', 'results.subject_id')
             ->where('results.student_id', $studentId)->where('results.exam_id', $examId)
-            ->orderBy('subjects.name')
-            ->select('results.*', 'subjects.name as subject_name', 'subjects.code as subject_code')->get();
-
+            ->orderBy('subjects.name')->select('results.*', 'subjects.name as subject_name', 'subjects.code as subject_code')->get();
         if ($results->isEmpty()) return null;
 
-        $expectedSubjectIds = DB::table('results')->where('exam_id', $examId)->distinct()->pluck('subject_id');
+        // Every learning area configured in the school is expected for the assessment.
+        // A learner who did not sit one is explicitly recorded as "missed" rather than zero.
+        $expectedSubjectIds = DB::table('subjects')->pluck('id');
         $recordedSubjectIds = $results->pluck('subject_id');
         $complete = $expectedSubjectIds->isNotEmpty() && $expectedSubjectIds->diff($recordedSubjectIds)->isEmpty();
 
         $present = $results->where('assessment_status', '!=', 'missed')->filter(function ($r) { return $r->marks !== null; });
         $points = $present->sum('achievement_points');
         $average = $present->count() ? round($present->avg('marks'), 1) : null;
-
-        $attendance = DB::table('attendance')->where('student_id', $studentId)
-            ->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
-
+        $attendance = DB::table('attendance')->where('student_id', $studentId)->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
         $parent = $student->parent_id ? DB::table('parents')->find($student->parent_id) : null;
 
         return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent');
@@ -76,7 +60,7 @@ class CbcReportCardService
     {
         $report = $this->build($studentId, $examId);
         if (!$report) return ['complete' => false, 'sent' => 0, 'reason' => 'No assessment records exist.'];
-        if (!$report['complete']) return ['complete' => false, 'sent' => 0, 'reason' => 'Some subjects have not been recorded yet.'];
+        if (!$report['complete']) return ['complete' => false, 'sent' => 0, 'reason' => 'Some learning areas have not been recorded yet. Mark a missed assessment where appropriate.'];
 
         foreach ($report['results'] as $result) {
             $level = $this->level($result->marks === null ? null : (float) $result->marks);
@@ -85,63 +69,28 @@ class CbcReportCardService
             $result->display_remark = $this->remark($result->marks === null ? null : (float) $result->marks, $result->assessment_status);
         }
 
-        $hash = hash('sha256', json_encode([
-            'student' => $studentId,
-            'exam' => $examId,
-            'results' => $report['results']->map(function ($r) { return [$r->subject_id, $r->marks, $r->assessment_status, $r->achievement_level]; })->values()->all(),
-        ]));
-
+        $hash = hash('sha256', json_encode(['student' => $studentId, 'exam' => $examId, 'results' => $report['results']->map(function ($r) { return [$r->subject_id, $r->marks, $r->assessment_status, $r->achievement_level]; })->values()->all()]));
         $existing = DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->first();
-        if ($existing && $existing->content_hash === $hash && $existing->notification_status === 'sent') {
-            return ['complete' => true, 'sent' => 0, 'reason' => 'Report already sent for this version.'];
-        }
+        if ($existing && $existing->content_hash === $hash && $existing->notification_status === 'sent') return ['complete' => true, 'sent' => 0, 'reason' => 'Report already sent for this version.'];
 
-        $payload = [
-            'student_id' => $studentId,
-            'exam_id' => $examId,
-            'content_hash' => $hash,
-            'generated_at' => now(),
-            'notification_status' => 'pending',
-            'updated_at' => now(),
-        ];
-        if ($existing) DB::table('report_cards')->where('id', $existing->id)->update($payload);
-        else DB::table('report_cards')->insert($payload + ['created_at' => now()]);
+        $payload = ['student_id' => $studentId, 'exam_id' => $examId, 'content_hash' => $hash, 'generated_at' => now(), 'notification_status' => 'pending', 'updated_at' => now()];
+        if ($existing) DB::table('report_cards')->where('id', $existing->id)->update($payload); else DB::table('report_cards')->insert($payload + ['created_at' => now()]);
 
-        $recipients = $this->recipients($report['student']);
-        $sent = 0;
-        $errors = [];
+        $recipients = $this->recipients($report['student']); $sent = 0; $errors = [];
         foreach ($recipients as $email) {
-            try {
-                Mail::send('emails.cbc_report_card', $report, function ($message) use ($email, $report) {
-                    $message->to($email)->subject(config('app.name') . ' CBC Report Card — ' . $report['student']->name . ' — ' . $report['exam']->name);
-                });
-                $sent++;
-            } catch (\Throwable $e) {
-                $errors[] = $email . ': ' . $e->getMessage();
-            }
+            try { Mail::send('emails.cbc_report_card', $report, function ($message) use ($email, $report) { $message->to($email)->subject(config('app.name') . ' CBC Report Card — ' . $report['student']->name . ' — ' . $report['exam']->name); }); $sent++; }
+            catch (\Throwable $e) { $errors[] = $email . ': ' . $e->getMessage(); }
         }
 
-        DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->update([
-            'notification_status' => $errors ? ($sent ? 'partial' : 'failed') : 'sent',
-            'notified_at' => $sent ? now() : null,
-            'notification_error' => $errors ? Str::limit(implode(' | ', $errors), 1000) : null,
-            'updated_at' => now(),
-        ]);
-
+        DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->update(['notification_status' => $errors ? ($sent ? 'partial' : 'failed') : 'sent', 'notified_at' => $sent ? now() : null, 'notification_error' => $errors ? Str::limit(implode(' | ', $errors), 1000) : null, 'updated_at' => now()]);
         return ['complete' => true, 'sent' => $sent, 'recipients' => $recipients, 'errors' => $errors];
     }
 
     private function recipients($student): array
     {
         $emails = [];
-        if ($student->parent_id) {
-            $parentEmail = DB::table('parents')->where('id', $student->parent_id)->value('email');
-            if ($parentEmail) $emails[] = $parentEmail;
-        }
-        $profileEmails = DB::table('portal_profiles')->join('users', 'users.id', '=', 'portal_profiles.user_id')
-            ->where('portal_profiles.admission_number', $student->admission_number)
-            ->whereIn('portal_profiles.portal_type', ['pupil', 'parent', 'sponsor'])
-            ->where('portal_profiles.active', true)->pluck('users.email')->all();
+        if ($student->parent_id) { $parentEmail = DB::table('parents')->where('id', $student->parent_id)->value('email'); if ($parentEmail) $emails[] = $parentEmail; }
+        $profileEmails = DB::table('portal_profiles')->join('users', 'users.id', '=', 'portal_profiles.user_id')->where('portal_profiles.admission_number', $student->admission_number)->whereIn('portal_profiles.portal_type', ['pupil', 'parent', 'sponsor'])->where('portal_profiles.active', true)->pluck('users.email')->all();
         $emails = array_merge($emails, $profileEmails);
         return array_values(array_unique(array_filter($emails, function ($email) { return filter_var($email, FILTER_VALIDATE_EMAIL); })));
     }
