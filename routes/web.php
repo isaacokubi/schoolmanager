@@ -24,18 +24,19 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
     Route::get('/students/{student}/edit', [StudentController::class, 'edit'])->name('admin.students.edit');
     Route::put('/students/{student}', [StudentController::class, 'update'])->name('admin.students.update');
     Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('admin.students.destroy');
-
     Route::get('/admissions', [AdmissionManagementController::class, 'index'])->name('admin.admissions.index');
     Route::patch('/admissions/{application}/status', [AdmissionManagementController::class, 'updateStatus'])->name('admin.admissions.status');
-
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
     Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
     Route::post('/payments', [PaymentController::class, 'store'])->name('admin.payments.store');
+    Route::get('/operations', [OperationsController::class, 'index'])->name('admin.operations');
+    Route::post('/operations', [OperationsController::class, 'store'])->name('admin.operations.store');
+    Route::post('/operations/attendance', [OperationsController::class, 'attendance'])->name('admin.operations.attendance');
+    Route::post('/operations/results', [OperationsController::class, 'result'])->name('admin.operations.results');
 });
