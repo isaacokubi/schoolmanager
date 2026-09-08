@@ -55,7 +55,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/operations/results', [OperationsController::class, 'result'])->name('admin.operations.results');
 });
 
-Route::middleware(['auth', 'portal.role:pupil,parent,sponsor'])->prefix('portal')->group(function () {
+Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
 });
