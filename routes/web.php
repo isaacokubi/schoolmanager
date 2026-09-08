@@ -16,12 +16,12 @@ Route::view('/', 'home')->name('home');
 Route::view('/about', 'pages.about')->name('about');
 Route::view('/academics', 'pages.academics')->name('academics');
 Route::view('/admissions', 'pages.admissions')->name('admissions');
-Route::post('/admissions', [AdmissionController::class, 'store'])->name('admissions.store');
+Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::view('/contact', 'pages.contact')->name('contact');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
 });
 
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
