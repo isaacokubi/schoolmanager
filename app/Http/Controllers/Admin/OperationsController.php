@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OperationsController extends Controller
 {
@@ -30,17 +31,42 @@ class OperationsController extends Controller
 
     private function listing($section, Request $request)
     {
-        $query = DB::table($this->tables[$section])->orderByDesc('id');
+        $table = $this->tables[$section];
+        if ($section === 'attendance') {
+            $query = DB::table('attendance')
+                ->leftJoin('students','students.id','=','attendance.student_id')
+                ->select('attendance.*','students.name as student_name','students.admission_number')
+                ->orderByDesc('attendance.attendance_date')->orderByDesc('attendance.id');
+        } elseif ($section === 'results') {
+            $query = DB::table('results')
+                ->leftJoin('students','students.id','=','results.student_id')
+                ->leftJoin('exams','exams.id','=','results.exam_id')
+                ->leftJoin('subjects','subjects.id','=','results.subject_id')
+                ->select('results.*','students.name as student_name','students.admission_number','exams.name as exam_name','subjects.name as subject_name')
+                ->orderByDesc('results.id');
+        } else {
+            $query = DB::table($table)->orderByDesc('id');
+        }
         $search = trim((string)$request->get('search', ''));
         if ($search !== '') {
-            $columns = DB::getSchemaBuilder()->getColumnListing($this->tables[$section]);
-            $searchable = array_values(array_filter($columns, function ($column) {
-                return !in_array($column, ['id','created_at','updated_at'], true);
-            }));
-            if ($searchable) {
-                $query->where(function ($q) use ($searchable, $search) {
-                    foreach ($searchable as $column) $q->orWhere($column, 'like', '%'.$search.'%');
+            if ($section === 'attendance') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('students.name','like','%'.$search.'%')->orWhere('students.admission_number','like','%'.$search.'%')->orWhere('attendance.status','like','%'.$search.'%')->orWhere('attendance.attendance_date','like','%'.$search.'%');
                 });
+            } elseif ($section === 'results') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('students.name','like','%'.$search.'%')->orWhere('students.admission_number','like','%'.$search.'%')->orWhere('exams.name','like','%'.$search.'%')->orWhere('subjects.name','like','%'.$search.'%')->orWhere('results.grade','like','%'.$search.'%');
+                });
+            } else {
+                $columns = DB::getSchemaBuilder()->getColumnListing($table);
+                $searchable = array_values(array_filter($columns, function ($column) {
+                    return !in_array($column, ['id','created_at','updated_at'], true);
+                }));
+                if ($searchable) {
+                    $query->where(function ($q) use ($searchable, $search) {
+                        foreach ($searchable as $column) $q->orWhere($column, 'like', '%'.$search.'%');
+                    });
+                }
             }
         }
         return $query->paginate(10)->withQueryString();
@@ -53,7 +79,11 @@ class OperationsController extends Controller
         abort_unless(isset($rules[$section]), 422);
         $data = $request->validate($rules[$section]);
         $data = $this->prepare($section, $data, $request);
-        DB::table($this->tables[$section])->insert($data+['created_at'=>now(),'updated_at'=>now()]);
+        try {
+            DB::table($this->tables[$section])->insert($data+['created_at'=>now(),'updated_at'=>now()]);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['record'=>'The record could not be saved. Check for duplicate values or related records.'])->withInput();
+        }
         return back()->with('success','Record added successfully.');
     }
 
@@ -63,9 +93,13 @@ class OperationsController extends Controller
         $rules = $this->rules();
         abort_unless(isset($this->tables[$section]) && isset($rules[$section]), 404);
         abort_unless(DB::table($this->tables[$section])->where('id',$id)->exists(), 404);
-        $data = $request->validate($rules[$section]);
+        $data = $request->validate($rules[$section], [], $this->validationAttributes($section));
         $data = $this->prepare($section, $data, $request, $id);
-        DB::table($this->tables[$section])->where('id',$id)->update($data+['updated_at'=>now()]);
+        try {
+            DB::table($this->tables[$section])->where('id',$id)->update($data+['updated_at'=>now()]);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['record'=>'The record could not be updated. Check for duplicate values or related records.'])->withInput();
+        }
         return redirect()->route('admin.operations',['section'=>$section])->with('success','Record updated successfully.');
     }
 
@@ -74,7 +108,11 @@ class OperationsController extends Controller
         $section = $request->input('section');
         abort_unless(isset($this->tables[$section]), 404);
         abort_unless(DB::table($this->tables[$section])->where('id',$id)->exists(), 404);
-        DB::table($this->tables[$section])->where('id',$id)->delete();
+        try {
+            DB::table($this->tables[$section])->where('id',$id)->delete();
+        } catch (\Throwable $e) {
+            return back()->withErrors(['record'=>'This record cannot be deleted because other records depend on it. Remove those related records first.']);
+        }
         return back()->with('success','Record deleted successfully.');
     }
 
@@ -112,6 +150,18 @@ class OperationsController extends Controller
             'announcements'=>['title'=>'required|string|max:200','body'=>'required|string|max:10000','published'=>'nullable|boolean'],
             'events'=>['title'=>'required|string|max:200','event_date'=>'required|date','location'=>'nullable|string|max:200','description'=>'nullable|string|max:10000'],
         ];
+    }
+
+    private function validationAttributes($section)
+    {
+        $id = request()->route('id');
+        if ($section === 'teachers') {
+            return ['employee_number'=>[Rule::unique('teachers','employee_number')->ignore($id)]];
+        }
+        if ($section === 'subjects') {
+            return ['code'=>[Rule::unique('subjects','code')->ignore($id)]];
+        }
+        return [];
     }
 
     private function prepare($section, array $data, Request $request, $id=null)
