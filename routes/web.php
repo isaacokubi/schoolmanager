@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdmissionManagementController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MpesaController;
@@ -25,6 +26,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
