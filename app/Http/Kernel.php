@@ -33,6 +33,7 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'admin.role' => \App\Http\Middleware\AdminRole::class,
+        'portal.role' => \App\Http\Middleware\PortalRole::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
