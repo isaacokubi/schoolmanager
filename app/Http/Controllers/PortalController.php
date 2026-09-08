@@ -13,6 +13,7 @@ class PortalController extends Controller
         $profile = DB::table('portal_profiles')->where('user_id', $user->id)->first();
 
         $students = collect();
+        $studentMetrics = [];
         $teacher = null;
         $subjects = collect();
         $attendanceSummary = ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0];
@@ -34,6 +35,9 @@ class PortalController extends Controller
                 $teacherStudentCount = $subjectIds->isEmpty()
                     ? 0
                     : DB::table('results')->whereIn('subject_id', $subjectIds)->distinct()->count('student_id');
+                $resultCount = $subjectIds->isEmpty()
+                    ? 0
+                    : DB::table('results')->whereIn('subject_id', $subjectIds)->count();
 
                 $recentResults = $subjectIds->isEmpty()
                     ? collect()
@@ -50,8 +54,8 @@ class PortalController extends Controller
                 $dashboardStats = [
                     ['label' => 'Assigned subjects', 'value' => $subjects->count(), 'meta' => 'Current teaching allocation'],
                     ['label' => 'Learners assessed', 'value' => $teacherStudentCount, 'meta' => 'Learners with recorded results'],
-                    ['label' => 'Results recorded', 'value' => $subjectIds->isEmpty() ? 0 : DB::table('results')->whereIn('subject_id', $subjectIds)->count(), 'meta' => 'Across your subjects'],
-                    ['label' => 'Attendance records', 'value' => $subjectIds->isEmpty() ? 0 : DB::table('attendance')->count(), 'meta' => 'School attendance records'],
+                    ['label' => 'Results recorded', 'value' => $resultCount, 'meta' => 'Across your subjects'],
+                    ['label' => 'School learners', 'value' => DB::table('students')->count(), 'meta' => 'Current learner population'],
                 ];
             }
         } elseif ($profile && $profile->portal_type === 'parent') {
@@ -66,14 +70,28 @@ class PortalController extends Controller
         $studentIds = $students->pluck('id');
 
         if ($studentIds->isNotEmpty()) {
-            $attendance = DB::table('attendance')
+            $attendanceRows = DB::table('attendance')
                 ->whereIn('student_id', $studentIds)
-                ->select('status', DB::raw('COUNT(*) as total'))
-                ->groupBy('status')
-                ->pluck('total', 'status');
+                ->select('student_id', 'status', DB::raw('COUNT(*) as total'))
+                ->groupBy('student_id', 'status')
+                ->get();
 
-            foreach (array_keys($attendanceSummary) as $status) {
-                $attendanceSummary[$status] = (int) ($attendance[$status] ?? 0);
+            foreach ($attendanceRows as $row) {
+                $studentMetrics[$row->student_id]['attendance'][$row->status] = (int) $row->total;
+                $attendanceSummary[$row->status] = ($attendanceSummary[$row->status] ?? 0) + (int) $row->total;
+            }
+
+            foreach ($students as $student) {
+                $metrics = $studentMetrics[$student->id]['attendance'] ?? [];
+                $studentMetrics[$student->id] = [
+                    'attendance' => [
+                        'present' => (int) ($metrics['present'] ?? 0),
+                        'absent' => (int) ($metrics['absent'] ?? 0),
+                        'late' => (int) ($metrics['late'] ?? 0),
+                        'excused' => (int) ($metrics['excused'] ?? 0),
+                    ],
+                    'results' => DB::table('results')->where('student_id', $student->id)->count(),
+                ];
             }
 
             $recentResults = DB::table('results')
@@ -121,6 +139,7 @@ class PortalController extends Controller
             'user',
             'profile',
             'students',
+            'studentMetrics',
             'teacher',
             'subjects',
             'attendanceSummary',
