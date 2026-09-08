@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\MpesaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class MpesaController extends Controller
@@ -22,6 +23,7 @@ class MpesaController extends Controller
             'student_id' => $data['student_id'],
             'parent_phone' => $data['parent_phone'],
             'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
             'amount' => $data['amount'],
             'account_reference' => $reference,
             'status' => 'pending',
@@ -39,7 +41,8 @@ class MpesaController extends Controller
             return back()->with('success', 'M-Pesa payment prompt sent to the parent phone.');
         } catch (Throwable $e) {
             DB::table('payments')->where('id', $paymentId)->update(['status' => 'failed', 'updated_at' => now()]);
-            return back()->withErrors(['mpesa' => $e->getMessage()]);
+            report($e);
+            return back()->withErrors(['mpesa' => 'The M-Pesa request could not be started.']);
         }
     }
 
@@ -62,9 +65,10 @@ class MpesaController extends Controller
         $receipt = optional($items->firstWhere('Name', 'MpesaReceiptNumber'))['Value'] ?? null;
         $amount = optional($items->firstWhere('Name', 'Amount'))['Value'] ?? $payment->amount;
         $phone = optional($items->firstWhere('Name', 'PhoneNumber'))['Value'] ?? $payment->parent_phone;
+        $wasCompleted = $payment->status === 'completed';
 
-        DB::transaction(function () use ($payment, $receipt, $amount, $phone) {
-            if ($payment->status === 'completed') return;
+        DB::transaction(function () use ($payment, $receipt, $amount, $phone, $wasCompleted) {
+            if ($wasCompleted) return;
             DB::table('payments')->where('id', $payment->id)->update([
                 'status' => 'completed',
                 'mpesa_receipt' => $receipt,
@@ -78,6 +82,33 @@ class MpesaController extends Controller
                 DB::table('students')->where('id', $payment->student_id)->where('fee_balance', '<', 0)->update(['fee_balance' => 0]);
             }
         });
+
+        if (!$wasCompleted && $payment->student_id) {
+            $student = DB::table('students')->where('id', $payment->student_id)->first();
+            $recipient = $payment->user_id
+                ? DB::table('users')->where('id', $payment->user_id)->value('email')
+                : null;
+            if (!$recipient && $student && $student->parent_id) {
+                $recipient = DB::table('parents')->where('id', $student->parent_id)->value('email');
+            }
+
+            if ($recipient && $student) {
+                try {
+                    Mail::send('emails.payment-confirmation', [
+                        'payment' => (object) array_merge((array) $payment, [
+                            'amount' => $amount,
+                            'mpesa_receipt' => $receipt,
+                        ]),
+                        'student' => $student,
+                        'recipientName' => $payment->payer_name ?: 'Parent/Guardian',
+                    ], function ($message) use ($recipient) {
+                        $message->to($recipient)->subject('School fee payment received');
+                    });
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            }
+        }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
     }
