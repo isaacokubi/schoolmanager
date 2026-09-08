@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MpesaController;
 
 Route::view('/', 'home')->name('home');
 Route::view('/about', 'pages.about')->name('about');
@@ -35,6 +36,7 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
     Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
     Route::post('/payments', [PaymentController::class, 'store'])->name('admin.payments.store');
+    Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])->name('admin.payments.mpesa');
     Route::get('/operations', [OperationsController::class, 'index'])->name('admin.operations');
     Route::post('/operations', [OperationsController::class, 'store'])->name('admin.operations.store');
     Route::post('/operations/attendance', [OperationsController::class, 'attendance'])->name('admin.operations.attendance');
