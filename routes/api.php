@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MpesaController;
 
-Route::post('/mpesa/callback', function () {
-    return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
-})->name('mpesa.callback');
+Route::post('/mpesa/callback', [MpesaController::class, 'callback'])->name('mpesa.callback');
