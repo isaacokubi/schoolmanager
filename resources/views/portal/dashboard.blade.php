@@ -76,6 +76,8 @@
                     @if($profile->portal_type !== 'pupil')<span class="badge">{{ $students->count() }} linked</span>@endif
                 </div>
                 @forelse($students as $student)
+                    @php($metrics = $studentMetrics[$student->id] ?? ['attendance' => ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0], 'results' => 0])
+                    @php($studentAttendance = array_sum($metrics['attendance']))
                     <article style="border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px;background:linear-gradient(135deg,#fff,#f8fbff)">
                         <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
                             <div>
@@ -84,9 +86,10 @@
                             </div>
                             @if(!empty($student->class_name))<span class="badge">{{ $student->class_name }}</span>@endif
                         </div>
-                        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-top:17px">
-                            <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Attendance</span><strong style="font-size:22px">{{ $studentIds = $students->pluck('id')->count() ? ($attendanceSummary['present'] + $attendanceSummary['absent'] + $attendanceSummary['late'] + $attendanceSummary['excused']) : 0 }}</strong><small class="muted">records</small></div>
-                            <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Present</span><strong style="font-size:22px">{{ $attendanceSummary['present'] }}</strong><small class="muted">records</small></div>
+                        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-top:17px">
+                            <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Attendance</span><strong style="font-size:22px">{{ number_format($studentAttendance) }}</strong><small class="muted">records</small></div>
+                            <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Present</span><strong style="font-size:22px">{{ number_format($metrics['attendance']['present']) }}</strong><small class="muted">records</small></div>
+                            <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Results</span><strong style="font-size:22px">{{ number_format($metrics['results']) }}</strong><small class="muted">recorded</small></div>
                             <div style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff"><span class="muted">Fee balance</span><strong style="font-size:22px">{{ isset($student->fee_balance) ? number_format((float)$student->fee_balance, 2) : '—' }}</strong><small class="muted">KES</small></div>
                         </div>
                     </article>
@@ -119,7 +122,7 @@
                         </table>
                     </div>
                 @else
-                    <div class="empty">No academic results have been published for the linked learner records yet.</div>
+                    <div class="empty">No academic results have been recorded for the linked learner records yet.</div>
                 @endif
             </section>
         @endif
@@ -130,7 +133,7 @@
                 @forelse($announcements as $announcement)
                     <article style="padding:15px 0;border-bottom:1px solid var(--line)">
                         <h3>{{ $announcement->title }}</h3>
-                        <p class="muted" style="margin:3px 0 8px">{{ optional($announcement->published_at ? \Carbon\Carbon::parse($announcement->published_at) : $announcement->created_at)->format('d M Y') }}</p>
+                        <p class="muted" style="margin:3px 0 8px">{{ \Carbon\Carbon::parse($announcement->published_at ?: $announcement->created_at)->format('d M Y') }}</p>
                         <p style="margin:0">{{ \Illuminate\Support\Str::limit($announcement->body, 180) }}</p>
                     </article>
                 @empty
