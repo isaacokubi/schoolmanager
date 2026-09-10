@@ -29,6 +29,17 @@ class CbcReportCardService
         return $this->level($marks)['label'];
     }
 
+    public function currentContentHash($results, int $studentId, int $examId): string
+    {
+        return hash('sha256', json_encode([
+            'student' => $studentId,
+            'exam' => $examId,
+            'results' => $results->map(function ($r) {
+                return [$r->subject_id, $r->marks, $r->assessment_status, $r->achievement_level];
+            })->values()->all(),
+        ]));
+    }
+
     public function build(int $studentId, int $examId): ?array
     {
         $student = DB::table('students')->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
@@ -97,11 +108,14 @@ class CbcReportCardService
             $result->display_remark = $this->remark($result->marks === null ? null : (float) $result->marks, $result->assessment_status);
         }
 
-        $hash = hash('sha256', json_encode(['student' => $studentId, 'exam' => $examId, 'results' => $report['results']->map(function ($r) { return [$r->subject_id, $r->marks, $r->assessment_status, $r->achievement_level]; })->values()->all()]));
+        $hash = $this->currentContentHash($report['results'], $studentId, $examId);
         $existing = DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->first();
         if ($existing && $existing->content_hash === $hash && $existing->notification_status === 'sent') return ['complete' => true, 'sent' => 0, 'reason' => 'Report already sent for this version.'];
 
-        $payload = ['student_id' => $studentId, 'exam_id' => $examId, 'content_hash' => $hash, 'generated_at' => now(), 'notification_status' => 'pending', 'updated_at' => now()];
+        if ($existing && $existing->content_hash !== $hash && $existing->parent_signature_path) {
+            Storage::disk('public')->delete($existing->parent_signature_path);
+        }
+        $payload = ['student_id' => $studentId, 'exam_id' => $examId, 'content_hash' => $hash, 'generated_at' => now(), 'notification_status' => 'pending', 'parent_signature_path' => null, 'parent_signed_by' => null, 'parent_signed_at' => null, 'updated_at' => now()];
         if ($existing) DB::table('report_cards')->where('id', $existing->id)->update($payload); else DB::table('report_cards')->insert($payload + ['created_at' => now()]);
 
         $recipients = $this->recipients($report['student']); $sent = 0; $errors = [];
