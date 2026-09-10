@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CbcReportCardService
@@ -61,8 +62,15 @@ class CbcReportCardService
         if (!$classTeacher) $classTeacher = DB::table('teachers')->orderBy('name')->first();
 
         $headOfInstitution = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('id')->first();
+        $schoolBadge = DB::table('settings')->where('key', 'school_badge')->value('value');
+        $schoolBadgeData = null;
+        if ($schoolBadge && Storage::disk('public')->exists($schoolBadge)) {
+            $path = Storage::disk('public')->path($schoolBadge);
+            $mime = function_exists('mime_content_type') ? mime_content_type($path) : 'image/png';
+            $schoolBadgeData = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($schoolBadge));
+        }
 
-        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution');
+        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution', 'schoolBadgeData');
     }
 
     public function generateAndNotify(int $studentId, int $examId): array
