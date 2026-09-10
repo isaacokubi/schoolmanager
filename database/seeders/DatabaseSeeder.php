@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             DemoSchoolSeeder::class,
             PortalDemoUsersSeeder::class,
+            SampleSignatureSeeder::class,
         ]);
     }
 }
