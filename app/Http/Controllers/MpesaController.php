@@ -64,6 +64,89 @@ class MpesaController extends Controller
         }
     }
 
+    /**
+     * Reconcile an existing pending STK payment with Safaricom.
+     *
+     * A query success does not manufacture an M-Pesa receipt. The payment
+     * remains pending until a valid callback supplies the receipt and amount.
+     */
+    public function query(Request $request, MpesaService $mpesa, int $paymentId)
+    {
+        $payment = DB::table('payments')->where('id', $paymentId)->first();
+
+        if (!$payment) {
+            return back()->withErrors(['mpesa' => 'Payment was not found.']);
+        }
+
+        if (!$payment->checkout_request_id) {
+            return back()->withErrors(['mpesa' => 'This payment has no CheckoutRequestID to query.']);
+        }
+
+        if ($payment->status === 'completed' && $payment->verification_status === 'verified') {
+            return back()->with('success', 'This M-Pesa payment is already verified.');
+        }
+
+        try {
+            $result = $mpesa->stkQuery($payment->checkout_request_id);
+            $resultCode = $result['ResultCode'] ?? null;
+            $resultDesc = (string) ($result['ResultDesc'] ?? 'No result description returned.');
+
+            DB::table('payment_audits')->insert([
+                'payment_id' => $payment->id,
+                'event' => 'stk_query',
+                'details' => json_encode([
+                    'result_code' => $resultCode,
+                    'result_desc' => $resultDesc,
+                    'checkout_request_id' => $payment->checkout_request_id,
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ((string) $resultCode === '0') {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'pending',
+                    'verification_status' => 'pending',
+                    'failure_reason' => 'STK Query confirms Safaricom processed the request, but final payment metadata/receipt is still required.',
+                    'updated_at' => now(),
+                ]);
+
+                return back()->with(
+                    'success',
+                    'Safaricom reports the STK request was processed. The payment remains pending until the verified M-Pesa callback supplies the receipt and amount.'
+                );
+            }
+
+            DB::table('payments')->where('id', $payment->id)->update([
+                'status' => 'failed',
+                'verification_status' => 'rejected',
+                'failure_reason' => 'M-Pesa STK Query: ' . $resultDesc,
+                'updated_at' => now(),
+            ]);
+
+            return back()->withErrors([
+                'mpesa' => 'Safaricom reports that this M-Pesa request was not completed: ' . $resultDesc,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
+
+            DB::table('payment_audits')->insert([
+                'payment_id' => $payment->id,
+                'event' => 'stk_query_error',
+                'details' => json_encode([
+                    'message' => $e->getMessage(),
+                    'checkout_request_id' => $payment->checkout_request_id,
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return back()->withErrors([
+                'mpesa' => 'The M-Pesa status could not be queried right now.',
+            ]);
+        }
+    }
+
     public function callback(Request $request)
     {
         // Safaricom expects a fast 200 response. Keep the raw callback in the

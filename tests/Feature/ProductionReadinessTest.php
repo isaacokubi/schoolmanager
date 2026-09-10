@@ -221,4 +221,114 @@ class ProductionReadinessTest extends TestCase
         $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$student,$exam]),['parent_signature'=>$this->validPngUpload('signature.png')])->assertSessionHas('success');
         $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'parent_signed_by'=>$parentUser->id]);
     }
+
+    public function test_stk_query_success_does_not_falsely_verify_without_receipt(): void
+    {
+        $student = DB::table('students')->insertGetId([
+            'name' => 'STK Query Student',
+            'admission_number' => 'QUERY-STU-001',
+            'fee_balance' => 5000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 1000,
+            'account_reference' => 'QUERY-1',
+            'checkout_request_id' => 'ws_CO_QUERY_SUCCESS',
+            'status' => 'pending',
+            'verification_status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->mock(\App\Services\MpesaService::class, function ($mock) {
+            $mock->shouldReceive('stkQuery')
+                ->once()
+                ->with('ws_CO_QUERY_SUCCESS')
+                ->andReturn([
+                    'ResponseCode' => '0',
+                    'ResponseDescription' => 'Success. Request accepted for processing',
+                    'ResultCode' => '0',
+                    'ResultDesc' => 'The service request is processed successfully.',
+                ]);
+        });
+
+        $admin = \App\Models\User::create(['name' => 'STK Query Admin', 'email' => 'stk-query-admin@example.test', 'password' => \Illuminate\Support\Facades\Hash::make('password'), 'role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.payments.mpesa.query', $payment))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment,
+            'status' => 'pending',
+            'verification_status' => 'pending',
+            'mpesa_receipt' => null,
+        ]);
+
+        $this->assertDatabaseHas('payment_audits', [
+            'payment_id' => $payment,
+            'event' => 'stk_query',
+        ]);
+    }
+
+    public function test_stk_query_failure_rejects_pending_payment(): void
+    {
+        $student = DB::table('students')->insertGetId([
+            'name' => 'STK Query Failed Student',
+            'admission_number' => 'QUERY-STU-002',
+            'fee_balance' => 5000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 1000,
+            'account_reference' => 'QUERY-2',
+            'checkout_request_id' => 'ws_CO_QUERY_FAILED',
+            'status' => 'pending',
+            'verification_status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->mock(\App\Services\MpesaService::class, function ($mock) {
+            $mock->shouldReceive('stkQuery')
+                ->once()
+                ->with('ws_CO_QUERY_FAILED')
+                ->andReturn([
+                    'ResponseCode' => '0',
+                    'ResponseDescription' => 'Success. Request accepted for processing',
+                    'ResultCode' => '1032',
+                    'ResultDesc' => 'Request cancelled by user',
+                ]);
+        });
+
+        $admin = \App\Models\User::create(['name' => 'STK Query Admin', 'email' => 'stk-query-admin@example.test', 'password' => \Illuminate\Support\Facades\Hash::make('password'), 'role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.payments.mpesa.query', $payment))
+            ->assertSessionHasErrors('mpesa');
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment,
+            'status' => 'failed',
+            'verification_status' => 'rejected',
+        ]);
+
+        $this->assertDatabaseHas('payment_audits', [
+            'payment_id' => $payment,
+            'event' => 'stk_query',
+        ]);
+    }
+
 }

@@ -44,6 +44,65 @@ class MpesaService
         }
     }
 
+    /**
+     * Query the status of an existing STK Push using its CheckoutRequestID.
+     *
+     * This does not invent a payment receipt. A successful query only proves
+     * Safaricom processed the STK request; final fee verification still requires
+     * a valid callback containing payment metadata.
+     */
+    public function stkQuery(string $checkoutRequestId): array
+    {
+        $shortcode = trim((string) env('MPESA_SHORTCODE'));
+        $passkey = trim((string) env('MPESA_PASSKEY'));
+
+        if (!$shortcode || !$passkey) {
+            throw new RuntimeException('M-Pesa shortcode/passkey are not configured.');
+        }
+
+        $checkoutRequestId = trim($checkoutRequestId);
+        if ($checkoutRequestId === '') {
+            throw new RuntimeException('CheckoutRequestID is required.');
+        }
+
+        $timestamp = now()->format('YmdHis');
+        $password = base64_encode($shortcode . $passkey . $timestamp);
+
+        try {
+            $response = Http::timeout(30)
+                ->withToken($this->accessToken())
+                ->post($this->baseUrl() . '/mpesa/stkpushquery/v1/query', [
+                    'BusinessShortCode' => $shortcode,
+                    'Password' => $password,
+                    'Timestamp' => $timestamp,
+                    'CheckoutRequestID' => $checkoutRequestId,
+                ]);
+
+            if (!$response->successful()) {
+                throw new RuntimeException(
+                    'M-Pesa STK Query failed (HTTP ' . $response->status() . '): ' .
+                    substr((string) $response->body(), 0, 800)
+                );
+            }
+
+            $payload = $response->json();
+
+            if (!is_array($payload)) {
+                throw new RuntimeException('M-Pesa STK Query returned an invalid response.');
+            }
+
+            return $payload;
+        } catch (RuntimeException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                'Unable to connect to the M-Pesa STK Query service: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
+
     public function stkPush(string $phone, float $amount, string $accountReference, string $description = 'School fees')
     {
         $shortcode = trim((string) env('MPESA_SHORTCODE'));

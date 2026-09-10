@@ -54,6 +54,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
     Route::post('/payments', [PaymentController::class, 'store'])->name('admin.payments.store');
     Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])->name('admin.payments.mpesa');
+    Route::post('/payments/mpesa/query/{payment}', [MpesaController::class, 'query'])->name('admin.payments.mpesa.query');
     Route::get('/operations', [OperationsController::class, 'index'])->name('admin.operations');
     Route::post('/operations', [OperationsController::class, 'store'])->name('admin.operations.store');
     Route::put('/operations/{id}', [OperationsController::class, 'update'])->name('admin.operations.update');
