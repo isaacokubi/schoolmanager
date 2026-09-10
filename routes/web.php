@@ -16,6 +16,7 @@ use App\Http\Controllers\PortalController;
 use App\Http\Controllers\PortalPaymentController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ReportCardController;
+use App\Http\Controllers\SignatureController;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
@@ -37,6 +38,9 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
     Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
     Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
+    Route::get('/signature', [SignatureController::class, 'show'])->name('signature.index');
+    Route::put('/signature', [SignatureController::class, 'update'])->name('signature.update');
+    Route::delete('/signature', [SignatureController::class, 'remove'])->name('signature.remove');
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
@@ -65,7 +69,11 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
     Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
     Route::post('/payments/mpesa', [PortalPaymentController::class, 'pay'])->middleware('throttle:5,1')->name('portal.payments.pay');
+    Route::get('/signature', [SignatureController::class, 'show'])->middleware('portal.role:teacher')->name('portal.signature.index');
+    Route::put('/signature', [SignatureController::class, 'update'])->middleware('portal.role:teacher')->name('portal.signature.update');
+    Route::delete('/signature', [SignatureController::class, 'remove'])->middleware('portal.role:teacher')->name('portal.signature.remove');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
+    Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
 });
 
