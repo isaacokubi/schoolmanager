@@ -2,159 +2,30 @@
 @section('title', ucfirst($user->role).' Dashboard | '.config('app.name'))
 @section('body')
 @php
-    $portalType = $profile->portal_type ?? $user->role;
-    $portalLabel = ucfirst($portalType);
-    $isLearnerPortal = in_array($portalType, ['pupil','parent','sponsor'], true);
-    $canPayFees = in_array($portalType, ['parent','sponsor'], true);
+$portalType=$profile->portal_type??$user->role;
+$portalLabel=ucfirst($portalType);
+$isLearnerPortal=in_array($portalType,['pupil','parent','sponsor'],true);
+$canPayFees=in_array($portalType,['parent','sponsor'],true);
 @endphp
 <div class="portal-shell">
-    <header class="portal-header">
-        <a class="portal-brand" href="{{ url('/') }}">
-            <span class="portal-brand-mark">{{ strtoupper(substr(config('app.name'), 0, 1)) }}</span>
-            <span><strong>{{ config('app.name') }}</strong><small>{{ $portalLabel }} Portal</small></span>
-        </a>
-        <div class="portal-userbar">
-            <div class="portal-user">
-                <span class="portal-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
-                <span><strong>{{ $user->name }}</strong><small>{{ $portalLabel }}</small></span>
-            </div>
-            @if($canPayFees)
-                <a class="btn payment-btn" href="{{ route('portal.payments') }}">M-Pesa payments</a>
-            @endif
-            <form method="post" action="{{ route('portal.logout') }}">
-                @csrf
-                <button class="btn secondary" type="submit">Sign out</button>
-            </form>
-        </div>
-    </header>
-
-    <main class="portal-main">
-        <section class="portal-hero">
-            <div>
-                <span class="portal-kicker">{{ $portalLabel }} dashboard</span>
-                <h1>Welcome back, {{ $user->name }}</h1>
-                <p>{{ $isLearnerPortal ? 'Your academic, attendance, fee and school information at a glance.' : 'Your teaching activity, academic records and school updates at a glance.' }}</p>
-            </div>
-            <div class="account-pill {{ $profile && $profile->active ? 'active' : 'inactive' }}"><span></span>{{ $profile && $profile->active ? 'Account active' : 'Account inactive' }}</div>
-        </section>
-
-        @if($canPayFees)
-            <section class="payment-cta">
-                <div><span class="portal-kicker">Fast school fee payments</span><h2>Pay school fees with M-Pesa</h2><p>Send an STK prompt to your Kenyan mobile number and track the payment receipt from this portal.</p></div>
-                <a class="btn" href="{{ route('portal.payments') }}">Open M-Pesa payments →</a>
-            </section>
-        @endif
-
-        @if(!$profile || !$profile->active)
-            <div class="portal-alert"><strong>Portal access requires an active profile.</strong><span>Please contact the school office if your account should have access to this portal.</span></div>
-        @endif
-
-        <section class="portal-stats">
-            @foreach($dashboardStats as $index => $stat)
-                <article class="portal-stat">
-                    <div class="stat-icon">{{ ['◉','✓','▣','◆'][$index % 4] }}</div>
-                    <div><span>{{ $stat['label'] }}</span><strong>{{ is_numeric($stat['value']) ? number_format((int)$stat['value']) : $stat['value'] }}</strong><small>{{ $stat['meta'] }}</small></div>
-                </article>
-            @endforeach
-        </section>
-
-        @if($portalType === 'teacher')
-            <section class="portal-grid two-col">
-                <article class="portal-card profile-card">
-                    <div class="card-heading"><div><span class="portal-kicker">Professional profile</span><h2>Teaching profile</h2></div><span class="soft-icon">◆</span></div>
-                    <div class="profile-list">
-                        <div><span>Name</span><strong>{{ $teacher->name ?? $user->name }}</strong></div>
-                        <div><span>Email</span><strong class="break">{{ $teacher->email ?? $user->email }}</strong></div>
-                        <div><span>Phone</span><strong>{{ $teacher->phone ?: 'Not provided' }}</strong></div>
-                        <div><span>Employee number</span><strong>{{ $teacher->employee_number ?: 'Not assigned' }}</strong></div>
-                    </div>
-                </article>
-                <article class="portal-card">
-                    <div class="card-heading"><div><span class="portal-kicker">Current allocation</span><h2>My subjects</h2></div><span class="count-pill">{{ $subjects->count() }}</span></div>
-                    <div class="subject-grid">
-                        @forelse($subjects as $subject)
-                            <div class="subject-card"><span class="subject-mark">{{ strtoupper(substr($subject->name, 0, 1)) }}</span><div><strong>{{ $subject->name }}</strong>@if($subject->code)<small>{{ $subject->code }}</small>@endif</div></div>
-                        @empty
-                            <div class="empty-state">No subjects have been assigned to your teacher profile yet.</div>
-                        @endforelse
-                    </div>
-                </article>
-            </section>
-        @elseif($isLearnerPortal)
-            <section class="portal-card learner-section">
-                <div class="card-heading">
-                    <div><span class="portal-kicker">{{ $portalType === 'pupil' ? 'Academic profile' : 'Learner overview' }}</span><h2>{{ $portalType === 'pupil' ? 'My learner record' : 'Linked learners' }}</h2></div>
-                    @if($portalType !== 'pupil')<span class="count-pill">{{ $students->count() }} linked</span>@endif
-                </div>
-                <div class="learner-list">
-                    @forelse($students as $student)
-                        @php
-                            $metrics = $studentMetrics[$student->id] ?? ['attendance' => ['present'=>0,'absent'=>0,'late'=>0,'excused'=>0], 'results'=>0];
-                            $attendanceTotal = array_sum($metrics['attendance']);
-                            $attendanceRate = $attendanceTotal > 0 ? round(($metrics['attendance']['present'] / $attendanceTotal) * 100) : 0;
-                            $feeBalance = isset($student->fee_balance) ? (float)$student->fee_balance : null;
-                        @endphp
-                        <article class="learner-card">
-                            <div class="learner-heading">
-                                <div class="learner-identity"><span class="learner-avatar">{{ strtoupper(substr($student->name,0,1)) }}</span><div><h3>{{ $student->name }}</h3><p>Admission {{ $student->admission_number }}</p></div></div>
-                                @if($student->class_name)<span class="class-pill">{{ $student->class_name }}</span>@endif
-                            </div>
-                            <div class="learner-metrics">
-                                <div class="metric"><span>Attendance</span><strong>{{ number_format($attendanceTotal) }}</strong><small>records</small></div>
-                                <div class="metric"><span>Present</span><strong>{{ number_format($metrics['attendance']['present']) }}</strong><small>{{ $attendanceRate }}% rate</small></div>
-                                <div class="metric"><span>Results</span><strong>{{ number_format($metrics['results']) }}</strong><small>recorded</small></div>
-                                <div class="metric fee"><span>Fee balance</span><strong>{{ $feeBalance !== null ? number_format($feeBalance, 2) : '—' }}</strong><small>KES</small></div>
-                            </div>
-                            <div class="attendance-bar"><div style="width:{{ min(100, $attendanceRate) }}%"></div></div>
-                        </article>
-                    @empty
-                        <div class="empty-state"><strong>No learner records linked</strong><span>Your account is active, but no learner record is currently connected to it. The school office can update the relationship or admission link.</span></div>
-                    @endforelse
-                </div>
-            </section>
-        @endif
-
-        @if($recentResults->isNotEmpty() || $isLearnerPortal || $portalType === 'teacher')
-            <section class="portal-card results-section">
-                <div class="card-heading"><div><span class="portal-kicker">Academic activity</span><h2>Recent results</h2></div><span class="section-note">Latest recorded assessments</span></div>
-                @if($recentResults->isNotEmpty())
-                    <div class="result-table-wrap"><table class="result-table"><thead><tr><th>Learner</th><th>Subject</th><th>Assessment</th><th>Marks</th><th>Grade</th></tr></thead><tbody>
-                        @foreach($recentResults as $result)
-                            <tr><td><strong>{{ $result->student_name }}</strong><small>{{ $result->admission_number }}</small></td><td>{{ $result->subject_name }}</td><td>{{ $result->exam_name }}</td><td><strong>{{ number_format((float)$result->marks, 2) }}</strong></td><td><span class="grade-badge grade-{{ strtolower($result->grade ?: 'na') }}">{{ $result->grade ?: '—' }}</span></td></tr>
-                        @endforeach
-                    </tbody></table></div>
-                @else
-                    <div class="empty-state">No academic results have been recorded for the linked learner records yet.</div>
-                @endif
-            </section>
-        @endif
-
-        <section class="portal-grid two-col bottom-grid">
-            <article class="portal-card">
-                <div class="card-heading"><div><span class="portal-kicker">School communication</span><h2>Announcements</h2></div><span class="soft-icon">!</span></div>
-                <div class="announcement-list">
-                    @forelse($announcements as $announcement)
-                        <article class="announcement"><span class="announcement-dot"></span><div><div class="announcement-meta">{{ \Carbon\Carbon::parse($announcement->published_at ?: $announcement->created_at)->format('d M Y') }}</div><h3>{{ $announcement->title }}</h3><p>{{ \Illuminate\Support\Str::limit($announcement->body, 180) }}</p></div></article>
-                    @empty
-                        <div class="empty-state">No published announcements are available.</div>
-                    @endforelse
-                </div>
-            </article>
-            <article class="portal-card">
-                <div class="card-heading"><div><span class="portal-kicker">School calendar</span><h2>Upcoming events</h2></div><span class="soft-icon">◷</span></div>
-                <div class="event-list">
-                    @forelse($upcomingEvents as $event)
-                        @php($eventDate = \Carbon\Carbon::parse($event->event_date))
-                        <article class="event-row"><div class="event-date"><strong>{{ $eventDate->format('d') }}</strong><small>{{ $eventDate->format('M') }}</small></div><div><h3>{{ $event->title }}</h3><p>{{ $eventDate->format('l, d M Y') }}@if($event->location) · {{ $event->location }}@endif</p></div></article>
-                    @empty
-                        <div class="empty-state">No upcoming school events are scheduled.</div>
-                    @endforelse
-                </div>
-            </article>
-        </section>
-    </main>
-</div>
+<header class="portal-header">
+<a class="portal-brand" href="{{ url('/') }}"><span class="brand-mark">{{ strtoupper(substr(config('app.name'),0,1)) }}</span><span><strong>{{ config('app.name') }}</strong><small>{{ $portalLabel }} Portal</small></span></a>
+<div class="portal-actions">@if($canPayFees)<a class="btn pay-btn" href="{{ route('portal.payments') }}">M-Pesa payments</a>@endif<form method="post" action="{{ route('portal.logout') }}">@csrf<button class="btn secondary">Sign out</button></form></div>
+</header>
+<main class="portal-main">
+<section class="hero"><div><span class="kicker">{{ $portalLabel }} dashboard</span><h1>Welcome back, {{ $user->name }}</h1><p>{{ $isLearnerPortal?'Your academic, attendance, fee and school information at a glance.':'Your teaching activity, academic records and school updates at a glance.' }}</p></div><span class="account {{ $profile&&$profile->active?'on':'off' }}">● {{ $profile&&$profile->active?'Account active':'Account inactive' }}</span></section>
+@if($canPayFees)<section class="payment-cta"><div><span class="kicker">School fees</span><h2>Pay with M-Pesa</h2><p>Send an STK prompt, authorize it with your M-Pesa PIN, and track the receipt.</p></div><a class="btn" href="{{ route('portal.payments') }}">Open payments →</a></section>@endif
+@if(!$profile||!$profile->active)<div class="alert"><strong>Portal access requires an active profile.</strong><span>Please contact the school office if your account should have access.</span></div>@endif
+<section class="stats">@foreach($dashboardStats as $stat)<article><span>{{ $stat['label'] }}</span><strong>{{ is_numeric($stat['value'])?number_format((int)$stat['value']):$stat['value'] }}</strong><small>{{ $stat['meta'] }}</small></article>@endforeach</section>
+@if($portalType==='teacher')
+<section class="grid two"><article class="card"><span class="kicker">Professional profile</span><h2>Teaching profile</h2><div class="details"><div><span>Name</span><strong>{{ $teacher->name??$user->name }}</strong></div><div><span>Email</span><strong>{{ $teacher->email??$user->email }}</strong></div><div><span>Phone</span><strong>{{ $teacher->phone?:'Not provided' }}</strong></div><div><span>Employee</span><strong>{{ $teacher->employee_number?:'Not assigned' }}</strong></div></div></article><article class="card"><span class="kicker">Current allocation</span><h2>My subjects</h2>@forelse($subjects as $subject)<div class="subject"><strong>{{ $subject->name }}</strong>@if($subject->code)<small>{{ $subject->code }}</small>@endif</div>@empty<div class="empty">No subjects assigned yet.</div>@endforelse</article></section>
+@elseif($isLearnerPortal)
+<section class="card"><div class="heading"><div><span class="kicker">{{ $portalType==='pupil'?'Academic profile':'Learner overview' }}</span><h2>{{ $portalType==='pupil'?'My learner record':'Linked learners' }}</h2></div>@if($portalType!=='pupil')<span class="pill">{{ $students->count() }} linked</span>@endif</div><div class="learners">@forelse($students as $student)@php($m=$studentMetrics[$student->id]??['attendance'=>['present'=>0,'absent'=>0,'late'=>0,'excused'=>0],'results'=>0])@php($total=array_sum($m['attendance']))@php($rate=$total?round(($m['attendance']['present']/$total)*100):0)<article><div class="learner-top"><div><strong>{{ $student->name }}</strong><small>Admission {{ $student->admission_number }}</small></div>@if($student->class_name)<span class="pill">{{ $student->class_name }}</span>@endif</div><div class="metrics"><div><span>Attendance</span><strong>{{ $total }}</strong></div><div><span>Present</span><strong>{{ $m['attendance']['present'] }}</strong><small>{{ $rate }}%</small></div><div><span>Results</span><strong>{{ $m['results'] }}</strong></div><div><span>Fee balance</span><strong>KES {{ number_format((float)$student->fee_balance,2) }}</strong></div></div><div class="bar"><i style="width:{{ min(100,$rate) }}%"></i></div></article>@empty<div class="empty">No learner records are linked to this account.</div>@endforelse</div></section>
+@endif
+@if($recentResults->isNotEmpty()||$isLearnerPortal)<section class="card"><div class="heading"><div><span class="kicker">Academic activity</span><h2>Recent results</h2></div></div>@if($recentResults->isNotEmpty())<div class="table-wrap"><table><thead><tr><th>Learner</th><th>Subject</th><th>Assessment</th><th>Marks</th><th>Grade</th></tr></thead><tbody>@foreach($recentResults as $result)<tr><td>{{ $result->student_name }}</td><td>{{ $result->subject_name }}</td><td>{{ $result->exam_name }}</td><td>{{ number_format((float)$result->marks,2) }}</td><td>{{ $result->grade?:'—' }}</td></tr>@endforeach</tbody></table></div>@else<div class="empty">No academic results have been recorded yet.</div>@endif</section>@endif
+<section class="grid two"><article class="card"><span class="kicker">School communication</span><h2>Announcements</h2>@forelse($announcements as $a)<div class="list-row"><strong>{{ $a->title }}</strong><small>{{ \Carbon\Carbon::parse($a->published_at?:$a->created_at)->format('d M Y') }}</small><p>{{ \Illuminate\Support\Str::limit($a->body,160) }}</p></div>@empty<div class="empty">No published announcements.</div>@endforelse</article><article class="card"><span class="kicker">School calendar</span><h2>Upcoming events</h2>@forelse($upcomingEvents as $event)@php($date=\Carbon\Carbon::parse($event->event_date))<div class="list-row"><strong>{{ $event->title }}</strong><small>{{ $date->format('d M Y') }}@if($event->location) · {{ $event->location }}@endif</small></div>@empty<div class="empty">No upcoming events.</div>@endforelse</article></section>
+</main></div>
 <style>
-.portal-shell{min-height:100vh;background:#f4f7fb;color:#152238}.portal-header{height:74px;background:#fff;border-bottom:1px solid #e5ebf3;padding:0 4%;display:flex;align-items:center;justify-content:space-between;gap:20px;position:sticky;top:0;z-index:40;box-shadow:0 5px 20px rgba(20,40,70,.04)}.portal-brand,.portal-user{display:flex;align-items:center;gap:11px;text-decoration:none}.portal-brand strong,.portal-user strong{display:block;font-size:15px;line-height:1.2}.portal-brand small,.portal-user small{display:block;color:#8491a4;font-size:11px;margin-top:3px}.portal-brand-mark,.portal-avatar{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:900}.portal-brand-mark{background:linear-gradient(135deg,#0f5bd7,#3283f5);color:#fff;box-shadow:0 8px 18px rgba(15,91,215,.18)}.portal-avatar{background:#eaf2ff;color:#145fc9}.portal-userbar{display:flex;align-items:center;gap:10px}.portal-userbar form{margin:0}.portal-main{width:min(1240px,92%);margin:0 auto;padding:30px 0 50px}.portal-hero{background:linear-gradient(135deg,#071d3a,#0d4d9e 62%,#1769df);border-radius:22px;padding:30px 34px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:20px;box-shadow:0 18px 45px rgba(14,55,105,.18);position:relative;overflow:hidden}.portal-hero:after{content:"";position:absolute;width:300px;height:300px;border:55px solid rgba(255,255,255,.06);border-radius:50%;right:-100px;bottom:-150px}.portal-kicker{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.13em;color:#6d9de9}.portal-hero .portal-kicker{color:#bdd7ff}.portal-hero h1{font-size:clamp(28px,4vw,42px);line-height:1.08;letter-spacing:-.04em;margin:7px 0 8px}.portal-hero p{margin:0;color:#dbe9fb;font-size:15px}.account-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:9px 13px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;position:relative;z-index:2}.account-pill span{width:8px;height:8px;border-radius:50%;background:#67e39a}.account-pill.inactive span{background:#f3b642}.payment-cta{margin:18px 0;background:#fff;border:1px solid #dce9f7;border-radius:18px;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 8px 28px rgba(20,40,70,.05)}.payment-cta h2{margin:3px 0 4px;font-size:21px;letter-spacing:-.02em}.payment-cta p{margin:0;color:#718097;font-size:12px}.payment-cta .btn{white-space:nowrap}.payment-btn{padding:9px 12px;background:#eaf8f0;color:#176b3a;border-color:#c7e9d5}.portal-alert{margin:18px 0;padding:14px 17px;background:#fff8e6;border:1px solid #f1dfab;border-left:4px solid #e2a91b;border-radius:12px;display:flex;gap:7px;flex-direction:column}.portal-alert span{font-size:12px;color:#6c7788}.portal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}.portal-stat{background:#fff;border:1px solid #e3eaf3;border-radius:16px;padding:17px;display:flex;align-items:center;gap:13px;box-shadow:0 7px 24px rgba(20,40,70,.045)}.stat-icon,.soft-icon{width:42px;height:42px;border-radius:12px;background:#edf4ff;color:#1769df;display:grid;place-items:center;font-weight:900;flex:0 0 42px}.portal-stat span{display:block;color:#738198;font-size:11px;font-weight:800}.portal-stat strong{display:block;font-size:25px;line-height:1.15;margin:3px 0}.portal-stat small{display:block;color:#99a4b3;font-size:10px}.portal-grid{display:grid;gap:18px}.portal-grid.two-col{grid-template-columns:1fr 1fr}.portal-card{background:#fff;border:1px solid #e2e9f2;border-radius:18px;padding:22px;box-shadow:0 9px 30px rgba(20,40,70,.05);min-width:0}.card-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:18px}.card-heading h2{margin:3px 0 0;font-size:20px;letter-spacing:-.02em}.count-pill,.class-pill{background:#edf4ff;color:#1769df;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900}.profile-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}.profile-list div{padding:12px;border:1px solid #edf0f5;border-radius:12px;background:#fafbfd}.profile-list span{display:block;color:#8793a4;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.profile-list strong{display:block;margin-top:4px;font-size:13px}.break{overflow-wrap:anywhere}.subject-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.subject-card{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid #e8edf4;border-radius:13px;background:#fafbfd}.subject-mark{width:34px;height:34px;border-radius:10px;background:#edf4ff;color:#1769df;display:grid;place-items:center;font-weight:900;font-size:12px}.subject-card strong{display:block;font-size:12px}.subject-card small{display:block;color:#8c98a9;margin-top:2px}.learner-section{margin-top:18px}.learner-list{display:grid;gap:13px}.learner-card{border:1px solid #e2e9f2;border-radius:16px;padding:18px;background:linear-gradient(135deg,#fff,#f9fbfe)}.learner-heading{display:flex;justify-content:space-between;align-items:center;gap:15px}.learner-identity{display:flex;align-items:center;gap:11px}.learner-avatar{width:44px;height:44px;border-radius:13px;background:#eaf2ff;color:#145fc9;display:grid;place-items:center;font-weight:900}.learner-identity h3{margin:0;font-size:17px}.learner-identity p{margin:2px 0 0;color:#8793a4;font-size:11px}.learner-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.metric{padding:12px;border-radius:12px;background:#fff;border:1px solid #e9eef5}.metric span{display:block;color:#8390a2;font-size:10px;font-weight:800}.metric strong{display:block;font-size:20px;margin:3px 0}.metric small{color:#a0aab8;font-size:10px}.metric.fee strong{font-size:17px}.attendance-bar{height:5px;background:#edf1f6;border-radius:99px;overflow:hidden;margin-top:14px}.attendance-bar div{height:100%;background:#2e9d68;border-radius:99px}.results-section{margin-top:18px}.section-note{color:#9aa5b3;font-size:11px}.result-table-wrap{overflow:auto;border:1px solid #e4eaf1;border-radius:13px}.result-table{width:100%;min-width:720px;border-collapse:collapse}.result-table th,.result-table td{padding:13px 14px;text-align:left;border-bottom:1px solid #edf0f5;font-size:12px}.result-table th{background:#f8fafc;color:#77859a;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.result-table tr:last-child td{border-bottom:0}.result-table td strong{display:block}.result-table td small{display:block;color:#9aa5b3;font-size:10px;margin-top:2px}.grade-badge{display:inline-flex;min-width:31px;justify-content:center;padding:5px 8px;border-radius:8px;background:#edf4ff;color:#1769df;font-weight:900;font-size:11px}.grade-e{background:#fff0f0;color:#b4232d}.grade-d{background:#fff6e8;color:#a86b00}.grade-c{background:#fff9e8;color:#9a7200}.grade-b{background:#eef8f1;color:#267347}.grade-a{background:#e8f7ef;color:#167044}.bottom-grid{margin-top:18px}.announcement-list,.event-list{display:grid}.announcement,.event-row{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #edf0f5}.announcement:last-child,.event-row:last-child{border-bottom:0}.announcement-dot{width:8px;height:8px;border-radius:50%;background:#1769df;margin-top:6px;flex:0 0 8px}.announcement-meta{font-size:10px;color:#9aa5b3}.announcement h3,.event-row h3{margin:3px 0;font-size:13px}.announcement p,.event-row p{margin:0;color:#758399;font-size:11px;line-height:1.55}.event-date{width:44px;height:47px;border-radius:11px;background:#edf4ff;color:#1769df;display:grid;place-items:center;align-content:center;flex:0 0 44px}.event-date strong{font-size:16px;line-height:1}.event-date small{font-size:9px;text-transform:uppercase;font-weight:900}.empty-state{border:1px dashed #ccd7e5;border-radius:13px;padding:22px;text-align:center;color:#7c899c;background:#fafbfd;font-size:12px}.empty-state strong,.empty-state span{display:block}.empty-state span{margin-top:4px;font-size:11px}.btn.secondary{background:#edf4ff;color:#145fc9;border-color:#dbe8fb}@media(max-width:1000px){.portal-stats{grid-template-columns:repeat(2,1fr)}.portal-grid.two-col{grid-template-columns:1fr}.learner-metrics{grid-template-columns:repeat(2,1fr)}.payment-cta{align-items:flex-start;flex-direction:column}}@media(max-width:650px){.portal-header{height:auto;padding:12px 5%;align-items:flex-start}.portal-userbar{gap:7px;flex-wrap:wrap;justify-content:flex-end}.portal-user{display:none}.portal-main{width:92%;padding-top:20px}.portal-hero{padding:23px 20px;align-items:flex-start;flex-direction:column}.portal-hero h1{font-size:29px}.portal-stats{grid-template-columns:1fr 1fr;gap:9px}.portal-stat{padding:13px}.portal-stat strong{font-size:21px}.profile-list,.subject-grid,.learner-metrics{grid-template-columns:1fr 1fr}.portal-card{padding:17px}.section-note{display:none}.payment-btn{padding:8px 10px;font-size:11px}}@media(max-width:430px){.portal-stats{grid-template-columns:1fr}.profile-list,.subject-grid,.learner-metrics{grid-template-columns:1fr}.learner-heading{align-items:flex-start;flex-direction:column}.class-pill{align-self:flex-start}.portal-brand strong{font-size:13px}.portal-brand-mark{width:36px;height:36px}.portal-header .btn{padding:9px 12px}}
+.portal-shell{min-height:100vh;background:#f4f7fb;color:#152238}.portal-header{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:15px;padding:13px 4%;background:#fff;border-bottom:1px solid #e3eaf2}.portal-brand{display:flex;align-items:center;gap:10px;text-decoration:none}.portal-brand strong,.portal-brand small{display:block}.portal-brand strong{font-size:14px}.portal-brand small{font-size:10px;color:#8793a4}.brand-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#1769df;color:#fff;font-weight:900}.portal-actions{display:flex;gap:8px;align-items:center}.portal-actions form{margin:0}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid transparent;background:#1769df;color:#fff;text-decoration:none;font-weight:800;font-size:12px;cursor:pointer}.btn.secondary{background:#edf4ff;color:#145fc9;border-color:#dbe8fb}.pay-btn{background:#eaf8f0;color:#176b3a;border-color:#c7e9d5}.portal-main{width:min(1200px,92%);margin:auto;padding:25px 0 50px}.hero{padding:28px;border-radius:20px;background:linear-gradient(135deg,#071d3a,#1769df);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:18px}.kicker{font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;color:#1769df}.hero .kicker{color:#bdd7ff}.hero h1{font-size:clamp(28px,4vw,42px);margin:5px 0}.hero p{margin:0;color:#dbe9fb;font-size:13px}.account{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.12);font-size:11px;font-weight:800;white-space:nowrap}.payment-cta{margin:16px 0;padding:19px 22px;background:#fff;border:1px solid #dce8f4;border-radius:17px;display:flex;align-items:center;justify-content:space-between;gap:18px}.payment-cta h2{margin:3px 0;font-size:20px}.payment-cta p{margin:0;color:#748298;font-size:12px}.payment-cta .btn{white-space:nowrap}.alert{margin:16px 0;padding:13px 16px;background:#fff8e6;border:1px solid #f0dfad;border-radius:12px}.alert strong,.alert span{display:block}.alert span{font-size:11px;color:#727f91}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin:16px 0}.stats article,.card{background:#fff;border:1px solid #e1e8f1;border-radius:16px;padding:19px;box-shadow:0 7px 25px rgba(20,40,70,.04)}.stats span,.stats small,.details span,.metrics span{display:block;color:#8190a4;font-size:10px}.stats strong{display:block;font-size:24px;margin:4px 0}.grid{display:grid;gap:16px;margin-top:16px}.two{grid-template-columns:1fr 1fr}.card h2{margin:4px 0 16px;font-size:20px}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px}.details div{padding:11px;background:#fafbfd;border:1px solid #edf1f5;border-radius:10px}.details strong{display:block;font-size:12px;margin-top:3px;overflow-wrap:anywhere}.subject{padding:12px;margin:8px 0;background:#fafbfd;border:1px solid #e8edf4;border-radius:10px}.subject strong{font-size:12px}.subject small{display:block;color:#8995a7;font-size:10px}.heading{display:flex;justify-content:space-between;gap:15px}.pill{display:inline-block;padding:6px 9px;border-radius:999px;background:#edf4ff;color:#1769df;font-size:10px;font-weight:900;height:max-content}.learners{display:grid;gap:11px}.learners article{border:1px solid #e2e9f2;border-radius:13px;padding:15px;background:#fafbfd}.learner-top{display:flex;justify-content:space-between;gap:10px}.learner-top strong{display:block;font-size:14px}.learner-top small{display:block;color:#8a96a7;font-size:10px;margin-top:2px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px}.metrics div{background:#fff;border:1px solid #e9eef4;border-radius:9px;padding:10px}.metrics strong{display:block;font-size:15px;margin-top:2px}.metrics small{font-size:9px;color:#8995a7}.bar{height:5px;background:#e8edf3;border-radius:99px;margin-top:12px;overflow:hidden}.bar i{display:block;height:100%;background:#2e9d68}.table-wrap{overflow:auto;border:1px solid #e4eaf1;border-radius:11px}.table-wrap table{width:100%;min-width:650px;border-collapse:collapse}.table-wrap th,.table-wrap td{padding:11px 12px;text-align:left;border-bottom:1px solid #edf0f5;font-size:11px}.table-wrap th{background:#f8fafc;color:#77859a;font-size:9px;text-transform:uppercase}.list-row{padding:11px 0;border-bottom:1px solid #edf0f5}.list-row:last-child{border-bottom:0}.list-row strong,.list-row small,.list-row p{display:block}.list-row strong{font-size:12px}.list-row small{font-size:9px;color:#929dad;margin-top:2px}.list-row p{font-size:10px;color:#758399;margin:3px 0 0}.empty{padding:20px;text-align:center;border:1px dashed #ccd7e5;border-radius:11px;color:#7b8799;font-size:11px}.empty strong,.empty span{display:block}@media(max-width:850px){.stats{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.payment-cta,.hero{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.portal-header{align-items:flex-start}.portal-actions{flex-wrap:wrap;justify-content:flex-end}.portal-user{display:none}.stats{grid-template-columns:1fr}.details,.metrics{grid-template-columns:1fr 1fr}.hero,.payment-cta,.card{padding:16px}}
 </style>
 @endsection
