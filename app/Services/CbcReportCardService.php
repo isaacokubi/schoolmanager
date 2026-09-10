@@ -48,7 +48,12 @@ class CbcReportCardService
         $complete = $expectedSubjectIds->isNotEmpty() && $expectedSubjectIds->diff($recordedSubjectIds)->isEmpty();
 
         $present = $results->where('assessment_status', '!=', 'missed')->filter(function ($r) { return $r->marks !== null; });
-        $points = $present->sum('achievement_points');
+        // Achievement points are derived from the same CBC scale used for each row.
+        // The stored result value is not relied on because report cards must remain
+        // consistent even when historical result records predate the points field.
+        $points = $present->sum(function ($result) {
+            return $this->level((float) $result->marks)['points'];
+        });
         $average = $present->count() ? round($present->avg('marks'), 1) : null;
         $attendance = DB::table('attendance')->where('student_id', $studentId)->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
         $parent = $student->parent_id ? DB::table('parents')->find($student->parent_id) : null;
