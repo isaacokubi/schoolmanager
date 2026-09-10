@@ -128,13 +128,18 @@ class CbcReportCardService
             $mime = mime_content_type($absolutePath) ?: null;
         }
         if (!$mime) {
-            $mime = match (strtolower(pathinfo($relativePath, PATHINFO_EXTENSION))) {
-                'jpg', 'jpeg' => 'image/jpeg',
-                'png' => 'image/png',
-                'webp' => 'image/webp',
-                'gif' => 'image/gif',
-                default => 'application/octet-stream',
-            };
+            $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
+            if ($extension === 'jpg' || $extension === 'jpeg') {
+                $mime = 'image/jpeg';
+            } elseif ($extension === 'png') {
+                $mime = 'image/png';
+            } elseif ($extension === 'webp') {
+                $mime = 'image/webp';
+            } elseif ($extension === 'gif') {
+                $mime = 'image/gif';
+            } else {
+                $mime = 'application/octet-stream';
+            }
         }
 
         // DomPDF support for WebP depends on the installed image backend.
@@ -178,25 +183,3 @@ class CbcReportCardService
         if ($existing && $existing->content_hash !== $hash && $existing->parent_signature_path) {
             Storage::disk('public')->delete($existing->parent_signature_path);
         }
-        $payload = ['student_id' => $studentId, 'exam_id' => $examId, 'content_hash' => $hash, 'generated_at' => now(), 'notification_status' => 'pending', 'parent_signature_path' => null, 'parent_signed_by' => null, 'parent_signed_at' => null, 'updated_at' => now()];
-        if ($existing) DB::table('report_cards')->where('id', $existing->id)->update($payload); else DB::table('report_cards')->insert($payload + ['created_at' => now()]);
-
-        $recipients = $this->recipients($report['student']); $sent = 0; $errors = [];
-        foreach ($recipients as $email) {
-            try { Mail::send('emails.cbc_report_card', $report, function ($message) use ($email, $report) { $message->to($email)->subject(config('app.name') . ' CBC Report Card — ' . $report['student']->name . ' — ' . $report['exam']->name); }); $sent++; }
-            catch (\Throwable $e) { $errors[] = $email . ': ' . $e->getMessage(); }
-        }
-
-        DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->update(['notification_status' => $errors ? ($sent ? 'partial' : 'failed') : 'sent', 'notified_at' => $sent ? now() : null, 'notification_error' => $errors ? Str::limit(implode(' | ', $errors), 1000) : null, 'updated_at' => now()]);
-        return ['complete' => true, 'sent' => $sent, 'recipients' => $recipients, 'errors' => $errors];
-    }
-
-    private function recipients($student): array
-    {
-        $emails = [];
-        if ($student->parent_id) { $parentEmail = DB::table('parents')->where('id', $student->parent_id)->value('email'); if ($parentEmail) $emails[] = $parentEmail; }
-        $profileEmails = DB::table('portal_profiles')->join('users', 'users.id', '=', 'portal_profiles.user_id')->where('portal_profiles.admission_number', $student->admission_number)->whereIn('portal_profiles.portal_type', ['pupil', 'parent', 'sponsor'])->where('portal_profiles.active', true)->pluck('users.email')->all();
-        $emails = array_merge($emails, $profileEmails);
-        return array_values(array_unique(array_filter($emails, function ($email) { return filter_var($email, FILTER_VALIDATE_EMAIL); })));
-    }
-}
