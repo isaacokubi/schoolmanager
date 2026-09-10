@@ -90,12 +90,72 @@ class CbcReportCardService
         return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution', 'schoolBadgeData', 'schoolStampData', 'classTeacherSignatureData', 'headSignatureData', 'parentSignatureData', 'parentSignedAt');
     }
 
+    /**
+     * Return a self-contained image data URI for HTML and DomPDF.
+     * Signature files are stored on the public disk, but older records may contain
+     * /storage/ URLs or full public-disk URLs. Normalize all supported forms here.
+     * WebP is converted to PNG when GD supports it because DomPDF installations
+     * commonly have incomplete WebP support even though browsers can display it.
+     */
     private function imageData(?string $path): ?string
     {
-        if (!$path || !Storage::disk('public')->exists($path)) return null;
-        $absolutePath = Storage::disk('public')->path($path);
-        $mime = function_exists('mime_content_type') ? mime_content_type($absolutePath) : 'image/png';
-        return 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($path));
+        if (!$path) return null;
+
+        $disk = Storage::disk('public');
+        $relativePath = trim($path);
+        $parsed = parse_url($relativePath);
+
+        if ($parsed !== false && !empty($parsed['path'])) {
+            $relativePath = $parsed['path'];
+        }
+
+        $relativePath = preg_replace('#^/+#', '', $relativePath);
+        $relativePath = preg_replace('#^storage/#', '', $relativePath);
+        $relativePath = urldecode($relativePath);
+
+        if (!$disk->exists($relativePath)) {
+            return null;
+        }
+
+        $bytes = $disk->get($relativePath);
+        if ($bytes === false || $bytes === '') {
+            return null;
+        }
+
+        $absolutePath = $disk->path($relativePath);
+        $mime = null;
+        if (function_exists('mime_content_type') && is_file($absolutePath)) {
+            $mime = mime_content_type($absolutePath) ?: null;
+        }
+        if (!$mime) {
+            $mime = match (strtolower(pathinfo($relativePath, PATHINFO_EXTENSION))) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                'gif' => 'image/gif',
+                default => 'application/octet-stream',
+            };
+        }
+
+        // DomPDF support for WebP depends on the installed image backend.
+        // Convert it to PNG when possible so both browser printing and PDF output
+        // use a format with consistent support.
+        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp') && function_exists('imagepng')) {
+            $source = @imagecreatefromwebp($absolutePath);
+            if ($source !== false) {
+                ob_start();
+                imagepng($source);
+                $pngBytes = ob_get_clean();
+                imagedestroy($source);
+                if ($pngBytes !== false && $pngBytes !== '') {
+                    $bytes = $pngBytes;
+                    $mime = 'image/png';
+                }
+            }
+        }
+
+        if ($mime === 'application/octet-stream') return null;
+        return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
     public function generateAndNotify(int $studentId, int $examId): array
