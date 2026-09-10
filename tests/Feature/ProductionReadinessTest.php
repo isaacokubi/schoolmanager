@@ -73,7 +73,7 @@ class ProductionReadinessTest extends TestCase
 
     public function test_report_card_cannot_be_viewed_for_an_unlinked_student(): void
     {
-        $parent=DB::table('parents')->insertGetId(['name'=>'Parent One','phone'=>'0712345678','email'=>'parent@example.test','created_at'=>now(),'updated_at'=>now()]);
+        $parent=DB::table('parents')->insertGetId(['name'=>'Other Parent','phone'=>'0712345679','email'=>'other-parent@example.test','created_at'=>now(),'updated_at'=>now()]);
         $user=$this->user('parent','parent@example.test');
         DB::table('portal_profiles')->where('user_id',$user->id)->update(['admission_number'=>'P-001']);
         $student=$this->student('P-002','Other Learner',$parent,1000);
