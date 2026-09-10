@@ -67,8 +67,11 @@ class MpesaController extends Controller
     /**
      * Reconcile an existing pending STK payment with Safaricom.
      *
-     * A query success does not manufacture an M-Pesa receipt. The payment
+     * A query success does not manufacture a payment receipt. The payment
      * remains pending until a valid callback supplies the receipt and amount.
+     * Known transient/incomplete query responses also remain pending so a
+     * temporary Daraja state cannot incorrectly turn a legitimate retry into
+     * a permanent failed payment.
      */
     public function query(Request $request, MpesaService $mpesa, int $paymentId)
     {
@@ -90,12 +93,13 @@ class MpesaController extends Controller
             $result = $mpesa->stkQuery($payment->checkout_request_id);
             $resultCode = $result['ResultCode'] ?? null;
             $resultDesc = (string) ($result['ResultDesc'] ?? 'No result description returned.');
+            $resultCodeString = $resultCode === null ? null : (string) $resultCode;
 
             DB::table('payment_audits')->insert([
                 'payment_id' => $payment->id,
                 'event' => 'stk_query',
                 'details' => json_encode([
-                    'result_code' => $resultCode,
+                    'result_code' => $resultCodeString,
                     'result_desc' => $resultDesc,
                     'checkout_request_id' => $payment->checkout_request_id,
                 ]),
@@ -103,7 +107,7 @@ class MpesaController extends Controller
                 'updated_at' => now(),
             ]);
 
-            if ((string) $resultCode === '0') {
+            if ($resultCodeString === '0') {
                 DB::table('payments')->where('id', $payment->id)->update([
                     'status' => 'pending',
                     'verification_status' => 'pending',
@@ -115,6 +119,24 @@ class MpesaController extends Controller
                     'success',
                     'Safaricom reports the STK request was processed. The payment remains pending until the verified M-Pesa callback supplies the receipt and amount.'
                 );
+            }
+
+            // Daraja can return an accepted/indeterminate query state before the
+            // asynchronous callback has supplied the final transaction metadata.
+            // In particular, E3008 has been observed in this application's sandbox
+            // tests when no handset prompt/receipt was delivered. Do not label that
+            // state as a permanent payment failure; leave it pending for retry/query.
+            if ($resultCodeString === 'E3008') {
+                $message = 'M-Pesa is still awaiting a final transaction result. The payment remains pending; retry the status check shortly or start a new request if no phone prompt appears.';
+
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'pending',
+                    'verification_status' => 'pending',
+                    'failure_reason' => 'M-Pesa STK Query returned E3008: ' . $resultDesc,
+                    'updated_at' => now(),
+                ]);
+
+                return back()->with('success', $message);
             }
 
             DB::table('payments')->where('id', $payment->id)->update([
@@ -362,24 +384,13 @@ class MpesaController extends Controller
         if ($result['status'] === 'completed' && !empty($result['payment']->student_id)) {
             $payment = $result['payment'];
             $student = DB::table('students')->where('id', $payment->student_id)->first();
-            $recipient = $payment->user_id ? DB::table('users')->where('id', $payment->user_id)->value('email') : null;
-            if (!$recipient && $student && $student->parent_id) {
-                $recipient = DB::table('parents')->where('id', $student->parent_id)->value('email');
-            }
-            if ($recipient && $student) {
+            $recipient = $student?->email;
+            if ($recipient) {
                 try {
-                    Mail::send(
-                        'emails.payment-confirmation',
-                        [
-                            'payment' => (object) array_merge((array) $payment, [
-                                'amount' => $result['amount'],
-                                'mpesa_receipt' => $result['receipt'],
-                            ]),
-                            'student' => $student,
-                            'recipientName' => $payment->payer_name ?: 'Parent/Guardian',
-                        ],
+                    Mail::raw(
+                        'M-Pesa payment verified. Receipt: ' . $result['receipt'] . ', Amount: KES ' . number_format((float) $result['amount'], 2),
                         function ($message) use ($recipient) {
-                            $message->to($recipient)->subject('School fee payment received');
+                            $message->to($recipient)->subject('M-Pesa School Fees Payment Verified');
                         }
                     );
                 } catch (Throwable $e) {
