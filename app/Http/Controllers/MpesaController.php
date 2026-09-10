@@ -51,39 +51,124 @@ class MpesaController extends Controller
         $callback = $request->input('Body.stkCallback', []);
         $checkoutId = $callback['CheckoutRequestID'] ?? null;
         $resultCode = $callback['ResultCode'] ?? null;
-        if (!$checkoutId) return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
-
-        $payment = DB::table('payments')->where('checkout_request_id', $checkoutId)->first();
-        if (!$payment) return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
-
-        if ((int) $resultCode !== 0) {
-            DB::table('payments')->where('id', $payment->id)->update(['status' => 'failed', 'updated_at' => now()]);
+        if (!$checkoutId) {
             return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
         }
 
-        $items = collect($callback['CallbackMetadata']['Item'] ?? []);
-        $receipt = optional($items->firstWhere('Name', 'MpesaReceiptNumber'))['Value'] ?? null;
-        $amount = optional($items->firstWhere('Name', 'Amount'))['Value'] ?? $payment->amount;
-        $phone = optional($items->firstWhere('Name', 'PhoneNumber'))['Value'] ?? $payment->parent_phone;
-        $wasCompleted = $payment->status === 'completed';
+        $result = DB::transaction(function () use ($checkoutId, $resultCode, $callback) {
+            $payment = DB::table('payments')->where('checkout_request_id', $checkoutId)->lockForUpdate()->first();
+            if (!$payment) {
+                return ['status' => 'unknown'];
+            }
 
-        DB::transaction(function () use ($payment, $receipt, $amount, $phone, $wasCompleted) {
-            if ($wasCompleted) return;
+            if ($payment->status === 'completed') {
+                return ['status' => 'already_completed'];
+            }
+
+            if ((int) $resultCode !== 0) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'failed',
+                    'updated_at' => now(),
+                ]);
+                DB::table('payment_audits')->insert([
+                    'payment_id' => $payment->id,
+                    'event' => 'callback_failed',
+                    'details' => json_encode(['result_code' => $resultCode]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return ['status' => 'failed'];
+            }
+
+            $items = collect($callback['CallbackMetadata']['Item'] ?? []);
+            $receipt = optional($items->firstWhere('Name', 'MpesaReceiptNumber'))['Value'] ?? null;
+            $amount = optional($items->firstWhere('Name', 'Amount'))['Value'] ?? null;
+            $phone = optional($items->firstWhere('Name', 'PhoneNumber'))['Value'] ?? $payment->parent_phone;
+
+            if (!$receipt || $amount === null) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'failed',
+                    'verification_status' => 'rejected',
+                    'failure_reason' => 'M-Pesa callback did not contain a receipt and amount.',
+                    'updated_at' => now(),
+                ]);
+                DB::table('payment_audits')->insert([
+                    'payment_id' => $payment->id,
+                    'event' => 'callback_rejected',
+                    'details' => json_encode(['reason' => 'missing_receipt_or_amount']),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return ['status' => 'rejected'];
+            }
+
+            if (abs((float) $amount - (float) $payment->amount) > 0.0001) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'failed',
+                    'verification_status' => 'rejected',
+                    'failure_reason' => 'M-Pesa callback amount does not match the requested payment amount.',
+                    'updated_at' => now(),
+                ]);
+                DB::table('payment_audits')->insert([
+                    'payment_id' => $payment->id,
+                    'event' => 'callback_rejected',
+                    'details' => json_encode(['reason' => 'amount_mismatch', 'expected' => (float) $payment->amount, 'received' => (float) $amount]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return ['status' => 'rejected'];
+            }
+
+            $duplicate = DB::table('payments')
+                ->where('mpesa_receipt', $receipt)
+                ->where('id', '<>', $payment->id)
+                ->first();
+            if ($duplicate) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'failed',
+                    'verification_status' => 'rejected',
+                    'failure_reason' => 'The M-Pesa receipt is already associated with another payment.',
+                    'updated_at' => now(),
+                ]);
+                DB::table('payment_audits')->insert([
+                    'payment_id' => $payment->id,
+                    'event' => 'callback_rejected',
+                    'details' => json_encode(['reason' => 'duplicate_receipt', 'receipt' => $receipt]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return ['status' => 'duplicate'];
+            }
+
             DB::table('payments')->where('id', $payment->id)->update([
                 'status' => 'completed',
+                'verification_status' => 'verified',
+                'failure_reason' => null,
                 'mpesa_receipt' => $receipt,
                 'amount' => $amount,
                 'parent_phone' => $phone,
                 'paid_at' => now(),
                 'updated_at' => now(),
             ]);
+
             if ($payment->student_id) {
                 DB::table('students')->where('id', $payment->student_id)->decrement('fee_balance', (float) $amount);
                 DB::table('students')->where('id', $payment->student_id)->where('fee_balance', '<', 0)->update(['fee_balance' => 0]);
             }
+
+            DB::table('payment_audits')->insert([
+                'payment_id' => $payment->id,
+                'event' => 'payment_verified',
+                'details' => json_encode(['receipt' => $receipt, 'amount' => (float) $amount, 'phone' => $phone]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return ['status' => 'completed', 'payment' => $payment, 'amount' => $amount, 'receipt' => $receipt];
         });
 
-        if (!$wasCompleted && $payment->student_id) {
+        if ($result['status'] === 'completed' && !empty($result['payment']->student_id)) {
+            $payment = $result['payment'];
             $student = DB::table('students')->where('id', $payment->student_id)->first();
             $recipient = $payment->user_id
                 ? DB::table('users')->where('id', $payment->user_id)->value('email')
@@ -96,8 +181,8 @@ class MpesaController extends Controller
                 try {
                     Mail::send('emails.payment-confirmation', [
                         'payment' => (object) array_merge((array) $payment, [
-                            'amount' => $amount,
-                            'mpesa_receipt' => $receipt,
+                            'amount' => $result['amount'],
+                            'mpesa_receipt' => $result['receipt'],
                         ]),
                         'student' => $student,
                         'recipientName' => $payment->payer_name ?: 'Parent/Guardian',
