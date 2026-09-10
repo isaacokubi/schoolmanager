@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -20,6 +21,7 @@ class SettingsController extends Controller
         'mission' => 'To provide a safe, inclusive and inspiring learning environment where every learner can develop academically, socially and creatively.',
         'vision' => 'To nurture responsible, confident and capable young people prepared to contribute positively to society.',
         'values' => 'Integrity, respect, excellence, responsibility, teamwork and lifelong learning.',
+        'school_badge' => '',
     ];
 
     public function index()
@@ -42,15 +44,36 @@ class SettingsController extends Controller
             'mission' => 'nullable|string|max:2000',
             'vision' => 'nullable|string|max:2000',
             'values' => 'nullable|string|max:2000',
+            'school_badge' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'remove_school_badge' => 'nullable|boolean',
         ]);
 
-        foreach ($data as $key => $value) {
-            $exists = DB::table('settings')->where('key', $key)->exists();
-            $payload = ['value' => (string) $value, 'updated_at' => now()];
-            if (!$exists) $payload['created_at'] = now();
-            DB::table('settings')->updateOrInsert(['key' => $key], $payload);
+        foreach (['school_name','school_phone','school_email','school_address','academic_year','academic_term','currency','timezone','mission','vision','values'] as $key) {
+            $this->saveSetting($key, (string) ($data[$key] ?? ''));
         }
-        return back()->with('success', 'School settings saved successfully. Public pages now use these values.');
+
+        $currentBadge = DB::table('settings')->where('key', 'school_badge')->value('value');
+        if ($request->boolean('remove_school_badge') && $currentBadge) {
+            Storage::disk('public')->delete($currentBadge);
+            $this->saveSetting('school_badge', '');
+            $currentBadge = '';
+        }
+
+        if ($request->hasFile('school_badge')) {
+            if ($currentBadge) Storage::disk('public')->delete($currentBadge);
+            $path = $request->file('school_badge')->store('school', 'public');
+            $this->saveSetting('school_badge', $path);
+        }
+
+        return back()->with('success', 'School settings and branding saved successfully.');
+    }
+
+    private function saveSetting(string $key, string $value): void
+    {
+        $exists = DB::table('settings')->where('key', $key)->exists();
+        $payload = ['value' => $value, 'updated_at' => now()];
+        if (!$exists) $payload['created_at'] = now();
+        DB::table('settings')->updateOrInsert(['key' => $key], $payload);
     }
 
     private function values()
