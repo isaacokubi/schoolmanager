@@ -94,6 +94,8 @@ class CbcReportCardService
      * Return a self-contained image data URI for HTML and DomPDF.
      * Signature files are stored on the public disk, but older records may contain
      * /storage/ URLs or full public-disk URLs. Normalize all supported forms here.
+     * SVG is explicitly normalized to image/svg+xml because some PHP fileinfo builds
+     * report SVG as image/svg, which DomPDF 1.x does not reliably recognize.
      * WebP is converted to PNG when GD supports it because DomPDF installations
      * commonly have incomplete WebP support even though browsers can display it.
      */
@@ -123,12 +125,18 @@ class CbcReportCardService
         }
 
         $absolutePath = $disk->path($relativePath);
+        $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
         $mime = null;
-        if (function_exists('mime_content_type') && is_file($absolutePath)) {
+
+        if ($extension === 'svg') {
+            // Do not trust fileinfo here: on this server it returns image/svg.
+            // DomPDF's SVG loader expects the standard image/svg+xml MIME type.
+            $mime = 'image/svg+xml';
+        } elseif (function_exists('mime_content_type') && is_file($absolutePath)) {
             $mime = mime_content_type($absolutePath) ?: null;
         }
+
         if (!$mime) {
-            $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
             if ($extension === 'jpg' || $extension === 'jpeg') {
                 $mime = 'image/jpeg';
             } elseif ($extension === 'png') {
@@ -137,6 +145,8 @@ class CbcReportCardService
                 $mime = 'image/webp';
             } elseif ($extension === 'gif') {
                 $mime = 'image/gif';
+            } elseif ($extension === 'svg') {
+                $mime = 'image/svg+xml';
             } else {
                 $mime = 'application/octet-stream';
             }
