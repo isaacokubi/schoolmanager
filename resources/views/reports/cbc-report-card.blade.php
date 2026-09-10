@@ -153,9 +153,18 @@ body{margin:0;background:#eef2f7;color:#172338;font-family:Arial,Helvetica,sans-
 
     <table class="signatures">
         <tr>
-            <td>Class Teacher / Assessor<small>Signature &amp; Date</small></td>
-            <td>Parent / Guardian<small>Signature &amp; Date</small></td>
-            <td>Head of Institution<small>Signature &amp; Official Stamp</small></td>
+            <td>
+                {{ $classTeacher ? $classTeacher->name : 'Class Teacher' }}
+                <small>Class Teacher / Assessor · Signature &amp; Date</small>
+            </td>
+            <td>
+                {{ $parent ? $parent->name : 'Parent / Guardian' }}
+                <small>Parent / Guardian · Signature &amp; Date</small>
+            </td>
+            <td>
+                {{ $headOfInstitution ? $headOfInstitution->name : 'Head of Institution' }}
+                <small>Head of Institution · Signature &amp; Official Stamp</small>
+            </td>
         </tr>
     </table>
 
