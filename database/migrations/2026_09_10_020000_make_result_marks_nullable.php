@@ -21,12 +21,13 @@ return new class extends Migration {
             $marks = collect($columns)->firstWhere('name', 'marks');
             if ($marks && (int) $marks->notnull === 1) {
                 DB::statement('PRAGMA foreign_keys=OFF');
-                DB::statement('CREATE TABLE results_nullable_tmp (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, exam_id INTEGER NOT NULL, student_id INTEGER NOT NULL, subject_id INTEGER NOT NULL, marks DECIMAL(5, 2) NULL, grade VARCHAR(5) NULL, remarks TEXT NULL, created_at DATETIME NULL, updated_at DATETIME NULL, assessment_status VARCHAR(20) NOT NULL DEFAULT \'present\', achievement_level VARCHAR(5) NULL, achievement_points INTEGER NULL)');
+                DB::statement("CREATE TABLE results_nullable_tmp (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE, student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE, subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE, marks DECIMAL(5, 2) NULL, grade VARCHAR(5) NULL, remarks TEXT NULL, created_at DATETIME NULL, updated_at DATETIME NULL, assessment_status VARCHAR(20) NOT NULL DEFAULT 'present', achievement_level VARCHAR(5) NULL, achievement_points INTEGER NULL)");
                 DB::statement('INSERT INTO results_nullable_tmp (id, exam_id, student_id, subject_id, marks, grade, remarks, created_at, updated_at, assessment_status, achievement_level, achievement_points) SELECT id, exam_id, student_id, subject_id, marks, grade, remarks, created_at, updated_at, assessment_status, achievement_level, achievement_points FROM results');
                 DB::statement('DROP TABLE results');
                 DB::statement('ALTER TABLE results_nullable_tmp RENAME TO results');
                 DB::statement('CREATE UNIQUE INDEX results_exam_id_student_id_subject_id_unique ON results (exam_id, student_id, subject_id)');
                 DB::statement('CREATE INDEX results_exam_id_student_id_assessment_status_index ON results (exam_id, student_id, assessment_status)');
+                DB::statement('CREATE INDEX results_exam_id_student_id_index ON results (exam_id, student_id)');
                 DB::statement('PRAGMA foreign_keys=ON');
             }
         }
@@ -34,7 +35,7 @@ return new class extends Migration {
 
     public function down(): void
     {
-        // Existing result data must not be destroyed by rollback; nullability is
-        // intentionally left unchanged because missed assessments are supported.
+        // Nullability is intentionally retained so existing missed assessments
+        // remain valid if migrations are rolled back.
     }
 };
