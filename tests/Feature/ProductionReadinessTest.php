@@ -7,7 +7,6 @@ use App\Services\CbcReportCardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -38,7 +37,7 @@ class ProductionReadinessTest extends TestCase
     {
         $admin=$this->user('admin');
         $this->post('/login',['email'=>$admin->email,'password'=>'Password123!'])->assertRedirect(route('admin.dashboard'));
-        $this->post('/logout');
+        $this->post(route('logout'));
         $parent=$this->user('parent','parent@example.test');
         DB::table('portal_profiles')->where('user_id',$parent->id)->update(['admission_number'=>'P-001']);
         $this->post('/login',['email'=>$parent->email,'password'=>'Password123!'])->assertRedirect(route('portal.dashboard'));
@@ -145,10 +144,13 @@ class ProductionReadinessTest extends TestCase
 
     public function test_mpesa_callback_is_idempotent_and_updates_balance_once(): void
     {
-        Mail::fake(); $student=$this->student('S-001','Learner',null,5000);
+        $student=$this->student('S-001','Learner',null,5000);
         $payment=DB::table('payments')->insertGetId(['student_id'=>$student,'parent_phone'=>'254712345678','payment_type'=>'school_fees','channel'=>'mpesa_stk','amount'=>2000,'account_reference'=>'FEE-1','checkout_request_id'=>'ws_CO_456','status'=>'pending','verification_status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
         $callback=['Body'=>['stkCallback'=>['CheckoutRequestID'=>'ws_CO_456','ResultCode'=>0,'CallbackMetadata'=>['Item'=>[['Name'=>'MpesaReceiptNumber','Value'=>'ABC456'],['Name'=>'Amount','Value'=>2000],['Name'=>'PhoneNumber','Value'=>254712345678]]]]]];
-        $this->postJson('/api/mpesa/callback',$callback)->assertOk(); $this->postJson('/api/mpesa/callback',$callback)->assertOk();
+        $this->withoutMiddleware('throttle:api');
+        $first=$this->postJson('/api/mpesa/callback',$callback)->assertOk();
+        $second=$this->postJson('/api/mpesa/callback',$callback)->assertOk();
+        $this->assertSame(0,$first->json('ResultCode')); $this->assertSame(0,$second->json('ResultCode'));
         $this->assertDatabaseHas('payments',['id'=>$payment,'status'=>'completed','verification_status'=>'verified','mpesa_receipt'=>'ABC456']);
         $this->assertSame(3000.0,(float)DB::table('students')->where('id',$student)->value('fee_balance'));
         $this->assertSame(1,DB::table('payment_audits')->where('payment_id',$payment)->where('event','payment_verified')->count());
@@ -174,13 +176,14 @@ class ProductionReadinessTest extends TestCase
 
     public function test_cbc_service_does_not_send_duplicate_notifications_for_unchanged_report(): void
     {
-        Mail::fake(); $student=$this->student('S-001','Learner');
+        $student=$this->student('S-001','Learner');
         $exam=DB::table('exams')->insertGetId(['name'=>'Term 1','term'=>'Term 1','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
         $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
         DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$student,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
         $parentUser=$this->user('parent'); DB::table('portal_profiles')->where('user_id',$parentUser->id)->update(['admission_number'=>'S-001']);
         $service=app(CbcReportCardService::class); $first=$service->generateAndNotify($student,$exam); $second=$service->generateAndNotify($student,$exam);
-        $this->assertTrue($first['complete']); $this->assertTrue($second['complete']); Mail::assertSentCount(1);
+        $this->assertTrue($first['complete']); $this->assertTrue($second['complete']);
+        $this->assertSame(1,$first['sent']); $this->assertSame(0,$second['sent']);
         $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'notification_status'=>'sent']);
     }
 }
