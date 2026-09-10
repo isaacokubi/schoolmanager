@@ -37,15 +37,13 @@ class AdmissionManagementController extends Controller
 
             if ($data['status'] !== 'approved') return;
 
-            // Approval is idempotent: approving the same application again must not
-            // create a second learner record.
-            $alreadyLinked = DB::table('students')
-                ->where('admission_number', 'ADM-' . date('Y') . '-' . str_pad((string) $record->id, 6, '0', STR_PAD_LEFT))
-                ->exists();
-            if ($alreadyLinked) return;
-
             $base = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $record->student_name), 0, 4)) ?: 'STUD';
             $admission = $base . '-' . date('Y') . '-' . str_pad((string) $record->id, 4, '0', STR_PAD_LEFT);
+
+            // Approval is idempotent: the deterministic admission number is the
+            // link between this application and the learner it created.
+            if (DB::table('students')->where('admission_number', $admission)->exists()) return;
+
             while (DB::table('students')->where('admission_number', $admission)->exists()) {
                 $admission .= 'X';
             }
