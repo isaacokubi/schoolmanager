@@ -72,7 +72,10 @@ class CbcReportCardService
         }
         if (!$classTeacher) $classTeacher = DB::table('teachers')->orderBy('name')->first();
 
-        $headOfInstitution = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('id')->first();
+        $headUserId = DB::table('settings')->where('key', 'head_of_institution_user_id')->value('value');
+        $headOfInstitution = $headUserId ? DB::table('users')->where('id', $headUserId)->whereIn('role', ['admin', 'manager'])->first() : null;
+        if (!$headOfInstitution) $headOfInstitution = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('id')->first();
+
         $schoolBadge = DB::table('settings')->where('key', 'school_badge')->value('value');
         $schoolStamp = DB::table('settings')->where('key', 'school_stamp')->value('value');
         $schoolBadgeData = $this->imageData($schoolBadge);
