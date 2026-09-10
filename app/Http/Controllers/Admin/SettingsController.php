@@ -22,12 +22,15 @@ class SettingsController extends Controller
         'vision' => 'To nurture responsible, confident and capable young people prepared to contribute positively to society.',
         'values' => 'Integrity, respect, excellence, responsibility, teamwork and lifelong learning.',
         'school_badge' => '',
+        'school_stamp' => '',
+        'head_of_institution_user_id' => '',
     ];
 
     public function index()
     {
         $settings = $this->values();
-        return view('admin.settings.index', compact('settings'));
+        $institutionHeads = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('name')->get(['id', 'name', 'email', 'role', 'signature_path']);
+        return view('admin.settings.index', compact('settings', 'institutionHeads'));
     }
 
     public function update(Request $request)
@@ -44,28 +47,38 @@ class SettingsController extends Controller
             'mission' => 'nullable|string|max:2000',
             'vision' => 'nullable|string|max:2000',
             'values' => 'nullable|string|max:2000',
+            'head_of_institution_user_id' => 'nullable|integer|exists:users,id',
             'school_badge' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'school_stamp' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'remove_school_badge' => 'nullable|boolean',
+            'remove_school_stamp' => 'nullable|boolean',
         ]);
 
         foreach (['school_name','school_phone','school_email','school_address','academic_year','academic_term','currency','timezone','mission','vision','values'] as $key) {
             $this->saveSetting($key, (string) ($data[$key] ?? ''));
         }
+        $this->saveSetting('head_of_institution_user_id', (string) ($data['head_of_institution_user_id'] ?? ''));
 
-        $currentBadge = DB::table('settings')->where('key', 'school_badge')->value('value');
-        if ($request->boolean('remove_school_badge') && $currentBadge) {
-            Storage::disk('public')->delete($currentBadge);
-            $this->saveSetting('school_badge', '');
-            $currentBadge = '';
+        $this->processImageSetting($request, 'school_badge', 'remove_school_badge');
+        $this->processImageSetting($request, 'school_stamp', 'remove_school_stamp');
+
+        return back()->with('success', 'School settings, report-card branding and signing configuration saved successfully.');
+    }
+
+    private function processImageSetting(Request $request, string $key, string $removeKey): void
+    {
+        $current = DB::table('settings')->where('key', $key)->value('value');
+        if ($request->boolean($removeKey) && $current) {
+            Storage::disk('public')->delete($current);
+            $this->saveSetting($key, '');
+            $current = '';
         }
 
-        if ($request->hasFile('school_badge')) {
-            if ($currentBadge) Storage::disk('public')->delete($currentBadge);
-            $path = $request->file('school_badge')->store('school', 'public');
-            $this->saveSetting('school_badge', $path);
+        if ($request->hasFile($key)) {
+            if ($current) Storage::disk('public')->delete($current);
+            $path = $request->file($key)->store('school', 'public');
+            $this->saveSetting($key, $path);
         }
-
-        return back()->with('success', 'School settings and branding saved successfully.');
     }
 
     private function saveSetting(string $key, string $value): void
