@@ -18,14 +18,9 @@ class PortalAuthController extends Controller
     public function register(Request $request)
     {
         $portalType = $request->input('portal_type');
-        $emailRules = ['required', 'email', 'max:150'];
-        if ($portalType !== 'teacher') {
-            $emailRules[] = Rule::unique('users', 'email');
-        }
-
         $data = $request->validate([
             'name' => 'required|string|max:120',
-            'email' => $emailRules,
+            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
             'phone' => 'nullable|string|max:30',
             'portal_type' => 'required|in:pupil,parent,sponsor,teacher',
             'admission_number' => 'nullable|string|max:100',
@@ -82,36 +77,31 @@ class PortalAuthController extends Controller
             if ($teacher->email && strcasecmp($teacher->email, $data['email']) !== 0) {
                 return back()->withErrors(['email' => 'The email does not match the teacher record. Please use the school email on file.'])->withInput();
             }
-
-            $existingTeacher = DB::table('users')
-                ->where(function ($query) use ($data) {
-                    $query->where('email', $data['email'])->orWhere('role', 'teacher');
-                })
-                ->first();
-            if ($existingTeacher) {
-                return back()->withErrors(['email' => 'This teacher account is already registered. Please sign in or contact the school administrator.'])->withInput();
-            }
         }
 
-        $userId = DB::table('users')->insertGetId([
-            'name' => $teacher ? $teacher->name : $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role' => $data['portal_type'],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $userId = DB::transaction(function () use ($data, $teacher) {
+            $userId = DB::table('users')->insertGetId([
+                'name' => $teacher ? $teacher->name : $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'role' => $data['portal_type'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        DB::table('portal_profiles')->insert([
-            'user_id' => $userId,
-            'portal_type' => $data['portal_type'],
-            'phone' => $data['phone'] ?? ($teacher->phone ?? null),
-            'relationship' => $data['relationship'] ?? null,
-            'admission_number' => $data['admission_number'] ?? null,
-            'active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            DB::table('portal_profiles')->insert([
+                'user_id' => $userId,
+                'portal_type' => $data['portal_type'],
+                'phone' => $data['phone'] ?? ($teacher->phone ?? null),
+                'relationship' => $data['relationship'] ?? null,
+                'admission_number' => $data['admission_number'] ?? null,
+                'active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return $userId;
+        });
 
         Auth::loginUsingId($userId);
         $request->session()->regenerate();
