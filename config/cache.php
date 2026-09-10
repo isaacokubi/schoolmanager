@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default' => env('CACHE_DRIVER', 'file'),
+    'default' => env('CACHE_DRIVER', env('CACHE_STORE', 'file')),
     'stores' => [
         'apc' => ['driver' => 'apc'],
         'array' => ['driver' => 'array'],
