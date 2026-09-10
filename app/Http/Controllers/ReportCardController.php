@@ -6,6 +6,7 @@ use App\Services\CbcReportCardService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ReportCardController extends Controller
 {
@@ -15,10 +16,12 @@ class ReportCardController extends Controller
         abort_unless($report, 404);
         if (!$this->canAccess($request, $report['student'])) abort(403);
         $this->decorate($report, $service);
+        $canParentSign = $this->canParentSign($request, $report['student']);
         return view('reports.cbc-report-card', $report + [
             'schoolName' => config('app.name'),
             'printMode' => $request->boolean('print'),
             'downloadMode' => false,
+            'canParentSign' => $canParentSign,
         ]);
     }
 
@@ -35,9 +38,51 @@ class ReportCardController extends Controller
             'schoolName' => config('app.name'),
             'printMode' => false,
             'downloadMode' => true,
+            'canParentSign' => false,
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download($filename);
+    }
+
+    public function sign(Request $request, CbcReportCardService $service, int $student, int $exam)
+    {
+        $report = $service->build($student, $exam);
+        abort_unless($report, 404);
+        if (!$this->canParentSign($request, $report['student'])) abort(403);
+
+        $request->validate([
+            'parent_signature' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
+        $this->decorate($report, $service);
+        $hash = $service->currentContentHash($report['results'], $student, $exam);
+        $existing = DB::table('report_cards')->where('student_id', $student)->where('exam_id', $exam)->first();
+
+        if ($existing && $existing->parent_signature_path) {
+            Storage::disk('public')->delete($existing->parent_signature_path);
+        }
+
+        $path = $request->file('parent_signature')->store('signatures/parents/report-cards', 'public');
+        $payload = [
+            'student_id' => $student,
+            'exam_id' => $exam,
+            'content_hash' => $hash,
+            'generated_at' => $existing && $existing->generated_at ? $existing->generated_at : now(),
+            'parent_signature_path' => $path,
+            'parent_signed_by' => $request->user()->id,
+            'parent_signed_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('report_cards')->where('id', $existing->id)->update($payload);
+        } else {
+            $payload['created_at'] = now();
+            $payload['notification_status'] = 'pending';
+            DB::table('report_cards')->insert($payload);
+        }
+
+        return back()->with('success', 'Your signature has been recorded on this CBC report card.');
     }
 
     public function notify(Request $request, CbcReportCardService $service, int $student, int $exam)
@@ -69,5 +114,14 @@ class ReportCardController extends Controller
             return DB::table('parents')->where('id', $student->parent_id)->where('email', $user->email)->exists();
         }
         return false;
+    }
+
+    private function canParentSign(Request $request, $student): bool
+    {
+        $user = $request->user();
+        $profile = DB::table('portal_profiles')->where('user_id', $user->id)->where('portal_type', 'parent')->where('active', true)->first();
+        if (!$profile) return false;
+        if ($student->parent_id && DB::table('parents')->where('id', $student->parent_id)->where('email', $user->email)->exists()) return true;
+        return $profile->admission_number && $profile->admission_number === $student->admission_number;
     }
 }
