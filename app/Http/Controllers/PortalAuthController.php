@@ -34,11 +34,7 @@ class PortalAuthController extends Controller
             'password' => 'required|string|min:8|max:255|confirmed',
         ]);
 
-        if ($data['portal_type'] === 'pupil' && empty($data['admission_number'])) {
-            return back()->withErrors(['admission_number' => 'Pupils must provide their admission number.'])->withInput();
-        }
-
-        if (in_array($data['portal_type'], ['parent', 'sponsor'], true) && empty($data['admission_number'])) {
+        if (in_array($data['portal_type'], ['pupil', 'parent', 'sponsor'], true) && empty($data['admission_number'])) {
             return back()->withErrors(['admission_number' => 'Please provide the pupil admission number linked to this account.'])->withInput();
         }
 
@@ -46,8 +42,35 @@ class PortalAuthController extends Controller
             return back()->withErrors(['employee_number' => 'Teachers must provide their employee number.'])->withInput();
         }
 
-        if (!empty($data['admission_number']) && !DB::table('students')->where('admission_number', $data['admission_number'])->exists()) {
-            return back()->withErrors(['admission_number' => 'The admission number could not be found. Please contact the school.'])->withInput();
+        $student = null;
+        if (!empty($data['admission_number'])) {
+            $student = DB::table('students')->where('admission_number', $data['admission_number'])->first();
+            if (!$student) {
+                return back()->withErrors(['admission_number' => 'The admission number could not be found. Please contact the school.'])->withInput();
+            }
+        }
+
+        if ($data['portal_type'] === 'pupil') {
+            if (!$student || strcasecmp(trim($student->name), trim($data['name'])) !== 0) {
+                return back()->withErrors(['name' => 'The name does not match the learner record. Please contact the school if your details need updating.'])->withInput();
+            }
+        }
+
+        if (in_array($data['portal_type'], ['parent', 'sponsor'], true)) {
+            $submittedPhone = preg_replace('/\D+/', '', (string) ($data['phone'] ?? ''));
+            $studentPhone = preg_replace('/\D+/', '', (string) ($student->parent_phone ?? ''));
+            $parentMatches = false;
+
+            if ($student && $student->parent_id) {
+                $parent = DB::table('parents')->where('id', $student->parent_id)->first();
+                $parentEmailMatches = $parent && $parent->email && strcasecmp($parent->email, $data['email']) === 0;
+                $parentPhoneMatches = $parent && $submittedPhone !== '' && preg_replace('/\D+/', '', (string) $parent->phone) === $submittedPhone;
+                $parentMatches = $parentEmailMatches || $parentPhoneMatches;
+            }
+
+            if (!$parentMatches && ($submittedPhone === '' || $studentPhone === '' || $submittedPhone !== $studentPhone)) {
+                return back()->withErrors(['admission_number' => 'We could not verify your relationship to this learner. Use the parent/guardian phone or email already held by the school.'])->withInput();
+            }
         }
 
         $teacher = null;
@@ -59,25 +82,19 @@ class PortalAuthController extends Controller
             if ($teacher->email && strcasecmp($teacher->email, $data['email']) !== 0) {
                 return back()->withErrors(['email' => 'The email does not match the teacher record. Please use the school email on file.'])->withInput();
             }
-            if (DB::table('users')->where('email', $data['email'])->where('role', 'teacher')->exists()) {
-                $userId = DB::table('users')->where('email', $data['email'])->where('role', 'teacher')->value('id');
-                DB::table('users')->where('id', $userId)->update([
-                    'name' => $teacher->name,
-                    'password' => Hash::make($data['password']),
-                    'updated_at' => now(),
-                ]);
-                DB::table('portal_profiles')->updateOrInsert(
-                    ['user_id' => $userId],
-                    ['portal_type' => 'teacher', 'phone' => $data['phone'] ?: $teacher->phone, 'relationship' => null, 'admission_number' => null, 'active' => true, 'created_at' => now(), 'updated_at' => now()]
-                );
-                Auth::loginUsingId($userId);
-                $request->session()->regenerate();
-                return redirect()->route('portal.dashboard');
+
+            $existingTeacher = DB::table('users')
+                ->where(function ($query) use ($data) {
+                    $query->where('email', $data['email'])->orWhere('role', 'teacher');
+                })
+                ->first();
+            if ($existingTeacher) {
+                return back()->withErrors(['email' => 'This teacher account is already registered. Please sign in or contact the school administrator.'])->withInput();
             }
         }
 
         $userId = DB::table('users')->insertGetId([
-            'name' => $data['name'],
+            'name' => $teacher ? $teacher->name : $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'role' => $data['portal_type'],
@@ -88,7 +105,7 @@ class PortalAuthController extends Controller
         DB::table('portal_profiles')->insert([
             'user_id' => $userId,
             'portal_type' => $data['portal_type'],
-            'phone' => $data['phone'] ?? null,
+            'phone' => $data['phone'] ?? ($teacher->phone ?? null),
             'relationship' => $data['relationship'] ?? null,
             'admission_number' => $data['admission_number'] ?? null,
             'active' => true,
