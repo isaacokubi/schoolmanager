@@ -18,11 +18,16 @@ class MpesaController extends Controller
             'amount' => ['required', 'integer', 'min:1', 'max:1500000'],
         ]);
 
+        $student = DB::table('students')->where('id', $data['student_id'])->first();
+        if (!$student || (int) $data['amount'] > max(0, (int) floor((float) $student->fee_balance))) {
+            return back()->withErrors(['amount' => 'The payment amount cannot exceed the learner\'s outstanding whole-KES fee balance.']);
+        }
+
         $phone = preg_replace('/^\+/', '', trim($data['parent_phone']));
         if (preg_match('/^07\d{8}$/', $phone)) $phone = '254' . substr($phone, 1);
         elseif (preg_match('/^7\d{8}$/', $phone)) $phone = '254' . $phone;
 
-        $reference = 'STU' . $data['student_id'] . '-' . now()->format('ymdHis');
+        $reference = 'STU' . $data['student_id'] . '-' . now()->format('ymdHis') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
         $paymentId = DB::table('payments')->insertGetId([
             'student_id' => $data['student_id'],
             'user_id' => auth()->id(),
