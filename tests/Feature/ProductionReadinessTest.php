@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\CbcReportCardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductionReadinessTest extends TestCase
@@ -186,5 +188,31 @@ class ProductionReadinessTest extends TestCase
         $this->assertTrue($first['complete']); $this->assertTrue($second['complete']);
         $this->assertSame(1,$first['sent']); $this->assertSame(0,$second['sent']);
         $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'notification_status'=>'sent']);
+    }
+
+    public function test_teacher_can_upload_signature_for_report_cards(): void
+    {
+        Storage::fake('public');
+        $teacher=$this->user('teacher','teacher@example.test');
+        DB::table('teachers')->insert(['name'=>$teacher->name,'email'=>$teacher->email,'employee_number'=>'T-001','created_at'=>now(),'updated_at'=>now()]);
+        $this->actingAs($teacher)->put(route('portal.signature.update'),['signature'=>UploadedFile::fake()->image('teacher-signature.png')])->assertSessionHas('success');
+        $path=DB::table('teachers')->where('email',$teacher->email)->value('signature_path');
+        $this->assertNotNull($path); Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_parent_can_sign_only_their_linked_report_card(): void
+    {
+        Storage::fake('public');
+        $parent=DB::table('parents')->insertGetId(['name'=>'Parent One','phone'=>'0712345678','email'=>'parent@example.test','created_at'=>now(),'updated_at'=>now()]);
+        $parentUser=$this->user('parent','parent@example.test');
+        DB::table('portal_profiles')->where('user_id',$parentUser->id)->update(['admission_number'=>'S-001']);
+        $student=$this->student('S-001','Learner',$parent);
+        $otherStudent=$this->student('S-002','Other Learner',null);
+        $exam=DB::table('exams')->insertGetId(['name'=>'Term 2','term'=>'Term 2','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
+        $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
+        foreach ([$student,$otherStudent] as $id) DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$id,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
+        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$otherStudent,$exam]),['parent_signature'=>UploadedFile::fake()->image('signature.png')])->assertForbidden();
+        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$student,$exam]),['parent_signature'=>UploadedFile::fake()->image('signature.png')])->assertSessionHas('success');
+        $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'parent_signed_by'=>$parentUser->id]);
     }
 }
