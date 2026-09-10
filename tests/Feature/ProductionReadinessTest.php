@@ -190,12 +190,18 @@ class ProductionReadinessTest extends TestCase
         $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'notification_status'=>'sent']);
     }
 
+    private function validPngUpload(string $name): UploadedFile
+    {
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+        return UploadedFile::fake()->createWithContent($name, $png);
+    }
+
     public function test_teacher_can_upload_signature_for_report_cards(): void
     {
         Storage::fake('public');
         $teacher=$this->user('teacher','teacher@example.test');
         DB::table('teachers')->insert(['name'=>$teacher->name,'email'=>$teacher->email,'employee_number'=>'T-001','created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($teacher)->put(route('portal.signature.update'),['signature'=>UploadedFile::fake()->image('teacher-signature.png')])->assertSessionHas('success');
+        $this->actingAs($teacher)->put(route('portal.signature.update'),['signature'=>$this->validPngUpload('teacher-signature.png')])->assertSessionHas('success');
         $path=DB::table('teachers')->where('email',$teacher->email)->value('signature_path');
         $this->assertNotNull($path); Storage::disk('public')->assertExists($path);
     }
@@ -211,8 +217,8 @@ class ProductionReadinessTest extends TestCase
         $exam=DB::table('exams')->insertGetId(['name'=>'Term 2','term'=>'Term 2','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
         $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
         foreach ([$student,$otherStudent] as $id) DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$id,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$otherStudent,$exam]),['parent_signature'=>UploadedFile::fake()->image('signature.png')])->assertForbidden();
-        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$student,$exam]),['parent_signature'=>UploadedFile::fake()->image('signature.png')])->assertSessionHas('success');
+        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$otherStudent,$exam]),['parent_signature'=>$this->validPngUpload('signature.png')])->assertForbidden();
+        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$student,$exam]),['parent_signature'=>$this->validPngUpload('signature.png')])->assertSessionHas('success');
         $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'parent_signed_by'=>$parentUser->id]);
     }
 }
