@@ -63,14 +63,25 @@ class CbcReportCardService
 
         $headOfInstitution = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('id')->first();
         $schoolBadge = DB::table('settings')->where('key', 'school_badge')->value('value');
-        $schoolBadgeData = null;
-        if ($schoolBadge && Storage::disk('public')->exists($schoolBadge)) {
-            $path = Storage::disk('public')->path($schoolBadge);
-            $mime = function_exists('mime_content_type') ? mime_content_type($path) : 'image/png';
-            $schoolBadgeData = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($schoolBadge));
-        }
+        $schoolStamp = DB::table('settings')->where('key', 'school_stamp')->value('value');
+        $schoolBadgeData = $this->imageData($schoolBadge);
+        $schoolStampData = $this->imageData($schoolStamp);
+        $classTeacherSignatureData = $this->imageData($classTeacher ? $classTeacher->signature_path : null);
+        $headSignatureData = $this->imageData($headOfInstitution ? $headOfInstitution->signature_path : null);
 
-        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution', 'schoolBadgeData');
+        $reportCard = DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->first();
+        $parentSignatureData = $this->imageData($reportCard ? $reportCard->parent_signature_path : null);
+        $parentSignedAt = $reportCard ? $reportCard->parent_signed_at : null;
+
+        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution', 'schoolBadgeData', 'schoolStampData', 'classTeacherSignatureData', 'headSignatureData', 'parentSignatureData', 'parentSignedAt');
+    }
+
+    private function imageData(?string $path): ?string
+    {
+        if (!$path || !Storage::disk('public')->exists($path)) return null;
+        $absolutePath = Storage::disk('public')->path($path);
+        $mime = function_exists('mime_content_type') ? mime_content_type($absolutePath) : 'image/png';
+        return 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($path));
     }
 
     public function generateAndNotify(int $studentId, int $examId): array
