@@ -1,6 +1,7 @@
 FROM php:7.4-apache
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
+    PORT=80
 
 RUN a2enmod rewrite \
     && sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
@@ -9,10 +10,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-COPY composer.json ./
+COPY composer.json composer.lock ./
 COPY . .
 
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
+RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rwX storage bootstrap/cache
