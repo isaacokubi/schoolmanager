@@ -64,8 +64,9 @@ class StudentController extends Controller
         abort_unless($studentRecord, 404);
         $data = $this->validated($request, $student);
         $this->syncLegacyClassName($data);
+        unset($data['fee_balance']);
         DB::table('students')->where('id', $student)->update($data + ['updated_at' => now()]);
-        return redirect()->route('admin.students.index')->with('success', 'Student updated successfully.');
+        return redirect()->route('admin.students.index')->with('success', 'Student updated successfully. Fee balances can only change through recorded fee transactions.');
     }
 
     public function destroy($student)
