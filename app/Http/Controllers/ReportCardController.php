@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\CbcReportCardService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +18,7 @@ class ReportCardController extends Controller
         return view('reports.cbc-report-card', $report + [
             'schoolName' => config('app.name'),
             'printMode' => $request->boolean('print'),
+            'downloadMode' => false,
         ]);
     }
 
@@ -26,17 +28,16 @@ class ReportCardController extends Controller
         abort_unless($report, 404);
         if (!$this->canAccess($request, $report['student'])) abort(403);
         $this->decorate($report, $service);
-        $html = view('reports.cbc-report-card', $report + [
+
+        $filename = 'CBC-Report-Card-' . preg_replace('/[^A-Za-z0-9_-]+/', '-', $report['student']->name) . '-' . $report['exam']->academic_year . '.pdf';
+
+        $pdf = Pdf::loadView('reports.cbc-report-card', $report + [
             'schoolName' => config('app.name'),
             'printMode' => false,
             'downloadMode' => true,
-        ])->render();
-        $filename = 'CBC-Report-Card-' . preg_replace('/[^A-Za-z0-9_-]+/', '-', $report['student']->name) . '-' . $report['exam']->academic_year . '.html';
-        return response($html, 200, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
     }
 
     public function notify(Request $request, CbcReportCardService $service, int $student, int $exam)
