@@ -20,7 +20,7 @@
 <select name="head_of_institution_user_id">
 <option value="">Select the official Head of Institution</option>
 @foreach($institutionHeads as $head)
-<option value="{{ $head->id }}" @selected((string)old('head_of_institution_user_id',$settings['head_of_institution_user_id']) === (string)$head->id)>{{ $head->name }} — {{ ucfirst($head->role) }} ({{ $head->email }}){{ $head->signature_path ? ' — signature uploaded' : ' — signature not uploaded' }}</option>
+<option value="{{ $head->id }}" {{ (string)old('head_of_institution_user_id',$settings['head_of_institution_user_id']) === (string)$head->id ? 'selected' : '' }}>{{ $head->name }} — {{ ucfirst($head->role) }} ({{ $head->email }}){{ $head->signature_path ? ' — signature uploaded' : ' — signature not uploaded' }}</option>
 @endforeach
 </select>
 <small>The selected admin/manager is the person whose system name and uploaded signature will appear as Head of Institution.</small></div>
