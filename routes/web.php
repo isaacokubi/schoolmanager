@@ -17,6 +17,7 @@ use App\Http\Controllers\PortalPaymentController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\TeacherAssessmentController;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
@@ -72,6 +73,8 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::get('/signature', [SignatureController::class, 'show'])->middleware('portal.role:teacher')->name('portal.signature.index');
     Route::put('/signature', [SignatureController::class, 'update'])->middleware('portal.role:teacher')->name('portal.signature.update');
     Route::delete('/signature', [SignatureController::class, 'remove'])->middleware('portal.role:teacher')->name('portal.signature.remove');
+    Route::get('/teacher/assessments', [TeacherAssessmentController::class, 'index'])->middleware('portal.role:teacher')->name('portal.teacher-assessments');
+    Route::post('/teacher/assessments', [TeacherAssessmentController::class, 'store'])->middleware('portal.role:teacher')->name('portal.teacher-assessments.store');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
     Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
