@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\CbcReportCardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -147,7 +148,7 @@ class ProductionReadinessTest extends TestCase
         $student=$this->student('S-001','Learner',null,5000);
         $payment=DB::table('payments')->insertGetId(['student_id'=>$student,'parent_phone'=>'254712345678','payment_type'=>'school_fees','channel'=>'mpesa_stk','amount'=>2000,'account_reference'=>'FEE-1','checkout_request_id'=>'ws_CO_456','status'=>'pending','verification_status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
         $callback=['Body'=>['stkCallback'=>['CheckoutRequestID'=>'ws_CO_456','ResultCode'=>0,'CallbackMetadata'=>['Item'=>[['Name'=>'MpesaReceiptNumber','Value'=>'ABC456'],['Name'=>'Amount','Value'=>2000],['Name'=>'PhoneNumber','Value'=>254712345678]]]]]];
-        $this->withoutMiddleware('throttle:api');
+        $this->withoutMiddleware(ThrottleRequests::class);
         $first=$this->postJson('/api/mpesa/callback',$callback)->assertOk();
         $second=$this->postJson('/api/mpesa/callback',$callback)->assertOk();
         $this->assertSame(0,$first->json('ResultCode')); $this->assertSame(0,$second->json('ResultCode'));
