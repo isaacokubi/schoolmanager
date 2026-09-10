@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PaymentController extends Controller
 {
@@ -53,20 +54,21 @@ class PaymentController extends Controller
         $data['paid_at']=($data['status']==='completed')?now():null;
 
         DB::transaction(function() use ($data){
+            if (!empty($data['student_id']) && $data['status']==='completed') {
+                $student = DB::table('students')->where('id',$data['student_id'])->lockForUpdate()->first();
+                if (!$student || (int)$data['amount'] > max(0,(int)floor((float)$student->fee_balance))) {
+                    throw ValidationException::withMessages(['amount'=>'The payment amount cannot exceed the learner\'s outstanding whole-KES fee balance.']);
+                }
+            }
+
             $paymentId = DB::table('payments')->insertGetId($data+['created_at'=>now(),'updated_at'=>now()]);
             if (!empty($data['student_id']) && $data['status']==='completed') {
                 DB::table('students')->where('id',$data['student_id'])->decrement('fee_balance',(int)$data['amount']);
-                DB::table('students')->where('id',$data['student_id'])->where('fee_balance','<',0)->update(['fee_balance'=>0]);
             }
             DB::table('payment_audits')->insert([
                 'payment_id'=>$paymentId,
                 'event'=>$data['status']==='completed'?'manual_payment_verified':'manual_payment_recorded',
-                'details'=>json_encode([
-                    'amount'=>(int)$data['amount'],
-                    'student_id'=>$data['student_id'] ?? null,
-                    'status'=>$data['status'],
-                    'account_reference'=>$data['account_reference'] ?? null,
-                ]),
+                'details'=>json_encode(['amount'=>(int)$data['amount'],'student_id'=>$data['student_id'] ?? null,'status'=>$data['status'],'account_reference'=>$data['account_reference'] ?? null]),
                 'created_at'=>now(),
                 'updated_at'=>now(),
             ]);
