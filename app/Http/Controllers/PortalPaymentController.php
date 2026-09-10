@@ -28,14 +28,28 @@ class PortalPaymentController extends Controller
         $student=$this->accessibleStudents($user)->firstWhere('id',(int)$data['student_id']);
         if(!$student) abort(403,'You are not authorised to pay fees for this learner.');
         $balance=(float)$student->fee_balance;
-        $amount=min((int)$data['amount'],max(0,(int)floor($balance)));
+        $amount=(int)$data['amount'];
+        if($amount>max(0,(int)floor($balance))) return back()->withErrors(['amount'=>'The payment amount cannot exceed the learner\'s outstanding whole-KES fee balance.']);
         if($amount<=0) return back()->withErrors(['amount'=>'This learner has no whole-KES outstanding fee balance.']);
 
         $phone=preg_replace('/^\+/','',trim($data['phone']));
         if(preg_match('/^07\d{8}$/',$phone)) $phone='254'.substr($phone,1);
         elseif(preg_match('/^7\d{8}$/',$phone)) $phone='254'.$phone;
 
-        $reference='FEE'.$student->id.'-'.now()->format('ymdHis');
+        // Prevent repeated STK prompts when the same payment is already in progress.
+        $existing=DB::table('payments')
+            ->where('student_id',$student->id)
+            ->where('user_id',$user->id)
+            ->where('parent_phone',$phone)
+            ->where('amount',$amount)
+            ->where('channel','mpesa_stk')
+            ->where('status','pending')
+            ->where('created_at','>=',now()->subMinutes(5))
+            ->latest('id')
+            ->first();
+        if($existing) return back()->with('success','An M-Pesa payment request for this learner and amount is already in progress. Check the phone for the STK prompt and do not submit another request.');
+
+        $reference='FEE'.$student->id.'-'.now()->format('ymdHis').'-'.strtoupper(substr(bin2hex(random_bytes(3)),0,6));
         $paymentId=DB::table('payments')->insertGetId([
             'student_id'=>$student->id,'user_id'=>$user->id,'payer_role'=>$user->role,'payer_name'=>$user->name,
             'parent_phone'=>$phone,'payment_type'=>'school_fees','channel'=>'mpesa_stk','amount'=>$amount,
@@ -46,9 +60,10 @@ class PortalPaymentController extends Controller
             DB::table('payments')->where('id',$paymentId)->update(['checkout_request_id'=>$response['CheckoutRequestID']??null,'merchant_request_id'=>$response['MerchantRequestID']??null,'updated_at'=>now()]);
             return back()->with('success','M-Pesa prompt sent. Enter your M-Pesa PIN on the phone to complete the payment.');
         } catch(Throwable $e) {
-            DB::table('payments')->where('id',$paymentId)->update(['status'=>'failed','verification_status'=>'rejected','failure_reason'=>'M-Pesa request could not be started.','updated_at'=>now()]);
+            $message=$e->getMessage();
+            DB::table('payments')->where('id',$paymentId)->update(['status'=>'failed','verification_status'=>'rejected','failure_reason'=>$message,'updated_at'=>now()]);
             report($e);
-            return back()->withErrors(['mpesa'=>'The M-Pesa request could not be started. Check the M-Pesa configuration and try again.']);
+            return back()->withErrors(['mpesa'=>$message ?: 'The M-Pesa request could not be started.']);
         }
     }
 
