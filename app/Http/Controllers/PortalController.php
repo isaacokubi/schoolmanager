@@ -2,143 +2,77 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CbcReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PortalController extends Controller
 {
-    public function dashboard(Request $request)
+    public function dashboard(Request $request, CbcReportCardService $cbc)
     {
         $user = $request->user();
         $profile = DB::table('portal_profiles')->where('user_id', $user->id)->first();
 
-        $students = collect();
-        $studentMetrics = [];
-        $teacher = null;
-        $subjects = collect();
+        $students = collect(); $studentMetrics = []; $teacher = null; $subjects = collect();
         $attendanceSummary = ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0];
-        $recentResults = collect();
-        $announcements = collect();
-        $upcomingEvents = collect();
-        $dashboardStats = [];
+        $recentResults = collect(); $announcements = collect(); $upcomingEvents = collect(); $dashboardStats = [];
 
         if ($profile && $profile->portal_type === 'teacher') {
             $teacher = DB::table('teachers')->where('email', $user->email)->first();
-
             if ($teacher) {
                 $subjects = DB::table('subjects')->where('teacher_id', $teacher->id)->orderBy('name')->get();
                 $subjectIds = $subjects->pluck('id');
                 $teacherStudentCount = $subjectIds->isEmpty() ? 0 : DB::table('results')->whereIn('subject_id', $subjectIds)->distinct()->count('student_id');
                 $resultCount = $subjectIds->isEmpty() ? 0 : DB::table('results')->whereIn('subject_id', $subjectIds)->count();
-
                 $recentResults = $subjectIds->isEmpty() ? collect() : DB::table('results')
-                    ->join('students', 'students.id', '=', 'results.student_id')
-                    ->join('subjects', 'subjects.id', '=', 'results.subject_id')
-                    ->join('exams', 'exams.id', '=', 'results.exam_id')
-                    ->whereIn('results.subject_id', $subjectIds)
-                    ->orderByDesc('results.created_at')
-                    ->select('results.*', 'students.name as student_name', 'students.admission_number', 'subjects.name as subject_name', 'exams.name as exam_name')
-                    ->limit(8)->get();
-
+                    ->join('students','students.id','=','results.student_id')->join('subjects','subjects.id','=','results.subject_id')->join('exams','exams.id','=','results.exam_id')
+                    ->whereIn('results.subject_id',$subjectIds)->orderByDesc('results.created_at')
+                    ->select('results.*','students.name as student_name','students.admission_number','subjects.name as subject_name','exams.name as exam_name')->limit(8)->get();
+                foreach ($recentResults as $result) {
+                    $level = $cbc->level($result->marks === null ? null : (float) $result->marks);
+                    $result->cbc_code = $result->assessment_status === 'missed' ? 'MISSED' : $level['code'];
+                    $result->cbc_label = $result->assessment_status === 'missed' ? 'Missed Assessment' : $level['label'];
+                    $result->cbc_points = $result->assessment_status === 'missed' ? null : $level['points'];
+                    $result->cbc_remark = $cbc->remark($result->marks === null ? null : (float)$result->marks, $result->assessment_status);
+                }
                 $dashboardStats = [
-                    ['label' => 'Assigned subjects', 'value' => $subjects->count(), 'meta' => 'Current teaching allocation'],
-                    ['label' => 'Learners assessed', 'value' => $teacherStudentCount, 'meta' => 'Learners with recorded results'],
-                    ['label' => 'Results recorded', 'value' => $resultCount, 'meta' => 'Across your subjects'],
-                    ['label' => 'School learners', 'value' => DB::table('students')->count(), 'meta' => 'Current learner population'],
+                    ['label'=>'Learning areas','value'=>$subjects->count(),'meta'=>'Current teaching allocation'],
+                    ['label'=>'Learners assessed','value'=>$teacherStudentCount,'meta'=>'Learners with recorded assessments'],
+                    ['label'=>'CBC records','value'=>$resultCount,'meta'=>'Results recorded across your learning areas'],
+                    ['label'=>'School learners','value'=>DB::table('students')->count(),'meta'=>'Current learner population'],
                 ];
             }
         } elseif ($profile && $profile->portal_type === 'parent') {
-            $parentId = DB::table('parents')->where('email', $user->email)->value('id');
-            $students = $parentId
-                ? DB::table('students')->where('parent_id', $parentId)->orderBy('name')->get()
-                : ($profile->admission_number ? DB::table('students')->where('admission_number', $profile->admission_number)->get() : collect());
+            $parentId = DB::table('parents')->where('email',$user->email)->value('id');
+            $students = $parentId ? DB::table('students')->where('parent_id',$parentId)->orderBy('name')->get() : ($profile->admission_number ? DB::table('students')->where('admission_number',$profile->admission_number)->get() : collect());
         } elseif ($profile && $profile->admission_number) {
-            $students = DB::table('students')->where('admission_number', $profile->admission_number)->get();
+            $students = DB::table('students')->where('admission_number',$profile->admission_number)->get();
         }
 
         $studentIds = $students->pluck('id');
-
         if ($studentIds->isNotEmpty()) {
-            $attendanceRows = DB::table('attendance')
-                ->whereIn('student_id', $studentIds)
-                ->select('student_id', 'status', DB::raw('COUNT(*) as total'))
-                ->groupBy('student_id', 'status')->get();
-
-            foreach ($attendanceRows as $row) {
-                $studentMetrics[$row->student_id]['attendance'][$row->status] = (int) $row->total;
-                $attendanceSummary[$row->status] = ($attendanceSummary[$row->status] ?? 0) + (int) $row->total;
-            }
-
-            $resultMetrics = DB::table('results')
-                ->whereIn('student_id', $studentIds)
-                ->select('student_id', DB::raw('COUNT(*) as total_results'), DB::raw('AVG(marks) as average_marks'))
-                ->groupBy('student_id')->get()->keyBy('student_id');
-
+            $attendanceRows = DB::table('attendance')->whereIn('student_id',$studentIds)->select('student_id','status',DB::raw('COUNT(*) as total'))->groupBy('student_id','status')->get();
+            foreach ($attendanceRows as $row) { $studentMetrics[$row->student_id]['attendance'][$row->status]=(int)$row->total; $attendanceSummary[$row->status]=($attendanceSummary[$row->status]??0)+(int)$row->total; }
+            $resultMetrics = DB::table('results')->whereIn('student_id',$studentIds)->select('student_id',DB::raw('COUNT(*) as total_results'),DB::raw('AVG(marks) as average_marks'))->groupBy('student_id')->get()->keyBy('student_id');
             foreach ($students as $student) {
-                $attendance = $studentMetrics[$student->id]['attendance'] ?? [];
-                $resultMetric = $resultMetrics->get($student->id);
-                $studentMetrics[$student->id] = [
-                    'attendance' => [
-                        'present' => (int) ($attendance['present'] ?? 0),
-                        'absent' => (int) ($attendance['absent'] ?? 0),
-                        'late' => (int) ($attendance['late'] ?? 0),
-                        'excused' => (int) ($attendance['excused'] ?? 0),
-                    ],
-                    'results' => (int) ($resultMetric->total_results ?? 0),
-                    'average_marks' => $resultMetric ? round((float) $resultMetric->average_marks, 1) : null,
-                ];
+                $attendance=$studentMetrics[$student->id]['attendance']??[]; $metric=$resultMetrics->get($student->id);
+                $studentMetrics[$student->id]=['attendance'=>['present'=>(int)($attendance['present']??0),'absent'=>(int)($attendance['absent']??0),'late'=>(int)($attendance['late']??0),'excused'=>(int)($attendance['excused']??0)],'results'=>(int)($metric->total_results??0),'average_marks'=>$metric?round((float)$metric->average_marks,1):null];
             }
-
-            $recentResults = DB::table('results')
-                ->join('students', 'students.id', '=', 'results.student_id')
-                ->join('subjects', 'subjects.id', '=', 'results.subject_id')
-                ->join('exams', 'exams.id', '=', 'results.exam_id')
-                ->whereIn('results.student_id', $studentIds)
-                ->orderByDesc('results.created_at')
-                ->select('results.*', 'students.name as student_name', 'students.admission_number', 'subjects.name as subject_name', 'exams.name as exam_name')
-                ->limit(10)->get();
-
-            $resultCount = (int) DB::table('results')->whereIn('student_id', $studentIds)->count();
-            $attendanceTotal = array_sum($attendanceSummary);
-            $attendanceRate = $attendanceTotal > 0 ? round(($attendanceSummary['present'] / $attendanceTotal) * 100) : 0;
-
-            $dashboardStats = [
-                ['label' => 'Linked learners', 'value' => $students->count(), 'meta' => 'Learners connected to this account'],
-                ['label' => 'Attendance records', 'value' => $attendanceTotal, 'meta' => 'Recorded attendance'],
-                ['label' => 'Attendance rate', 'value' => $attendanceRate . '%', 'meta' => 'Present attendance'],
-                ['label' => 'Results available', 'value' => $resultCount, 'meta' => 'All recorded results'],
-            ];
-        } elseif ($profile && in_array($profile->portal_type, ['pupil', 'parent', 'sponsor'], true)) {
-            $dashboardStats = [
-                ['label' => 'Linked learners', 'value' => 0, 'meta' => 'No learner record linked yet'],
-                ['label' => 'Attendance records', 'value' => 0, 'meta' => 'No attendance available'],
-                ['label' => 'Attendance rate', 'value' => '0%', 'meta' => 'No attendance available'],
-                ['label' => 'Results available', 'value' => 0, 'meta' => 'No academic results available'],
-            ];
+            $recentResults=DB::table('results')->join('students','students.id','=','results.student_id')->join('subjects','subjects.id','=','results.subject_id')->join('exams','exams.id','=','results.exam_id')->whereIn('results.student_id',$studentIds)->orderByDesc('results.created_at')->select('results.*','students.name as student_name','students.admission_number','subjects.name as subject_name','subjects.code as subject_code','exams.name as exam_name','exams.term as exam_term','exams.academic_year')->limit(12)->get();
+            foreach ($recentResults as $result) { $level=$cbc->level($result->marks===null?null:(float)$result->marks); $result->cbc_code=$result->assessment_status==='missed'?'MISSED':$level['code']; $result->cbc_label=$result->assessment_status==='missed'?'Missed Assessment':$level['label']; $result->cbc_points=$result->assessment_status==='missed'?null:$level['points']; $result->cbc_remark=$cbc->remark($result->marks===null?null:(float)$result->marks,$result->assessment_status); }
+            $resultCount=(int)DB::table('results')->whereIn('student_id',$studentIds)->count(); $attendanceTotal=array_sum($attendanceSummary); $attendanceRate=$attendanceTotal>0?round(($attendanceSummary['present']/$attendanceTotal)*100):0;
+            $dashboardStats=[['label'=>'Linked learners','value'=>$students->count(),'meta'=>'Learners connected to this account'],['label'=>'Attendance records','value'=>$attendanceTotal,'meta'=>'Recorded attendance'],['label'=>'Attendance rate','value'=>$attendanceRate.'%','meta'=>'Present attendance'],['label'=>'CBC assessments','value'=>$resultCount,'meta'=>'All recorded learning-area assessments']];
+        } elseif ($profile && in_array($profile->portal_type,['pupil','parent','sponsor'],true)) {
+            $dashboardStats=[['label'=>'Linked learners','value'=>0,'meta'=>'No learner record linked yet'],['label'=>'Attendance records','value'=>0,'meta'=>'No attendance available'],['label'=>'Attendance rate','value'=>'0%','meta'=>'No attendance available'],['label'=>'CBC assessments','value'=>0,'meta'=>'No academic results available']];
         }
 
-        $announcements = DB::table('announcements')
-            ->where('published', true)
-            ->where(function ($query) {
-                $query->whereNull('published_at')->orWhere('published_at', '<=', now());
-            })->orderByDesc('published_at')->orderByDesc('created_at')->limit(5)->get();
-
-        $upcomingEvents = DB::table('events')
-            ->whereDate('event_date', '>=', now()->toDateString())
-            ->orderBy('event_date')->limit(5)->get();
-
-        return view('portal.dashboard', compact(
-            'user', 'profile', 'students', 'studentMetrics', 'teacher', 'subjects',
-            'attendanceSummary', 'recentResults', 'announcements', 'upcomingEvents', 'dashboardStats'
-        ));
+        $announcements=DB::table('announcements')->where('published',true)->where(function($query){$query->whereNull('published_at')->orWhere('published_at','<=',now());})->orderByDesc('published_at')->orderByDesc('created_at')->limit(5)->get();
+        $upcomingEvents=DB::table('events')->whereDate('event_date','>=',now()->toDateString())->orderBy('event_date')->limit(5)->get();
+        return view('portal.dashboard',compact('user','profile','students','studentMetrics','teacher','subjects','attendanceSummary','recentResults','announcements','upcomingEvents','dashboardStats'));
     }
 
     public function logout(Request $request)
     {
-        auth()->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect()->route('login');
+        auth()->logout(); $request->session()->invalidate(); $request->session()->regenerateToken(); return redirect()->route('login');
     }
 }
