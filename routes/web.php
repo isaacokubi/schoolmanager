@@ -57,6 +57,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/operations/results', [OperationsController::class, 'result'])->name('admin.operations.results');
     Route::post('/report-cards/{student}/{exam}/notify', [ReportCardController::class, 'notify'])->name('admin.report-cards.notify');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('admin.report-cards.show');
+    Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('admin.report-cards.download');
 });
 
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
@@ -65,4 +66,8 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
     Route::post('/payments/mpesa', [PortalPaymentController::class, 'pay'])->middleware('throttle:5,1')->name('portal.payments.pay');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
+    Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
 });
+
+Route::post('/api/mpesa/callback', [MpesaController::class, 'callback'])->middleware('api')->name('mpesa.callback');
+Route::get('/broadcasting/auth', function () { return response()->json(['ok' => true]); })->middleware('auth');
