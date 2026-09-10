@@ -31,7 +31,7 @@ class CbcReportCardService
     public function build(int $studentId, int $examId): ?array
     {
         $student = DB::table('students')->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
-            ->select('students.*', 'school_classes.name as class_label', 'school_classes.stream as class_stream')
+            ->select('students.*', 'school_classes.name as class_label', 'school_classes.stream as class_stream', 'school_classes.class_teacher_id')
             ->where('students.id', $studentId)->first();
         $exam = DB::table('exams')->find($examId);
         if (!$student || !$exam) return null;
@@ -41,16 +41,11 @@ class CbcReportCardService
             ->orderBy('subjects.name')->select('results.*', 'subjects.name as subject_name', 'subjects.code as subject_code')->get();
         if ($results->isEmpty()) return null;
 
-        // Every learning area configured in the school is expected for the assessment.
-        // A learner who did not sit one is explicitly recorded as "missed" rather than zero.
         $expectedSubjectIds = DB::table('subjects')->pluck('id');
         $recordedSubjectIds = $results->pluck('subject_id');
         $complete = $expectedSubjectIds->isNotEmpty() && $expectedSubjectIds->diff($recordedSubjectIds)->isEmpty();
 
         $present = $results->where('assessment_status', '!=', 'missed')->filter(function ($r) { return $r->marks !== null; });
-        // Achievement points are derived from the same CBC scale used for each row.
-        // The stored result value is not relied on because report cards must remain
-        // consistent even when historical result records predate the points field.
         $points = $present->sum(function ($result) {
             return $this->level((float) $result->marks)['points'];
         });
@@ -58,7 +53,16 @@ class CbcReportCardService
         $attendance = DB::table('attendance')->where('student_id', $studentId)->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
         $parent = $student->parent_id ? DB::table('parents')->find($student->parent_id) : null;
 
-        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent');
+        $classTeacher = $student->class_teacher_id ? DB::table('teachers')->find($student->class_teacher_id) : null;
+        if (!$classTeacher) {
+            $teacherIds = DB::table('subjects')->whereIn('id', $results->pluck('subject_id')->all())->whereNotNull('teacher_id')->pluck('teacher_id');
+            if ($teacherIds->isNotEmpty()) $classTeacher = DB::table('teachers')->whereIn('id', $teacherIds->all())->orderBy('name')->first();
+        }
+        if (!$classTeacher) $classTeacher = DB::table('teachers')->orderBy('name')->first();
+
+        $headOfInstitution = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('id')->first();
+
+        return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution');
     }
 
     public function generateAndNotify(int $studentId, int $examId): array
