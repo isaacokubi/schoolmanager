@@ -30,8 +30,8 @@ class PortalPaymentController extends Controller
         $user = $request->user();
         $data = $request->validate([
             'student_id' => ['required', 'integer', 'exists:students,id'],
-            'phone' => ['required', 'regex:/^\\+?2547\\d{8}$/'],
-            'amount' => ['required', 'numeric', 'min:1', 'max:1500000'],
+            'phone' => ['required', 'regex:/^(?:0?7|2547|\+2547)\d{8}$/'],
+            'amount' => ['required', 'integer', 'min:1', 'max:1500000'],
         ]);
 
         $student = $this->accessibleStudents($user)->firstWhere('id', (int) $data['student_id']);
@@ -39,9 +39,16 @@ class PortalPaymentController extends Controller
             abort(403, 'You are not authorised to pay fees for this learner.');
         }
 
-        $amount = min((float) $data['amount'], (float) $student->fee_balance);
+        $amount = min((int) $data['amount'], (int) ceil((float) $student->fee_balance));
         if ($amount <= 0) {
             return back()->withErrors(['amount' => 'This learner has no outstanding fee balance.']);
+        }
+
+        $phone = preg_replace('/^\+/', '', trim($data['phone']));
+        if (preg_match('/^07\d{8}$/', $phone)) {
+            $phone = '254' . substr($phone, 1);
+        } elseif (preg_match('/^7\d{8}$/', $phone)) {
+            $phone = '254' . $phone;
         }
 
         $reference = 'FEE' . $student->id . '-' . now()->format('ymdHis');
@@ -50,18 +57,19 @@ class PortalPaymentController extends Controller
             'user_id' => $user->id,
             'payer_role' => $user->role,
             'payer_name' => $user->name,
-            'parent_phone' => $data['phone'],
+            'parent_phone' => $phone,
             'payment_type' => 'school_fees',
             'channel' => 'mpesa_stk',
             'amount' => $amount,
             'account_reference' => $reference,
             'status' => 'pending',
+            'verification_status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         try {
-            $response = $mpesa->stkPush($data['phone'], $amount, $reference, 'School fees');
+            $response = $mpesa->stkPush($phone, $amount, $reference, 'School fees');
             DB::table('payments')->where('id', $paymentId)->update([
                 'checkout_request_id' => $response['CheckoutRequestID'] ?? null,
                 'merchant_request_id' => $response['MerchantRequestID'] ?? null,
@@ -72,6 +80,8 @@ class PortalPaymentController extends Controller
         } catch (Throwable $e) {
             DB::table('payments')->where('id', $paymentId)->update([
                 'status' => 'failed',
+                'verification_status' => 'rejected',
+                'failure_reason' => 'M-Pesa request could not be started.',
                 'updated_at' => now(),
             ]);
 
