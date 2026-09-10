@@ -53,11 +53,23 @@ class PaymentController extends Controller
         $data['paid_at']=($data['status']==='completed')?now():null;
 
         DB::transaction(function() use ($data){
-            DB::table('payments')->insert($data+['created_at'=>now(),'updated_at'=>now()]);
+            $paymentId = DB::table('payments')->insertGetId($data+['created_at'=>now(),'updated_at'=>now()]);
             if (!empty($data['student_id']) && $data['status']==='completed') {
                 DB::table('students')->where('id',$data['student_id'])->decrement('fee_balance',(int)$data['amount']);
                 DB::table('students')->where('id',$data['student_id'])->where('fee_balance','<',0)->update(['fee_balance'=>0]);
             }
+            DB::table('payment_audits')->insert([
+                'payment_id'=>$paymentId,
+                'event'=>$data['status']==='completed'?'manual_payment_verified':'manual_payment_recorded',
+                'details'=>json_encode([
+                    'amount'=>(int)$data['amount'],
+                    'student_id'=>$data['student_id'] ?? null,
+                    'status'=>$data['status'],
+                    'account_reference'=>$data['account_reference'] ?? null,
+                ]),
+                'created_at'=>now(),
+                'updated_at'=>now(),
+            ]);
         });
         return redirect()->route('admin.payments.index')->with('success','Payment recorded successfully.');
     }
