@@ -27,9 +27,9 @@ class PortalPaymentPaginationTest extends TestCase
             ->assertOk()
             ->assertSeeText('Showing 21')
             ->assertSeeText('40 of 41 payments')
-            ->assertSee('>PORTAL-21</strong>')
-            ->assertSee('>PORTAL-2</strong>')
-            ->assertDontSee('>PORTAL-41</strong>')
-            ->assertDontSee('>PORTAL-1</strong>');
+            ->assertSeeHtml('>PORTAL-21</strong>')
+            ->assertSeeHtml('>PORTAL-2</strong>')
+            ->assertDontSeeHtml('>PORTAL-41</strong>')
+            ->assertDontSeeHtml('>PORTAL-1</strong>');
     }
 }
