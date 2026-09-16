@@ -24,7 +24,7 @@ class ReportsPaginationTest extends TestCase
 
     public function test_student_report_is_paginated(): void
     {
-        $this->admin();
+        $admin = $this->admin();
         for ($i = 1; $i <= 26; $i++) {
             DB::table('students')->insert([
                 'admission_number' => 'R-' . str_pad((string) $i, 3, '0', STR_PAD_LEFT),
@@ -35,11 +35,17 @@ class ReportsPaginationTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAs($this->admin())->get(route('admin.reports', ['report' => 'students']));
-        $response->assertOk()->assertSee('Showing 1–25 of 26 students')->assertSee('Report Learner 01')->assertDontSee('Report Learner 26');
+        $this->actingAs($admin)->get(route('admin.reports', ['report' => 'students']))
+            ->assertOk()
+            ->assertSee('Showing 1–25 of 26 students')
+            ->assertSee('Report Learner 01')
+            ->assertDontSee('Report Learner 26');
 
-        $response = $this->actingAs(User::where('email', 'reports-admin@example.test')->first())->get(route('admin.reports', ['report' => 'students', 'students_page' => 2]));
-        $response->assertOk()->assertSee('Showing 26–26 of 26 students')->assertSee('Report Learner 26')->assertDontSee('Report Learner 01');
+        $this->actingAs($admin)->get(route('admin.reports', ['report' => 'students', 'students_page' => 2]))
+            ->assertOk()
+            ->assertSee('Showing 26–26 of 26 students')
+            ->assertSee('Report Learner 26')
+            ->assertDontSee('Report Learner 01');
     }
 
     public function test_admissions_report_is_paginated(): void
