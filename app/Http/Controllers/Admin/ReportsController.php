@@ -109,7 +109,8 @@ class ReportsController extends Controller
 
     private function cbcLevelSummary($resultsQuery)
     {
-        $row = (clone $resultsQuery)->selectRaw("
+        $summaryQuery = clone $resultsQuery;
+        $row = $summaryQuery->select([])->selectRaw("
             SUM(CASE WHEN results.marks BETWEEN 90 AND 100 THEN 1 ELSE 0 END) as EE1,
             SUM(CASE WHEN results.marks BETWEEN 75 AND 89.999999 THEN 1 ELSE 0 END) as EE2,
             SUM(CASE WHEN results.marks BETWEEN 58 AND 74.999999 THEN 1 ELSE 0 END) as ME1,
