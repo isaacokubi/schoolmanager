@@ -2,8 +2,145 @@
 @section('title','Students | School Manager')
 @section('page_title','Students')
 @section('admin_content')
-<div class="admin-page-head"><div><h1>Student Management</h1><p>Manage enrolment records, classes, guardians and fee balances.</p></div><div class="admin-actions"><a class="btn secondary" href="{{ route('admin.operations',['section'=>'parents']) }}">Manage parents</a><a class="btn secondary" href="{{ route('admin.operations',['section'=>'classes']) }}">Manage classes</a><a class="btn" href="{{ route('admin.students.create') }}">+ Add student</a></div></div>
-@if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif @if($errors->any())<div class="alert error">{{ $errors->first() }}</div>@endif
-<div class="card" style="margin-bottom:16px"><form method="get" class="search"><input name="search" value="{{ request('search') }}" placeholder="Search by name, admission number, class, parent or phone"><button type="submit">Search</button>@if(request('search'))<a href="{{ route('admin.students.index') }}">Clear</a>@endif</form></div>
-<div class="card"><div class="section-head"><div><h2>Students</h2><p>{{ $students->total() }} student record{{ $students->total()===1?'':'s' }} in the system.</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Admission</th><th>Student</th><th>Class</th><th>Parent / Guardian</th><th>Phone</th><th>Balance</th><th>Actions</th></tr></thead><tbody>@forelse($students as $student)<tr><td><strong>{{ $student->admission_number }}</strong></td><td>{{ $student->name }}</td><td>{{ $student->linked_class_name ?: ($student->class_name ?: '—') }}{{ $student->linked_class_stream ? ' — '.$student->linked_class_stream : '' }}</td><td>{{ $student->linked_parent_name ?: ($student->parent_name ?: '—') }}</td><td>{{ $student->parent_phone ?: '—' }}</td><td><strong>KES {{ number_format((float)$student->fee_balance,2) }}</strong></td><td><a href="{{ route('admin.students.edit',$student->id) }}">Edit</a> <form method="post" action="{{ route('admin.students.destroy',$student->id) }}" style="display:inline" onsubmit="return confirm('Delete this student?')">@csrf @method('DELETE')<button style="border:0;background:none;color:#b91c1c;cursor:pointer;font-weight:700" type="submit">Delete</button></form></td></tr>@empty<tr><td colspan="7"><div class="empty-state"><strong>No students found</strong><span>Add a student or adjust your search.</span></div></td></tr>@endforelse</tbody></table></div>{{ $students->links() }}</div>
+@php
+    $total = $students->total();
+    $outstanding = $students->getCollection()->sum(fn ($student) => max((float) $student->fee_balance, 0));
+@endphp
+
+<div class="admin-page-head student-page-head">
+    <div>
+        <div class="eyebrow">STUDENT REGISTRY</div>
+        <h1>Student Management</h1>
+        <p>Manage enrolment, class placement, guardians and fee accounts securely.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn secondary" href="{{ route('admin.operations',['section'=>'parents']) }}">Parents & guardians</a>
+        <a class="btn secondary" href="{{ route('admin.operations',['section'=>'classes']) }}">Classes & streams</a>
+        <a class="btn" href="{{ route('admin.students.create') }}">+ Add student</a>
+    </div>
+</div>
+
+@if(session('success'))
+    <div class="alert success" role="status">{{ session('success') }}</div>
+@endif
+@if($errors->any())
+    <div class="alert error" role="alert">{{ $errors->first() }}</div>
+@endif
+
+<div class="student-stats">
+    <div class="student-stat"><span>Total records</span><strong>{{ number_format($total) }}</strong><small>Student records matching your current filters</small></div>
+    <div class="student-stat"><span>On this page</span><strong>{{ number_format($students->count()) }}</strong><small>Visible records</small></div>
+    <div class="student-stat"><span>Outstanding shown</span><strong>KES {{ number_format($outstanding, 2) }}</strong><small>Positive balances on this page</small></div>
+</div>
+
+<div class="card student-filter-card">
+    <form method="get" class="student-filters" role="search">
+        <div class="filter-search">
+            <label for="student-search">Search students</label>
+            <input id="student-search" name="search" value="{{ request('search') }}" autocomplete="off" placeholder="Name, admission no., class, guardian or phone">
+        </div>
+        <div>
+            <label for="class-filter">Class / stream</label>
+            <select id="class-filter" name="class_id">
+                <option value="">All classes</option>
+                @foreach($classes as $class)
+                    <option value="{{ $class->id }}" {{ (string)request('class_id') === (string)$class->id ? 'selected' : '' }}>
+                        {{ $class->name }}{{ $class->stream ? ' — '.$class->stream : '' }}{{ $class->academic_year ? ' ('.$class->academic_year.')' : '' }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label for="balance-filter">Fee status</label>
+            <select id="balance-filter" name="balance">
+                <option value="">All balances</option>
+                <option value="clear" {{ request('balance') === 'clear' ? 'selected' : '' }}>Paid / clear</option>
+                <option value="outstanding" {{ request('balance') === 'outstanding' ? 'selected' : '' }}>Outstanding</option>
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn" type="submit">Apply filters</button>
+            @if(request()->hasAny(['search','class_id','balance']))
+                <a class="btn secondary" href="{{ route('admin.students.index') }}">Reset</a>
+            @endif
+        </div>
+    </form>
+</div>
+
+<div class="card student-table-card">
+    <div class="section-head">
+        <div>
+            <h2>Students</h2>
+            <p>Financial balances are read-only here and should be changed through recorded fee transactions.</p>
+        </div>
+        <span class="record-count">{{ number_format($total) }} {{ $total === 1 ? 'record' : 'records' }}</span>
+    </div>
+
+    <div class="table-wrap">
+        <table class="table student-table">
+            <caption class="sr-only">Student registry</caption>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Admission no.</th>
+                    <th>Class / stream</th>
+                    <th>Parent / guardian</th>
+                    <th>Phone</th>
+                    <th>Fee balance</th>
+                    <th>Status</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($students as $student)
+                @php $balance = (float) $student->fee_balance; @endphp
+                <tr>
+                    <td data-label="Student"><strong>{{ $student->name }}</strong></td>
+                    <td data-label="Admission no."><span class="mono">{{ $student->admission_number }}</span></td>
+                    <td data-label="Class / stream">{{ $student->linked_class_name ?: ($student->class_name ?: 'Unassigned') }}{{ $student->linked_class_stream ? ' — '.$student->linked_class_stream : '' }}</td>
+                    <td data-label="Parent / guardian">{{ $student->linked_parent_name ?: ($student->parent_name ?: 'Not linked') }}</td>
+                    <td data-label="Phone">{{ $student->parent_phone ? preg_replace('/^(?:\+254|0)(\d{3})(\d{3})(\d{3})$/', '+254 $1 $2 $3', $student->parent_phone) : '—' }}</td>
+                    <td data-label="Fee balance">
+                        <strong class="{{ $balance > 0 ? 'balance-due' : 'balance-clear' }}">KES {{ number_format($balance, 2) }}</strong>
+                    </td>
+                    <td data-label="Status">
+                        <span class="status-pill {{ $balance > 0 ? 'warning' : 'success' }}">{{ $balance > 0 ? 'Outstanding' : 'Clear' }}</span>
+                    </td>
+                    <td data-label="Actions" class="actions-cell">
+                        <a class="table-action" href="{{ route('admin.students.edit',$student->id) }}">Edit</a>
+                        <form method="post" action="{{ route('admin.students.destroy',$student->id) }}" class="delete-form" onsubmit="return confirm('Delete this student record? Use this only when the record has no linked financial, attendance, examination or admission history.')">
+                            @csrf @method('DELETE')
+                            <button class="table-action danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <strong>No students found</strong>
+                            <span>Try a different search or reset the filters. You can also add a new student.</span>
+                            <a class="btn secondary" href="{{ route('admin.students.create') }}">Add student</a>
+                        </div>
+                    </td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    @if($students->hasPages())
+        <div class="pagination-wrap">
+            <div class="pagination-summary">Showing <strong>{{ $students->firstItem() ?? 0 }}</strong>–<strong>{{ $students->lastItem() ?? 0 }}</strong> of <strong>{{ $students->total() }}</strong></div>
+            <div class="pagination-links">{{ $students->onEachSide(1)->links() }}</div>
+        </div>
+    @endif
+</div>
+
+<style>
+.eyebrow{font-size:10px;letter-spacing:.14em;font-weight:900;color:#1769df;margin-bottom:7px}.student-page-head{align-items:center}.student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.student-stat{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid #e2e9f3;border-radius:15px;padding:16px 18px;box-shadow:0 7px 22px rgba(24,45,75,.045)}.student-stat span{display:block;color:#697a90;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.student-stat strong{display:block;color:#15243a;font-size:22px;margin:4px 0}.student-stat small{color:#8a98aa;font-size:11px}.student-filter-card{margin-bottom:18px}.student-filters{display:grid;grid-template-columns:minmax(250px,1.7fr) minmax(170px,1fr) minmax(150px,.8fr) auto;gap:12px;align-items:end}.student-filters label{display:block;font-size:11px;font-weight:850;color:#52637a;margin-bottom:6px}.student-filters input,.student-filters select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #d5dfeb;border-radius:10px;background:#fff;color:#26384f;font:inherit;outline:none}.student-filters input:focus,.student-filters select:focus{border-color:#5590e8;box-shadow:0 0 0 3px rgba(23,105,223,.1)}.filter-actions{display:flex;gap:8px}.student-table-card{overflow:hidden}.student-table-card .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.student-table-card .section-head p{max-width:680px}.record-count{white-space:nowrap;background:#f2f6fb;color:#607189;border:1px solid #e1e8f1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}.student-table{width:100%}.student-table th{white-space:nowrap}.student-table td{vertical-align:middle}.mono{font-variant-numeric:tabular-nums;letter-spacing:.02em;color:#44566f}.balance-due{color:#b45309}.balance-clear{color:#16724b}.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900;white-space:nowrap}.status-pill.success{background:#eaf8f1;color:#157347}.status-pill.warning{background:#fff5df;color:#9a5a00}.actions-col{width:130px}.actions-cell{white-space:nowrap}.delete-form{display:inline;margin:0}.table-action{border:0;background:transparent;color:#1769df;text-decoration:none;font:inherit;font-size:12px;font-weight:850;cursor:pointer;padding:4px}.table-action:hover{text-decoration:underline}.table-action.danger{color:#b42318}.pagination-wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0 0}.pagination-summary{font-size:12px;color:#748399}.pagination-links nav{display:flex}.pagination-links svg{width:16px}.empty-state{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:48px 20px;color:#7a899d;text-align:center}.empty-state strong{color:#25364e;font-size:15px}.empty-state .btn{margin-top:7px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:1050px){.student-filters{grid-template-columns:1fr 1fr}.filter-search{grid-column:1/-1}.filter-actions{grid-column:1/-1}.student-stats{grid-template-columns:1fr 1fr}.student-stat:last-child{grid-column:1/-1}}
+@media(max-width:800px){.student-page-head{display:block}.student-stats{grid-template-columns:1fr}.student-stat:last-child{grid-column:auto}.student-filters{grid-template-columns:1fr}.filter-search,.filter-actions{grid-column:auto}.filter-actions{justify-content:flex-start}.student-table{min-width:760px}.student-table-card{overflow-x:auto}.student-table-card .section-head{min-width:760px}.pagination-wrap{min-width:760px}.pagination-wrap{align-items:flex-start;flex-direction:column}}
+@media(max-width:560px){.admin-actions .btn{width:100%;text-align:center;box-sizing:border-box}.student-stat strong{font-size:20px}}
+</style>
 @endsection
