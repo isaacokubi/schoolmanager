@@ -47,7 +47,9 @@ class OperationsController extends Controller
                 ->orderByDesc('parents.id');
         } elseif ($section === 'classes') {
             $query = DB::table('school_classes')
-                ->leftJoin('teachers', 'teachers.id', '=', 'school_classes.class_teacher_id')
+                ->leftJoin('teachers', function ($join) {
+                    $join->on('teachers.id', '=', 'school_classes.class_teacher_id')->whereNull('teachers.archived_at');
+                })
                 ->select('school_classes.*', 'teachers.name as teacher_name')
                 ->whereNull('school_classes.archived_at')
                 ->orderByDesc('school_classes.id');
@@ -61,7 +63,9 @@ class OperationsController extends Controller
                 ->orderByDesc('teachers.id');
         } elseif ($section === 'subjects') {
             $query = DB::table('subjects')
-                ->leftJoin('teachers', 'teachers.id', '=', 'subjects.teacher_id')
+                ->leftJoin('teachers', function ($join) {
+                    $join->on('teachers.id', '=', 'subjects.teacher_id')->whereNull('teachers.archived_at');
+                })
                 ->select('subjects.*', 'teachers.name as teacher_name')
                 ->whereNull('subjects.archived_at')
                 ->orderByDesc('subjects.id');
@@ -74,8 +78,12 @@ class OperationsController extends Controller
         } elseif ($section === 'results') {
             $query = DB::table('results')
                 ->leftJoin('students', 'students.id', '=', 'results.student_id')
-                ->leftJoin('exams', 'exams.id', '=', 'results.exam_id')
-                ->leftJoin('subjects', 'subjects.id', '=', 'results.subject_id')
+                ->leftJoin('exams', function ($join) {
+                    $join->on('exams.id', '=', 'results.exam_id')->whereNull('exams.archived_at');
+                })
+                ->leftJoin('subjects', function ($join) {
+                    $join->on('subjects.id', '=', 'results.subject_id')->whereNull('subjects.archived_at');
+                })
                 ->select('results.*', 'students.name as student_name', 'students.admission_number', 'exams.name as exam_name', 'subjects.name as subject_name')
                 ->whereNull('results.archived_at')
                 ->orderByDesc('results.id');
@@ -87,46 +95,27 @@ class OperationsController extends Controller
         if ($search !== '') {
             if ($section === 'parents') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('parents.name', 'like', '%' . $search . '%')
-                        ->orWhere('parents.phone', 'like', '%' . $search . '%')
-                        ->orWhere('parents.email', 'like', '%' . $search . '%')
-                        ->orWhere('parents.relationship', 'like', '%' . $search . '%');
+                    $q->where('parents.name', 'like', '%' . $search . '%')->orWhere('parents.phone', 'like', '%' . $search . '%')->orWhere('parents.email', 'like', '%' . $search . '%')->orWhere('parents.relationship', 'like', '%' . $search . '%');
                 });
             } elseif ($section === 'classes') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('school_classes.name', 'like', '%' . $search . '%')
-                        ->orWhere('school_classes.stream', 'like', '%' . $search . '%')
-                        ->orWhere('school_classes.academic_year', 'like', '%' . $search . '%')
-                        ->orWhere('teachers.name', 'like', '%' . $search . '%');
+                    $q->where('school_classes.name', 'like', '%' . $search . '%')->orWhere('school_classes.stream', 'like', '%' . $search . '%')->orWhere('school_classes.academic_year', 'like', '%' . $search . '%')->orWhere('teachers.name', 'like', '%' . $search . '%');
                 });
             } elseif ($section === 'teachers') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('teachers.name', 'like', '%' . $search . '%')
-                        ->orWhere('teachers.email', 'like', '%' . $search . '%')
-                        ->orWhere('teachers.phone', 'like', '%' . $search . '%')
-                        ->orWhere('teachers.employee_number', 'like', '%' . $search . '%');
+                    $q->where('teachers.name', 'like', '%' . $search . '%')->orWhere('teachers.email', 'like', '%' . $search . '%')->orWhere('teachers.phone', 'like', '%' . $search . '%')->orWhere('teachers.employee_number', 'like', '%' . $search . '%');
                 });
             } elseif ($section === 'subjects') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('subjects.name', 'like', '%' . $search . '%')
-                        ->orWhere('subjects.code', 'like', '%' . $search . '%')
-                        ->orWhere('teachers.name', 'like', '%' . $search . '%');
+                    $q->where('subjects.name', 'like', '%' . $search . '%')->orWhere('subjects.code', 'like', '%' . $search . '%')->orWhere('teachers.name', 'like', '%' . $search . '%');
                 });
             } elseif ($section === 'attendance') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('students.name', 'like', '%' . $search . '%')
-                        ->orWhere('students.admission_number', 'like', '%' . $search . '%')
-                        ->orWhere('attendance.status', 'like', '%' . $search . '%')
-                        ->orWhere('attendance.attendance_date', 'like', '%' . $search . '%');
+                    $q->where('students.name', 'like', '%' . $search . '%')->orWhere('students.admission_number', 'like', '%' . $search . '%')->orWhere('attendance.status', 'like', '%' . $search . '%')->orWhere('attendance.attendance_date', 'like', '%' . $search . '%');
                 });
             } elseif ($section === 'results') {
                 $query->where(function ($q) use ($search) {
-                    $q->where('students.name', 'like', '%' . $search . '%')
-                        ->orWhere('students.admission_number', 'like', '%' . $search . '%')
-                        ->orWhere('exams.name', 'like', '%' . $search . '%')
-                        ->orWhere('subjects.name', 'like', '%' . $search . '%')
-                        ->orWhere('results.achievement_level', 'like', '%' . $search . '%')
-                        ->orWhere('results.assessment_status', 'like', '%' . $search . '%');
+                    $q->where('students.name', 'like', '%' . $search . '%')->orWhere('students.admission_number', 'like', '%' . $search . '%')->orWhere('exams.name', 'like', '%' . $search . '%')->orWhere('subjects.name', 'like', '%' . $search . '%')->orWhere('results.achievement_level', 'like', '%' . $search . '%')->orWhere('results.assessment_status', 'like', '%' . $search . '%');
                 });
             } else {
                 $columns = DB::getSchemaBuilder()->getColumnListing($table);
@@ -135,15 +124,22 @@ class OperationsController extends Controller
                 }));
                 if ($searchable) {
                     $query->where(function ($q) use ($searchable, $search, $table) {
-                        foreach ($searchable as $column) {
-                            $q->orWhere($table . '.' . $column, 'like', '%' . $search . '%');
-                        }
+                        foreach ($searchable as $column) $q->orWhere($table . '.' . $column, 'like', '%' . $search . '%');
                     });
                 }
             }
         }
 
-        return $query->paginate(10)->withQueryString();
+        $records = $query->paginate(10)->withQueryString();
+        if ($section === 'results') {
+            $cbc = app(CbcReportCardService::class);
+            $records->getCollection()->transform(function ($row) use ($cbc) {
+                if ($row->assessment_status === 'missed') $row->achievement_level = 'MISSED';
+                elseif ($row->marks !== null) $row->achievement_level = $cbc->level((float) $row->marks)['code'];
+                return $row;
+            });
+        }
+        return $records;
     }
 
     public function store(Request $request, CbcReportCardService $reportCards)
@@ -154,19 +150,15 @@ class OperationsController extends Controller
         $studentId = $section === 'parents' ? ($validated['student_id'] ?? null) : null;
         unset($validated['student_id']);
         $data = $this->prepare($section, $validated, $request);
-
         try {
             DB::transaction(function () use ($section, $data, $studentId) {
                 $id = DB::table($this->tables[$section])->insertGetId($data + ['created_at' => now(), 'updated_at' => now()]);
-                if ($section === 'parents' && $studentId) {
-                    DB::table('students')->where('id', $studentId)->update(['parent_id' => $id, 'updated_at' => now()]);
-                }
+                if ($section === 'parents' && $studentId) DB::table('students')->where('id', $studentId)->update(['parent_id' => $id, 'updated_at' => now()]);
             });
         } catch (\Throwable $e) {
             report($e);
             return back()->withErrors(['record' => 'The record could not be saved. Check for duplicate values or related records.'])->withInput();
         }
-
         if ($section === 'results') {
             try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); }
         }
@@ -179,7 +171,6 @@ class OperationsController extends Controller
         abort_unless(isset($this->tables[$section]), 404);
         abort_unless(DB::table($this->tables[$section])->where('id', $id)->whereNull('archived_at')->exists(), 404);
         $data = $this->prepare($section, $request->validate($this->rules($section, $id)), $request, $id);
-
         try {
             DB::table($this->tables[$section])->where('id', $id)->update($data + ['updated_at' => now()]);
         } catch (\Throwable $e) {
@@ -198,7 +189,6 @@ class OperationsController extends Controller
         abort_unless(isset($this->tables[$section]), 404);
         $table = $this->tables[$section];
         abort_unless(DB::table($table)->where('id', $id)->whereNull('archived_at')->exists(), 404);
-
         DB::table($table)->where('id', $id)->update(['archived_at' => now(), 'updated_at' => now()]);
         return back()->with('success', 'Record archived successfully. It is no longer shown in active records.');
     }
@@ -207,10 +197,7 @@ class OperationsController extends Controller
     {
         $data = $request->validate($this->rules('attendance'));
         DB::transaction(function () use ($data) {
-            DB::table('attendance')->updateOrInsert(
-                ['student_id' => $data['student_id'], 'attendance_date' => $data['attendance_date']],
-                $data + ['archived_at' => null, 'updated_at' => now()]
-            );
+            DB::table('attendance')->updateOrInsert(['student_id' => $data['student_id'], 'attendance_date' => $data['attendance_date']], $data + ['archived_at' => null, 'updated_at' => now()]);
         });
         return back()->with('success', 'Attendance saved successfully.');
     }
@@ -219,10 +206,7 @@ class OperationsController extends Controller
     {
         $data = $this->prepare('results', $request->validate($this->rules('results')), $request);
         DB::transaction(function () use ($data) {
-            DB::table('results')->updateOrInsert(
-                ['exam_id' => $data['exam_id'], 'student_id' => $data['student_id'], 'subject_id' => $data['subject_id']],
-                $data + ['archived_at' => null, 'updated_at' => now()]
-            );
+            DB::table('results')->updateOrInsert(['exam_id' => $data['exam_id'], 'student_id' => $data['student_id'], 'subject_id' => $data['subject_id']], $data + ['archived_at' => null, 'updated_at' => now()]);
         });
         try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); }
         return back()->with('success', $data['assessment_status'] === 'missed' ? 'Missed assessment recorded.' : 'CBC result saved.');
@@ -230,20 +214,17 @@ class OperationsController extends Controller
 
     private function rules($section, $id = null)
     {
+        $activeTeacher = Rule::exists('teachers', 'id')->whereNull('archived_at');
+        $activeExam = Rule::exists('exams', 'id')->whereNull('archived_at');
+        $activeSubject = Rule::exists('subjects', 'id')->whereNull('archived_at');
         $rules = [
-            'parents' => [
-                'name' => 'required|string|max:150',
-                'phone' => ['required', 'regex:/^(?:\+254|0)7\d{8}$/'],
-                'email' => 'nullable|email|max:150',
-                'relationship' => 'nullable|string|max:50',
-                'student_id' => 'nullable|exists:students,id',
-            ],
-            'classes' => ['name' => 'required|string|max:100', 'stream' => 'nullable|string|max:50', 'academic_year' => 'nullable|integer|min:2000|max:2100', 'class_teacher_id' => 'nullable|exists:teachers,id'],
+            'parents' => ['name' => 'required|string|max:150', 'phone' => ['required', 'regex:/^(?:\+254|0)7\d{8}$/'], 'email' => 'nullable|email|max:150', 'relationship' => 'nullable|string|max:50', 'student_id' => 'nullable|exists:students,id'],
+            'classes' => ['name' => 'required|string|max:100', 'stream' => 'nullable|string|max:50', 'academic_year' => 'nullable|integer|min:2000|max:2100', 'class_teacher_id' => ['nullable', $activeTeacher]],
             'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', 'regex:/^(?:\+254|0)7\d{8}$/'], 'employee_number' => ['nullable', 'string', 'max:50']],
-            'subjects' => ['name' => 'required|string|max:100', 'code' => ['nullable', 'string', 'max:30'], 'teacher_id' => 'nullable|exists:teachers,id'],
+            'subjects' => ['name' => 'required|string|max:100', 'code' => ['nullable', 'string', 'max:30'], 'teacher_id' => ['nullable', $activeTeacher]],
             'attendance' => ['student_id' => 'required|exists:students,id', 'attendance_date' => 'required|date', 'status' => 'required|in:present,absent,late,excused', 'notes' => 'nullable|string|max:500'],
-            'exams' => ['name' => 'required|string|max:150', 'term' => 'required|string|max:50', 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
-            'results' => ['exam_id' => 'required|exists:exams,id', 'student_id' => 'required|exists:students,id', 'subject_id' => 'required|exists:subjects,id', 'assessment_status' => 'required|in:present,missed', 'marks' => 'nullable|required_if:assessment_status,present|numeric|min:0|max:100', 'remarks' => 'nullable|string|max:500'],
+            'exams' => ['name' => 'required|string|max:150', 'term' => ['required', Rule::in(['Term 1', 'Term 2', 'Term 3'])], 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
+            'results' => ['exam_id' => ['required', $activeExam], 'student_id' => 'required|exists:students,id', 'subject_id' => ['required', $activeSubject], 'assessment_status' => 'required|in:present,missed', 'marks' => 'nullable|required_if:assessment_status,present|numeric|min:0|max:100', 'remarks' => 'nullable|string|max:500'],
             'announcements' => ['title' => 'required|string|max:200', 'body' => 'required|string|max:10000', 'published' => 'nullable|boolean'],
             'events' => ['title' => 'required|string|max:200', 'event_date' => 'required|date', 'location' => 'nullable|string|max:200', 'description' => 'nullable|string|max:10000'],
         ];
