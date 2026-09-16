@@ -53,6 +53,7 @@ class OperationsFeatureTest extends TestCase
         $this->assertDatabaseHas('teachers',[
             'name'=>'Manager Created Teacher',
             'employee_number'=>'MGR-TCH-001',
+            'phone'=>'+254712345678',
         ]);
 
         $this->actingAs($manager)->get(route('admin.settings'))->assertForbidden();
@@ -69,11 +70,49 @@ class OperationsFeatureTest extends TestCase
     {
         $admin=$this->admin(); $student=$this->student();
         $this->actingAs($admin)->post(route('admin.operations.store'),['section'=>'parents','name'=>'Grace Wanjiku','phone'=>'0712345678','email'=>'grace@example.test','relationship'=>'Mother','student_id'=>$student])->assertSessionHas('success');
-        $parent=DB::table('parents')->where('phone','0712345678')->first();
+        $parent=DB::table('parents')->where('phone','+254712345678')->first();
         $this->assertNotNull($parent); $this->assertDatabaseHas('students',['id'=>$student,'parent_id'=>$parent->id]);
         $this->actingAs($admin)->delete(route('admin.operations.destroy',$parent->id),['section'=>'parents'])->assertSessionHas('success');
         $this->assertNotNull(DB::table('parents')->where('id',$parent->id)->value('archived_at'));
         $this->assertSame(0,DB::table('parents')->where('id',$parent->id)->whereNull('archived_at')->count());
+    }
+
+    public function test_parent_linking_only_accepts_active_learners_and_preserves_existing_links_when_no_new_learner_is_selected(): void
+    {
+        $admin=$this->admin();
+        $activeStudent=$this->student('S-ACTIVE');
+        $archivedStudent=$this->student('S-ARCHIVED');
+        DB::table('students')->where('id',$archivedStudent)->update(['archived_at'=>now()]);
+
+        $this->actingAs($admin)->post(route('admin.operations.store'),[
+            'section'=>'parents','name'=>'Active Guardian','phone'=>'0112345678','relationship'=>'Guardian','student_id'=>$activeStudent,
+        ])->assertSessionHas('success');
+
+        $parent=DB::table('parents')->where('phone','+254112345678')->first();
+        $this->assertNotNull($parent);
+        $this->assertDatabaseHas('students',['id'=>$activeStudent,'parent_id'=>$parent->id]);
+
+        $this->actingAs($admin)->put(route('admin.operations.update',$parent->id),[
+            'section'=>'parents','name'=>'Active Guardian Updated','phone'=>'+254112345678','relationship'=>'Guardian',
+        ])->assertSessionHas('success');
+        $this->assertDatabaseHas('students',['id'=>$activeStudent,'parent_id'=>$parent->id]);
+
+        $this->actingAs($admin)->post(route('admin.operations.store'),[
+            'section'=>'parents','name'=>'Invalid Guardian','phone'=>'0712345699','relationship'=>'Guardian','student_id'=>$archivedStudent,
+        ])->assertSessionHasErrors('student_id');
+    }
+
+    public function test_archived_learners_are_not_counted_as_linked_guardian_learners(): void
+    {
+        $admin=$this->admin(); $activeStudent=$this->student('S-LINKED'); $archivedStudent=$this->student('S-HIDDEN');
+        $parentId=DB::table('parents')->insertGetId(['name'=>'Guardian Count Test','phone'=>'+254712345699','relationship'=>'Mother','created_at'=>now(),'updated_at'=>now()]);
+        DB::table('students')->where('id',$activeStudent)->update(['parent_id'=>$parentId]);
+        DB::table('students')->where('id',$archivedStudent)->update(['parent_id'=>$parentId,'archived_at'=>now()]);
+
+        $this->actingAs($admin)->get(route('admin.operations',['section'=>'parents']))
+            ->assertOk()
+            ->assertSee('1 learner linked')
+            ->assertDontSee('2 learners linked');
     }
 
     public function test_teacher_and_subject_enforce_active_unique_identifiers(): void
@@ -91,7 +130,7 @@ class OperationsFeatureTest extends TestCase
         $this->actingAs($admin)->post(route('admin.operations.store'),['section'=>'teachers','name'=>'Jane Wanjiku','email'=>'jane@example.test','phone'=>'0712345678','employee_number'=>'TCH-010'])->assertSessionHas('success');
         $teacher=DB::table('teachers')->where('employee_number','TCH-010')->first();
         $this->actingAs($admin)->put(route('admin.operations.update',$teacher->id),['section'=>'teachers','name'=>'Jane Wanjiku Updated','email'=>'jane.updated@example.test','phone'=>'0712345678','employee_number'=>'TCH-010'])->assertSessionHas('success');
-        $this->assertDatabaseHas('teachers',['id'=>$teacher->id,'name'=>'Jane Wanjiku Updated']);
+        $this->assertDatabaseHas('teachers',['id'=>$teacher->id,'name'=>'Jane Wanjiku Updated','phone'=>'+254712345678']);
         $this->actingAs($admin)->post(route('admin.operations.store'),['section'=>'subjects','name'=>'English','code'=>'ENG','teacher_id'=>$teacher->id])->assertSessionHas('success');
         $subject=DB::table('subjects')->where('code','ENG')->first();
         $this->actingAs($admin)->put(route('admin.operations.update',$subject->id),['section'=>'subjects','name'=>'English Language','code'=>'ENG','teacher_id'=>$teacher->id])->assertSessionHas('success');
