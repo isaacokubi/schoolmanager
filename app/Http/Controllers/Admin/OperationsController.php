@@ -16,7 +16,7 @@ class OperationsController extends Controller
     {
         $section=$request->get('section','parents'); abort_unless(isset($this->tables[$section]),404);
         $data=['section'=>$section,'students'=>DB::table('students')->orderBy('name')->get(),'teachers'=>DB::table('teachers')->orderBy('name')->get(),'subjects'=>DB::table('subjects')->orderBy('name')->get(),'exams'=>DB::table('exams')->orderByDesc('id')->get()];
-        $data[$section]=$this->listing($section,$request); return view('admin.operations.index',$data);
+        $data[$section]=$this->listing($section,$request); return view('admin.operations.professional',$data);
     }
 
     private function listing($section,Request $request)
