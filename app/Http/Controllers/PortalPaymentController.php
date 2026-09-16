@@ -9,12 +9,18 @@ use Throwable;
 
 class PortalPaymentController extends Controller
 {
+    private const HISTORY_PAGE_SIZE = 20;
+
     public function index(Request $request)
     {
         $students = $this->accessibleStudents($request->user());
         $studentIds = $students->pluck('id');
-        $payments = $studentIds->isEmpty() ? collect() : DB::table('payments')->whereIn('student_id',$studentIds)->orderByDesc('id')->limit(20)->get();
-        return view('portal.payments', compact('students','payments'));
+        $payments = $studentIds->isEmpty()
+            ? DB::table('payments')->whereRaw('1 = 0')->paginate(self::HISTORY_PAGE_SIZE, ['*'], 'payments_page')
+            : DB::table('payments')->whereIn('student_id', $studentIds)->orderByDesc('id')->paginate(self::HISTORY_PAGE_SIZE, ['*'], 'payments_page');
+        $payments->withQueryString();
+
+        return view('portal.payments', compact('students', 'payments'));
     }
 
     public function pay(Request $request, MpesaService $mpesa)
@@ -36,8 +42,6 @@ class PortalPaymentController extends Controller
         if(preg_match('/^07\d{8}$/',$phone)) $phone='254'.substr($phone,1);
         elseif(preg_match('/^7\d{8}$/',$phone)) $phone='254'.$phone;
 
-        // Only suppress a rapid accidental double-submit. A pending STK request
-        // must not block a genuine retry indefinitely when the phone never prompts.
         $retryWindowSeconds = max(30, (int) env('MPESA_STK_RETRY_WINDOW_SECONDS', 90));
         $existing=DB::table('payments')
             ->where('student_id',$student->id)
@@ -51,9 +55,6 @@ class PortalPaymentController extends Controller
             ->first();
         if($existing) return back()->with('success','An M-Pesa request for this learner and amount was just started. If no prompt appears, wait briefly and try again.');
 
-        // Close an older abandoned attempt before creating the retry. This keeps
-        // the portal history truthful instead of accumulating indefinite pending
-        // KES 1/2 test attempts when Safaricom never delivers a prompt.
         DB::table('payments')
             ->where('student_id',$student->id)
             ->where('user_id',$user->id)
