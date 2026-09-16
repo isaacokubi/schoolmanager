@@ -20,8 +20,14 @@ class AdmissionManagementController extends Controller
                   ->orWhere('parent_phone','like',"%{$search}%");
             });
         }
+
         $applications = $query->paginate(10)->withQueryString();
-        return view('admin.admissions.index', compact('applications'));
+        $statusCounts = DB::table('admission_applications')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('admin.admissions.index', compact('applications', 'statusCounts'));
     }
 
     public function updateStatus(Request $request, $application)
@@ -40,8 +46,6 @@ class AdmissionManagementController extends Controller
             $base = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $record->student_name), 0, 4)) ?: 'STUD';
             $admission = $base . '-' . date('Y') . '-' . str_pad((string) $record->id, 4, '0', STR_PAD_LEFT);
 
-            // Approval is idempotent: the deterministic admission number is the
-            // link between this application and the learner it created.
             if (DB::table('students')->where('admission_number', $admission)->exists()) return;
 
             while (DB::table('students')->where('admission_number', $admission)->exists()) {
