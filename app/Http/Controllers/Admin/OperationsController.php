@@ -69,6 +69,7 @@ class OperationsController extends Controller
             $query = DB::table('attendance')
                 ->leftJoin('students', 'students.id', '=', 'attendance.student_id')
                 ->select('attendance.*', 'students.name as student_name', 'students.admission_number')
+                ->whereNull('attendance.archived_at')
                 ->orderByDesc('attendance.attendance_date')->orderByDesc('attendance.id');
         } elseif ($section === 'results') {
             $query = DB::table('results')
@@ -76,6 +77,7 @@ class OperationsController extends Controller
                 ->leftJoin('exams', 'exams.id', '=', 'results.exam_id')
                 ->leftJoin('subjects', 'subjects.id', '=', 'results.subject_id')
                 ->select('results.*', 'students.name as student_name', 'students.admission_number', 'exams.name as exam_name', 'subjects.name as subject_name')
+                ->whereNull('results.archived_at')
                 ->orderByDesc('results.id');
         } else {
             $query = DB::table($table)->whereNull($table . '.archived_at')->orderByDesc('id');
@@ -204,20 +206,24 @@ class OperationsController extends Controller
     public function attendance(Request $request)
     {
         $data = $request->validate($this->rules('attendance'));
-        DB::table('attendance')->updateOrInsert(
-            ['student_id' => $data['student_id'], 'attendance_date' => $data['attendance_date']],
-            $data + ['updated_at' => now()]
-        );
+        DB::transaction(function () use ($data) {
+            DB::table('attendance')->updateOrInsert(
+                ['student_id' => $data['student_id'], 'attendance_date' => $data['attendance_date']],
+                $data + ['archived_at' => null, 'updated_at' => now()]
+            );
+        });
         return back()->with('success', 'Attendance saved successfully.');
     }
 
     public function result(Request $request, CbcReportCardService $reportCards)
     {
         $data = $this->prepare('results', $request->validate($this->rules('results')), $request);
-        DB::table('results')->updateOrInsert(
-            ['exam_id' => $data['exam_id'], 'student_id' => $data['student_id'], 'subject_id' => $data['subject_id']],
-            $data + ['updated_at' => now()]
-        );
+        DB::transaction(function () use ($data) {
+            DB::table('results')->updateOrInsert(
+                ['exam_id' => $data['exam_id'], 'student_id' => $data['student_id'], 'subject_id' => $data['subject_id']],
+                $data + ['archived_at' => null, 'updated_at' => now()]
+            );
+        });
         try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); }
         return back()->with('success', $data['assessment_status'] === 'missed' ? 'Missed assessment recorded.' : 'CBC result saved.');
     }
@@ -227,13 +233,13 @@ class OperationsController extends Controller
         $rules = [
             'parents' => [
                 'name' => 'required|string|max:150',
-                'phone' => ['required', 'regex:/^(?:\\+254|0)7\\d{8}$/'],
+                'phone' => ['required', 'regex:/^(?:\+254|0)7\d{8}$/'],
                 'email' => 'nullable|email|max:150',
                 'relationship' => 'nullable|string|max:50',
                 'student_id' => 'nullable|exists:students,id',
             ],
             'classes' => ['name' => 'required|string|max:100', 'stream' => 'nullable|string|max:50', 'academic_year' => 'nullable|integer|min:2000|max:2100', 'class_teacher_id' => 'nullable|exists:teachers,id'],
-            'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', 'regex:/^(?:\\+254|0)7\\d{8}$/'], 'employee_number' => ['nullable', 'string', 'max:50']],
+            'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', 'regex:/^(?:\+254|0)7\d{8}$/'], 'employee_number' => ['nullable', 'string', 'max:50']],
             'subjects' => ['name' => 'required|string|max:100', 'code' => ['nullable', 'string', 'max:30'], 'teacher_id' => 'nullable|exists:teachers,id'],
             'attendance' => ['student_id' => 'required|exists:students,id', 'attendance_date' => 'required|date', 'status' => 'required|in:present,absent,late,excused', 'notes' => 'nullable|string|max:500'],
             'exams' => ['name' => 'required|string|max:150', 'term' => 'required|string|max:50', 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
