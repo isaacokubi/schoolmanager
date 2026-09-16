@@ -39,11 +39,6 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/search', AdminSearchController::class)->name('admin.search');
     Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
-    Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
-    Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
-    Route::get('/signature', [SignatureController::class, 'show'])->name('signature.index');
-    Route::put('/signature', [SignatureController::class, 'update'])->name('signature.update');
-    Route::delete('/signature', [SignatureController::class, 'remove'])->name('signature.remove');
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
@@ -52,11 +47,6 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('admin.students.destroy');
     Route::get('/admissions', [AdmissionManagementController::class, 'index'])->name('admin.admissions.index');
     Route::patch('/admissions/{application}/status', [AdmissionManagementController::class, 'updateStatus'])->name('admin.admissions.status');
-    Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
-    Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
-    Route::post('/payments', [PaymentController::class, 'store'])->name('admin.payments.store');
-    Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])->name('admin.payments.mpesa');
-    Route::post('/payments/mpesa/query/{payment}', [MpesaController::class, 'query'])->name('admin.payments.mpesa.query');
     Route::get('/operations', [OperationsController::class, 'index'])->name('admin.operations');
     Route::post('/operations', [OperationsController::class, 'store'])->name('admin.operations.store');
     Route::put('/operations/{id}', [OperationsController::class, 'update'])->name('admin.operations.update');
@@ -66,6 +56,19 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/report-cards/{student}/{exam}/notify', [ReportCardController::class, 'notify'])->name('admin.report-cards.notify');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('admin.report-cards.show');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('admin.report-cards.download');
+
+    Route::middleware('admin.only')->group(function () {
+        Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
+        Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
+        Route::get('/signature', [SignatureController::class, 'show'])->name('signature.index');
+        Route::put('/signature', [SignatureController::class, 'update'])->name('signature.update');
+        Route::delete('/signature', [SignatureController::class, 'remove'])->name('signature.remove');
+        Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
+        Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
+        Route::post('/payments', [PaymentController::class, 'store'])->name('admin.payments.store');
+        Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])->name('admin.payments.mpesa');
+        Route::post('/payments/mpesa/query/{payment}', [MpesaController::class, 'query'])->name('admin.payments.mpesa.query');
+    });
 });
 
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
