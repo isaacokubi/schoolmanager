@@ -14,20 +14,49 @@ class StudentController extends Controller
         $query = DB::table('students')
             ->leftJoin('parents', 'parents.id', '=', 'students.parent_id')
             ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
-            ->select('students.*', 'parents.name as linked_parent_name', 'school_classes.name as linked_class_name', 'school_classes.stream as linked_class_stream')
+            ->select(
+                'students.*',
+                'parents.name as linked_parent_name',
+                'school_classes.name as linked_class_name',
+                'school_classes.stream as linked_class_stream'
+            )
             ->orderByDesc('students.id');
+
         if ($request->filled('search')) {
-            $search = trim($request->input('search'));
-            $query->where(function ($q) use ($search) {
+            $search = trim((string) $request->input('search'));
+            $digits = preg_replace('/\D+/', '', $search);
+
+            $query->where(function ($q) use ($search, $digits) {
                 $q->where('students.name', 'like', "%{$search}%")
                     ->orWhere('students.admission_number', 'like', "%{$search}%")
                     ->orWhere('students.class_name', 'like', "%{$search}%")
                     ->orWhere('parents.name', 'like', "%{$search}%")
                     ->orWhere('students.parent_phone', 'like', "%{$search}%");
+
+                if ($digits && $digits !== $search) {
+                    $q->orWhere('students.parent_phone', 'like', "%{$digits}%");
+                }
             });
         }
+
+        if ($request->filled('class_id') && ctype_digit((string) $request->input('class_id'))) {
+            $query->where('students.class_id', (int) $request->input('class_id'));
+        }
+
+        if ($request->input('balance') === 'clear') {
+            $query->where('students.fee_balance', '<=', 0);
+        } elseif ($request->input('balance') === 'outstanding') {
+            $query->where('students.fee_balance', '>', 0);
+        }
+
         $students = $query->paginate(10)->withQueryString();
-        return view('admin.students.index', compact('students'));
+        $classes = DB::table('school_classes')
+            ->orderBy('academic_year', 'desc')
+            ->orderBy('name')
+            ->orderBy('stream')
+            ->get();
+
+        return view('admin.students.index', compact('students', 'classes'));
     }
 
     public function create()
@@ -43,7 +72,14 @@ class StudentController extends Controller
     {
         $data = $this->validated($request);
         $this->syncLegacyClassName($data);
-        DB::table('students')->insert($data + ['fee_balance' => $data['fee_balance'] ?? 0, 'created_at' => now(), 'updated_at' => now()]);
+        $data['parent_phone'] = $this->normalizeKenyanPhone($data['parent_phone'] ?? null);
+
+        DB::table('students')->insert($data + [
+            'fee_balance' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         return redirect()->route('admin.students.index')->with('success', 'Student added successfully.');
     }
 
@@ -51,6 +87,7 @@ class StudentController extends Controller
     {
         $student = DB::table('students')->find($student);
         abort_unless($student, 404);
+
         return view('admin.students.form', [
             'student' => $student,
             'parents' => DB::table('parents')->orderBy('name')->get(),
@@ -62,39 +99,49 @@ class StudentController extends Controller
     {
         $studentRecord = DB::table('students')->find($student);
         abort_unless($studentRecord, 404);
+
         $data = $this->validated($request, $student);
         $this->syncLegacyClassName($data);
+        $data['parent_phone'] = $this->normalizeKenyanPhone($data['parent_phone'] ?? null);
         unset($data['fee_balance']);
+
         DB::table('students')->where('id', $student)->update($data + ['updated_at' => now()]);
-        return redirect()->route('admin.students.index')->with('success', 'Student updated successfully. Fee balances can only change through recorded fee transactions.');
+
+        return redirect()->route('admin.students.index')->with(
+            'success',
+            'Student updated successfully. Fee balances can only change through recorded fee transactions.'
+        );
     }
 
     public function destroy($student)
     {
         abort_unless(DB::table('students')->where('id', $student)->exists(), 404);
+
         try {
             DB::table('students')->where('id', $student)->delete();
             return back()->with('success', 'Student deleted successfully.');
         } catch (\Throwable $e) {
-            return back()->withErrors(['student' => 'This student cannot be deleted because related records exist.']);
+            return back()->withErrors([
+                'student' => 'This student cannot be deleted because related records exist. Preserve the record and resolve its linked records instead.',
+            ]);
         }
     }
 
     private function validated(Request $request, $student = null)
     {
         return $request->validate([
-            'admission_number' => ['required','string','max:50', Rule::unique('students','admission_number')->ignore($student)],
-            'name' => ['required','string','max:150'],
-            'class_id' => ['nullable','exists:school_classes,id'],
-            'parent_id' => ['nullable','exists:parents,id'],
-            'class_name' => ['nullable','string','max:100'],
-            'parent_name' => ['nullable','string','max:150'],
-            'parent_phone' => ['nullable','regex:/^\+?2547\d{8}$/'],
-            'fee_balance' => ['nullable','numeric','min:0'],
+            'admission_number' => ['required', 'string', 'max:50', Rule::unique('students', 'admission_number')->ignore($student)],
+            'name' => ['required', 'string', 'max:150'],
+            'class_id' => ['nullable', 'exists:school_classes,id'],
+            'parent_id' => ['nullable', 'exists:parents,id'],
+            'class_name' => ['nullable', 'string', 'max:100'],
+            'parent_name' => ['nullable', 'string', 'max:150'],
+            'parent_phone' => ['nullable', 'string', 'max:20', 'regex:/^(?:0|\+?254)7\d{8}$/'],
+            'fee_balance' => ['nullable', 'numeric', 'min:0'],
         ]);
     }
 
-    private function syncLegacyClassName(array &$data)
+    private function syncLegacyClassName(array &$data): void
     {
         if (!empty($data['class_id'])) {
             $class = DB::table('school_classes')->find($data['class_id']);
@@ -102,5 +149,22 @@ class StudentController extends Controller
                 $data['class_name'] = trim($class->name . ($class->stream ? ' - ' . $class->stream : ''));
             }
         }
+    }
+
+    private function normalizeKenyanPhone(?string $phone): ?string
+    {
+        if (!$phone) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (str_starts_with($digits, '254')) {
+            return '+' . $digits;
+        }
+        if (str_starts_with($digits, '07') && strlen($digits) === 10) {
+            return '+254' . substr($digits, 1);
+        }
+
+        return $phone;
     }
 }
