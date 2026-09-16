@@ -28,9 +28,9 @@
 @endif
 
 <div class="student-stats">
-    <div class="student-stat"><span>Total records</span><strong>{{ number_format($total) }}</strong><small>Student records matching your current filters</small></div>
-    <div class="student-stat"><span>On this page</span><strong>{{ number_format($students->count()) }}</strong><small>Visible records</small></div>
-    <div class="student-stat"><span>Outstanding shown</span><strong>KES {{ number_format($outstanding, 2) }}</strong><small>Positive balances on this page</small></div>
+    <div class="student-stat"><span>Total records</span><strong>{{ number_format($total) }}</strong><small>Records matching the current filters</small></div>
+    <div class="student-stat"><span>On this page</span><strong>{{ number_format($students->count()) }}</strong><small>Visible student records</small></div>
+    <div class="student-stat"><span>Outstanding on page</span><strong>KES {{ number_format($outstanding, 2) }}</strong><small>Positive balances among visible records</small></div>
 </div>
 
 <div class="card student-filter-card">
@@ -77,8 +77,7 @@
     </div>
 
     <div class="table-wrap">
-        <table class="table student-table">
-            <caption class="sr-only">Student registry</caption>
+        <table class="table student-table" aria-label="Student registry">
             <thead>
                 <tr>
                     <th>Student</th>
@@ -130,17 +129,40 @@
     </div>
 
     @if($students->hasPages())
-        <div class="pagination-wrap">
-            <div class="pagination-summary">Showing <strong>{{ $students->firstItem() ?? 0 }}</strong>–<strong>{{ $students->lastItem() ?? 0 }}</strong> of <strong>{{ $students->total() }}</strong></div>
-            <div class="pagination-links">{{ $students->onEachSide(1)->links() }}</div>
-        </div>
+        <nav class="student-pagination" aria-label="Student registry pagination">
+            <div class="pagination-summary">
+                Showing <strong>{{ $students->firstItem() ?? 0 }}</strong>–<strong>{{ $students->lastItem() ?? 0 }}</strong>
+                of <strong>{{ number_format($students->total()) }}</strong> students
+            </div>
+            <div class="pagination-controls">
+                @if($students->onFirstPage())
+                    <span class="page-link disabled" aria-disabled="true">Previous</span>
+                @else
+                    <a class="page-link" href="{{ $students->previousPageUrl() }}" rel="prev">Previous</a>
+                @endif
+
+                @foreach($students->getUrlRange(max(1, $students->currentPage() - 2), min($students->lastPage(), $students->currentPage() + 2)) as $page => $url)
+                    @if($page == $students->currentPage())
+                        <span class="page-link current" aria-current="page">{{ $page }}</span>
+                    @else
+                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                    @endif
+                @endforeach
+
+                @if($students->hasMorePages())
+                    <a class="page-link" href="{{ $students->nextPageUrl() }}" rel="next">Next</a>
+                @else
+                    <span class="page-link disabled" aria-disabled="true">Next</span>
+                @endif
+            </div>
+        </nav>
     @endif
 </div>
 
 <style>
-.eyebrow{font-size:10px;letter-spacing:.14em;font-weight:900;color:#1769df;margin-bottom:7px}.student-page-head{align-items:center}.student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.student-stat{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid #e2e9f3;border-radius:15px;padding:16px 18px;box-shadow:0 7px 22px rgba(24,45,75,.045)}.student-stat span{display:block;color:#697a90;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.student-stat strong{display:block;color:#15243a;font-size:22px;margin:4px 0}.student-stat small{color:#8a98aa;font-size:11px}.student-filter-card{margin-bottom:18px}.student-filters{display:grid;grid-template-columns:minmax(250px,1.7fr) minmax(170px,1fr) minmax(150px,.8fr) auto;gap:12px;align-items:end}.student-filters label{display:block;font-size:11px;font-weight:850;color:#52637a;margin-bottom:6px}.student-filters input,.student-filters select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #d5dfeb;border-radius:10px;background:#fff;color:#26384f;font:inherit;outline:none}.student-filters input:focus,.student-filters select:focus{border-color:#5590e8;box-shadow:0 0 0 3px rgba(23,105,223,.1)}.filter-actions{display:flex;gap:8px}.student-table-card{overflow:hidden}.student-table-card .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.student-table-card .section-head p{max-width:680px}.record-count{white-space:nowrap;background:#f2f6fb;color:#607189;border:1px solid #e1e8f1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}.student-table{width:100%}.student-table th{white-space:nowrap}.student-table td{vertical-align:middle}.mono{font-variant-numeric:tabular-nums;letter-spacing:.02em;color:#44566f}.balance-due{color:#b45309}.balance-clear{color:#16724b}.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900;white-space:nowrap}.status-pill.success{background:#eaf8f1;color:#157347}.status-pill.warning{background:#fff5df;color:#9a5a00}.actions-col{width:130px}.actions-cell{white-space:nowrap}.delete-form{display:inline;margin:0}.table-action{border:0;background:transparent;color:#1769df;text-decoration:none;font:inherit;font-size:12px;font-weight:850;cursor:pointer;padding:4px}.table-action:hover{text-decoration:underline}.table-action.danger{color:#b42318}.pagination-wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0 0}.pagination-summary{font-size:12px;color:#748399}.pagination-links nav{display:flex}.pagination-links svg{width:16px}.empty-state{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:48px 20px;color:#7a899d;text-align:center}.empty-state strong{color:#25364e;font-size:15px}.empty-state .btn{margin-top:7px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.eyebrow{font-size:10px;letter-spacing:.14em;font-weight:900;color:#1769df;margin-bottom:7px}.student-page-head{align-items:center}.student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.student-stat{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid #e2e9f3;border-radius:15px;padding:16px 18px;box-shadow:0 7px 22px rgba(24,45,75,.045)}.student-stat span{display:block;color:#697a90;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.student-stat strong{display:block;color:#15243a;font-size:22px;margin:4px 0}.student-stat small{color:#8a98aa;font-size:11px}.student-filter-card{margin-bottom:18px}.student-filters{display:grid;grid-template-columns:minmax(250px,1.7fr) minmax(170px,1fr) minmax(150px,.8fr) auto;gap:12px;align-items:end}.student-filters label{display:block;font-size:11px;font-weight:850;color:#52637a;margin-bottom:6px}.student-filters input,.student-filters select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #d5dfeb;border-radius:10px;background:#fff;color:#26384f;font:inherit;outline:none}.student-filters input:focus,.student-filters select:focus{border-color:#5590e8;box-shadow:0 0 0 3px rgba(23,105,223,.1)}.filter-actions{display:flex;gap:8px}.student-table-card{overflow:hidden}.student-table-card .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.student-table-card .section-head p{max-width:680px}.record-count{white-space:nowrap;background:#f2f6fb;color:#607189;border:1px solid #e1e8f1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}.student-table{width:100%}.student-table th{white-space:nowrap}.student-table td{vertical-align:middle}.mono{font-variant-numeric:tabular-nums;letter-spacing:.02em;color:#44566f}.balance-due{color:#b45309}.balance-clear{color:#16724b}.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900;white-space:nowrap}.status-pill.success{background:#eaf8f1;color:#157347}.status-pill.warning{background:#fff5df;color:#9a5a00}.actions-col{width:130px}.actions-cell{white-space:nowrap}.delete-form{display:inline;margin:0}.table-action{border:0;background:transparent;color:#1769df;text-decoration:none;font:inherit;font-size:12px;font-weight:850;cursor:pointer;padding:4px}.table-action:hover{text-decoration:underline}.table-action.danger{color:#b42318}.student-pagination{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px 0 2px;border-top:1px solid #edf1f6;margin-top:2px}.pagination-summary{font-size:12px;color:#748399}.pagination-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}.page-link{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 10px;box-sizing:border-box;border:1px solid #dce4ee;border-radius:9px;background:#fff;color:#42566f;text-decoration:none;font-size:12px;font-weight:800}.page-link:hover{border-color:#9bbbe7;color:#1769df;background:#f7faff}.page-link.current{border-color:#1769df;background:#1769df;color:#fff}.page-link.disabled{color:#a6b1bf;background:#f7f9fb;border-color:#e7ecf2;cursor:not-allowed}.empty-state{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:48px 20px;color:#7a899d;text-align:center}.empty-state strong{color:#25364e;font-size:15px}.empty-state .btn{margin-top:7px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:1050px){.student-filters{grid-template-columns:1fr 1fr}.filter-search{grid-column:1/-1}.filter-actions{grid-column:1/-1}.student-stats{grid-template-columns:1fr 1fr}.student-stat:last-child{grid-column:1/-1}}
-@media(max-width:800px){.student-page-head{display:block}.student-stats{grid-template-columns:1fr}.student-stat:last-child{grid-column:auto}.student-filters{grid-template-columns:1fr}.filter-search,.filter-actions{grid-column:auto}.filter-actions{justify-content:flex-start}.student-table{min-width:760px}.student-table-card{overflow-x:auto}.student-table-card .section-head{min-width:760px}.pagination-wrap{min-width:760px}.pagination-wrap{align-items:flex-start;flex-direction:column}}
-@media(max-width:560px){.admin-actions .btn{width:100%;text-align:center;box-sizing:border-box}.student-stat strong{font-size:20px}}
+@media(max-width:800px){.student-page-head{display:block}.student-stats{grid-template-columns:1fr}.student-stat:last-child{grid-column:auto}.student-filters{grid-template-columns:1fr}.filter-search,.filter-actions{grid-column:auto}.filter-actions{justify-content:flex-start}.student-table{min-width:760px}.student-table-card{overflow-x:auto}.student-table-card .section-head{min-width:760px}.student-pagination{min-width:760px;align-items:flex-start;flex-direction:column}.pagination-controls{justify-content:flex-start}}
+@media(max-width:560px){.admin-actions .btn{width:100%;text-align:center;box-sizing:border-box}.student-stat strong{font-size:20px}.student-pagination{gap:12px}.pagination-controls{width:100%}.page-link{min-width:32px}}
 </style>
 @endsection
