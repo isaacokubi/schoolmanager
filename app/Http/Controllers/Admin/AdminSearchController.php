@@ -39,15 +39,15 @@ class AdminSearchController extends Controller
         return match ($scope) {
             'students' => $this->students($like),
             'admissions' => $this->admissions($like),
-            'parents' => $this->simpleTable('parents', ['name', 'phone', 'email', 'relationship'], $like, 'Parents / Guardians'),
+            'parents' => $this->simpleTable('parents', ['name', 'phone', 'email', 'relationship'], $like, 'Parents / Guardians', 'parents'),
             'classes' => $this->classes($like),
-            'teachers' => $this->simpleTable('teachers', ['name', 'employee_number', 'phone', 'email'], $like, 'Teachers'),
-            'subjects' => $this->simpleTable('subjects', ['name', 'code'], $like, 'Learning Areas'),
+            'teachers' => $this->simpleTable('teachers', ['name', 'employee_number', 'phone', 'email'], $like, 'Teachers', 'teachers'),
+            'subjects' => $this->simpleTable('subjects', ['name', 'code'], $like, 'Learning Areas', 'subjects'),
             'attendance' => $this->attendance($like),
-            'exams' => $this->simpleTable('exams', ['name', 'term', 'academic_year'], $like, 'Assessments'),
+            'exams' => $this->simpleTable('exams', ['name', 'term', 'academic_year'], $like, 'Assessments', 'exams'),
             'results' => $this->results($like),
-            'announcements' => $this->simpleTable('announcements', ['title', 'body'], $like, 'Announcements'),
-            'events' => $this->simpleTable('events', ['title', 'location', 'description', 'event_date'], $like, 'School Calendar'),
+            'announcements' => $this->simpleTable('announcements', ['title', 'body'], $like, 'Announcements', 'announcements'),
+            'events' => $this->simpleTable('events', ['title', 'location', 'description', 'event_date'], $like, 'School Calendar', 'events'),
             'payments' => $this->payments($like),
             default => [],
         };
@@ -188,7 +188,7 @@ class AdminSearchController extends Controller
             ])->all();
     }
 
-    private function simpleTable(string $table, array $columns, string $like, string $label): array
+    private function simpleTable(string $table, array $columns, string $like, string $label, string $section): array
     {
         $query = DB::table($table)->where(function ($q) use ($columns, $like) {
             foreach ($columns as $column) {
@@ -198,15 +198,14 @@ class AdminSearchController extends Controller
 
         $rows = $query->orderByDesc('id')->limit(self::LIMIT)->get();
 
-        return $rows->map(function ($row) use ($table, $label) {
+        return $rows->map(function ($row) use ($label, $section) {
             $title = (string) ($row->name ?? $row->title ?? $row->event_name ?? $label);
             $secondary = $row->email ?? $row->phone ?? $row->code ?? $row->stream ?? $row->location ?? $row->term ?? null;
-            $params = ['section' => $table === 'school_classes' ? 'classes' : ($table === 'subjects' ? 'teachers' : $table), 'search' => $title];
 
             return [
                 'title' => $title,
                 'subtitle' => $label . ($secondary ? ' · ' . $secondary : ''),
-                'url' => route('admin.operations', $params),
+                'url' => route('admin.operations', ['section' => $section, 'search' => $title]),
             ];
         })->all();
     }
