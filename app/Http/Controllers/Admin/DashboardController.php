@@ -19,6 +19,10 @@ class DashboardController extends Controller
         $cbcRecentResults=$this->safeQuery('results',function($q){return $q->join('students','students.id','=','results.student_id')->join('subjects','subjects.id','=','results.subject_id')->join('exams','exams.id','=','results.exam_id')->orderByDesc('results.created_at')->select('results.*','students.name as student_name','students.admission_number','subjects.name as subject_name','exams.name as exam_name')->limit(8)->get();});
         foreach($cbcRecentResults as $result){$level=$cbc->level($result->marks===null?null:(float)$result->marks);$result->cbc_code=$result->assessment_status==='missed'?'MISSED':$level['code'];$result->cbc_label=$result->assessment_status==='missed'?'Missed Assessment':$level['label'];$result->cbc_points=$result->assessment_status==='missed'?null:$level['points'];}
         $upcomingEvents=$this->safeQuery('events',function($q){return $q->whereDate('event_date','>=',now()->toDateString())->orderBy('event_date')->limit(5)->get();});
+        $role=strtolower((string)(auth()->user()->role ?? 'admin'));
+        if(in_array($role,['manager','operations_manager','operations-manager'],true)){
+            return view('admin.manager-dashboard',compact('stats','upcomingEvents','cbcRecentResults'));
+        }
         return view('admin.dashboard',compact('stats','recentApplications','recentPayments','upcomingEvents','cbcRecentResults'));
     }
     private function countTable($table){try{return DB::table($table)->count();}catch(\Throwable $e){return 0;}}
