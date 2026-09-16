@@ -17,6 +17,11 @@ class OperationsFeatureTest extends TestCase
         return User::create(['name'=>'Operations Admin','email'=>'operations-admin@example.test','password'=>Hash::make('Password123!'),'role'=>'admin']);
     }
 
+    private function manager(): User
+    {
+        return User::create(['name'=>'Operations Manager','email'=>'operations-manager@example.test','password'=>Hash::make('Password123!'),'role'=>'manager']);
+    }
+
     private function student(string $admission='S-001'): int
     {
         return DB::table('students')->insertGetId(['admission_number'=>$admission,'name'=>'Test Learner','parent_name'=>'Test Parent','parent_phone'=>'+254712345678','fee_balance'=>1000,'created_at'=>now(),'updated_at'=>now()]);
@@ -26,6 +31,32 @@ class OperationsFeatureTest extends TestCase
     {
         $admin=$this->admin();
         foreach(['parents','classes','teachers','subjects','attendance','exams','results','announcements','events'] as $section) $this->actingAs($admin)->get(route('admin.operations',['section'=>$section]))->assertOk();
+    }
+
+    public function test_manager_can_open_every_operations_section(): void
+    {
+        $manager=$this->manager();
+        foreach(['parents','classes','teachers','subjects','attendance','exams','results','announcements','events'] as $section) $this->actingAs($manager)->get(route('admin.operations',['section'=>$section]))->assertOk();
+    }
+
+    public function test_manager_can_manage_school_operations_but_not_admin_only_areas(): void
+    {
+        $manager=$this->manager();
+        $this->actingAs($manager)->post(route('admin.operations.store'),[
+            'section'=>'teachers',
+            'name'=>'Manager Created Teacher',
+            'email'=>'manager.teacher@example.test',
+            'phone'=>'0712345678',
+            'employee_number'=>'MGR-TCH-001',
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('teachers',[
+            'name'=>'Manager Created Teacher',
+            'employee_number'=>'MGR-TCH-001',
+        ]);
+
+        $this->actingAs($manager)->get(route('admin.settings'))->assertForbidden();
+        $this->actingAs($manager)->get(route('admin.payments.index'))->assertForbidden();
     }
 
     public function test_non_admin_cannot_use_operations(): void
