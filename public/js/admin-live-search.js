@@ -4,8 +4,8 @@
     const MIN_QUERY_LENGTH = 1;
     const DEBOUNCE_MS = 180;
     const MAX_RESULTS = 8;
-    let activeController = null;
     let debounceTimer = null;
+    let activeController = null;
 
     const scopeFromLocation = () => {
         const path = window.location.pathname.replace(/\/+$/, '');
@@ -15,7 +15,9 @@
         if (/\/admin\/admissions$/.test(path)) return 'admissions';
         if (/\/admin\/payments$/.test(path)) return 'payments';
         if (/\/admin\/operations$/.test(path)) return params.get('section') || 'parents';
-        return '';
+        if (/\/admin\/reports/.test(path)) return 'reports';
+        if (/\/admin\/settings/.test(path)) return 'settings';
+        return 'global';
     };
 
     const escapeHtml = (value) => String(value ?? '')
@@ -41,7 +43,6 @@
         input.setAttribute('aria-autocomplete', 'list');
         input.setAttribute('aria-controls', listId);
         panel.id = listId;
-
         return panel;
     };
 
@@ -52,7 +53,6 @@
     };
 
     const showState = (panel, message, type = '') => {
-        if (!panel) return;
         panel.innerHTML = `<div class="admin-live-search-state ${type}" role="status">${escapeHtml(message)}</div>`;
         panel.hidden = false;
     };
@@ -77,13 +77,10 @@
         if (!query) {
             if (activeController) activeController.abort();
             hidePanel(panel);
-            input.removeAttribute('aria-activedescendant');
             return;
         }
 
-        if (!scope) return;
         if (query.length < MIN_QUERY_LENGTH) return;
-
         if (activeController) activeController.abort();
         activeController = new AbortController();
         showState(panel, 'Searching…', 'loading');
@@ -91,7 +88,7 @@
         const endpoint = window.schoolManagerAdminSearchUrl || '/admin/search';
         const url = new URL(endpoint, window.location.origin);
         url.searchParams.set('q', query);
-        url.searchParams.set('scope', scope);
+        url.searchParams.set('scope', scope || 'global');
 
         try {
             const response = await fetch(url.toString(), {
@@ -99,7 +96,6 @@
                 credentials: 'same-origin',
                 signal: activeController.signal,
             });
-
             if (!response.ok) throw new Error(`Search failed with status ${response.status}`);
             const payload = await response.json();
             renderResults(panel, Array.isArray(payload.data) ? payload.data : []);
@@ -115,7 +111,7 @@
 
         const scope = input.dataset.liveSearchScope || scopeFromLocation();
         const panel = createPanel(input);
-        if (!panel || !scope) return;
+        if (!panel) return;
 
         input.addEventListener('input', () => {
             clearTimeout(debounceTimer);
@@ -156,7 +152,17 @@
         });
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('input[name="search"], input[data-live-search]').forEach(initInput);
-    });
+    const initialize = () => {
+        document.querySelectorAll([
+            'input[name="search"]',
+            'input[type="search"]',
+            'input[data-live-search]',
+        ].join(',')).forEach(initInput);
+    };
+
+    document.addEventListener('DOMContentLoaded', initialize);
+
+    // Supports search boxes inserted later by Blade fragments or JavaScript.
+    const observer = new MutationObserver(() => initialize());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
