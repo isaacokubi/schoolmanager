@@ -66,7 +66,8 @@ class ReportsPaginationTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.reports', ['report' => 'admissions', 'admissions_page' => 2]))
             ->assertOk()
-            ->assertSee('Applicant 1')
-            ->assertSee('Applicant 26');
+            ->assertSee('Showing 26–26 of 26 admission applications')
+            ->assertSee('Applicant 26')
+            ->assertDontSee('Applicant 1');
     }
 }
