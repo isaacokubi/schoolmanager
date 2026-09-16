@@ -45,15 +45,16 @@ class CbcReportCardService
         $student = DB::table('students')->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
             ->select('students.*', 'school_classes.name as class_label', 'school_classes.stream as class_stream', 'school_classes.class_teacher_id')
             ->where('students.id', $studentId)->first();
-        $exam = DB::table('exams')->find($examId);
+        $exam = DB::table('exams')->where('id', $examId)->whereNull('archived_at')->first();
         if (!$student || !$exam) return null;
 
         $results = DB::table('results')->join('subjects', 'subjects.id', '=', 'results.subject_id')
             ->where('results.student_id', $studentId)->where('results.exam_id', $examId)
+            ->whereNull('results.archived_at')
             ->orderBy('subjects.name')->select('results.*', 'subjects.name as subject_name', 'subjects.code as subject_code')->get();
         if ($results->isEmpty()) return null;
 
-        $expectedSubjectIds = DB::table('subjects')->pluck('id');
+        $expectedSubjectIds = DB::table('subjects')->whereNull('archived_at')->pluck('id');
         $recordedSubjectIds = $results->pluck('subject_id');
         $complete = $expectedSubjectIds->isNotEmpty() && $expectedSubjectIds->diff($recordedSubjectIds)->isEmpty();
 
@@ -62,15 +63,15 @@ class CbcReportCardService
             return $this->level((float) $result->marks)['points'];
         });
         $average = $present->count() ? round($present->avg('marks'), 1) : null;
-        $attendance = DB::table('attendance')->where('student_id', $studentId)->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
+        $attendance = DB::table('attendance')->where('student_id', $studentId)->whereNull('archived_at')->select('status', DB::raw('COUNT(*) as total'))->groupBy('status')->pluck('total', 'status');
         $parent = $student->parent_id ? DB::table('parents')->find($student->parent_id) : null;
 
-        $classTeacher = $student->class_teacher_id ? DB::table('teachers')->find($student->class_teacher_id) : null;
+        $classTeacher = $student->class_teacher_id ? DB::table('teachers')->where('id', $student->class_teacher_id)->whereNull('archived_at')->first() : null;
         if (!$classTeacher) {
-            $teacherIds = DB::table('subjects')->whereIn('id', $results->pluck('subject_id')->all())->whereNotNull('teacher_id')->pluck('teacher_id');
-            if ($teacherIds->isNotEmpty()) $classTeacher = DB::table('teachers')->whereIn('id', $teacherIds->all())->orderBy('name')->first();
+            $teacherIds = DB::table('subjects')->whereIn('id', $results->pluck('subject_id')->all())->whereNotNull('teacher_id')->whereNull('archived_at')->pluck('teacher_id');
+            if ($teacherIds->isNotEmpty()) $classTeacher = DB::table('teachers')->whereIn('id', $teacherIds->all())->whereNull('archived_at')->orderBy('name')->first();
         }
-        if (!$classTeacher) $classTeacher = DB::table('teachers')->orderBy('name')->first();
+        if (!$classTeacher) $classTeacher = DB::table('teachers')->whereNull('archived_at')->orderBy('name')->first();
 
         $headUserId = DB::table('settings')->where('key', 'head_of_institution_user_id')->value('value');
         $headOfInstitution = $headUserId ? DB::table('users')->where('id', $headUserId)->whereIn('role', ['admin', 'manager'])->first() : null;
@@ -129,27 +130,18 @@ class CbcReportCardService
         $mime = null;
 
         if ($extension === 'svg') {
-            // Do not trust fileinfo here: on this server it returns image/svg.
-            // DomPDF's SVG loader expects the standard image/svg+xml MIME type.
             $mime = 'image/svg+xml';
         } elseif (function_exists('mime_content_type') && is_file($absolutePath)) {
             $mime = mime_content_type($absolutePath) ?: null;
         }
 
         if (!$mime) {
-            if ($extension === 'jpg' || $extension === 'jpeg') {
-                $mime = 'image/jpeg';
-            } elseif ($extension === 'png') {
-                $mime = 'image/png';
-            } elseif ($extension === 'webp') {
-                $mime = 'image/webp';
-            } elseif ($extension === 'gif') {
-                $mime = 'image/gif';
-            } elseif ($extension === 'svg') {
-                $mime = 'image/svg+xml';
-            } else {
-                $mime = 'application/octet-stream';
-            }
+            if ($extension === 'jpg' || $extension === 'jpeg') $mime = 'image/jpeg';
+            elseif ($extension === 'png') $mime = 'image/png';
+            elseif ($extension === 'webp') $mime = 'image/webp';
+            elseif ($extension === 'gif') $mime = 'image/gif';
+            elseif ($extension === 'svg') $mime = 'image/svg+xml';
+            else $mime = 'application/octet-stream';
         }
 
         if ($mime === 'image/webp' && function_exists('imagecreatefromwebp') && function_exists('imagepng')) {
