@@ -5,79 +5,388 @@
 
 @section('admin_content')
 @php
-    $labels = ['parents'=>'Parents & Guardians','classes'=>'Classes & Streams','teachers'=>'Teachers','subjects'=>'Learning Areas','attendance'=>'Attendance','exams'=>'Assessments','results'=>'CBC Results','announcements'=>'Announcements','events'=>'School Calendar'];
-    $descriptions = ['parents'=>'Maintain guardian contacts and relationships for learners.','classes'=>'Organise classes, streams and academic-year placement.','teachers'=>'Manage teaching staff and school identifiers.','subjects'=>'Maintain CBC learning areas and teacher assignments.','attendance'=>'Capture and review daily learner attendance.','exams'=>'Create and manage school assessments.','results'=>'Record CBC achievement data and access report cards.','announcements'=>'Manage important school communication.','events'=>'Manage school events, dates and venues.'];
-    $icons = ['parents'=>'♙','classes'=>'▦','teachers'=>'◆','subjects'=>'◈','attendance'=>'✓','exams'=>'▤','results'=>'▥','announcements'=>'!','events'=>'◷'];
+    $labels = [
+        'parents' => 'Parents & Guardians',
+        'classes' => 'Classes & Streams',
+        'teachers' => 'Teachers',
+        'subjects' => 'Learning Areas',
+        'attendance' => 'Attendance',
+        'exams' => 'Assessments',
+        'results' => 'CBC Results',
+        'announcements' => 'Announcements',
+        'events' => 'School Calendar',
+    ];
+
+    $descriptions = [
+        'parents' => 'Maintain guardian contacts and relationships for learners.',
+        'classes' => 'Organise classes, streams and academic-year placement.',
+        'teachers' => 'Manage teaching staff and school identifiers.',
+        'subjects' => 'Maintain CBC learning areas and teacher assignments.',
+        'attendance' => 'Capture and review daily learner attendance.',
+        'exams' => 'Create and manage school assessments.',
+        'results' => 'Record CBC achievement data and access report cards.',
+        'announcements' => 'Manage important school communication.',
+        'events' => 'Manage school events, dates and venues.',
+    ];
+
+    $icons = [
+        'parents' => '♙', 'classes' => '▦', 'teachers' => '◆', 'subjects' => '◈',
+        'attendance' => '✓', 'exams' => '▤', 'results' => '▥', 'announcements' => '!', 'events' => '◷',
+    ];
+
     $records = ${$section};
     $total = method_exists($records, 'total') ? $records->total() : $records->count();
+
     $configs = [
-        'parents'=>['title'=>'Add parent or guardian','fields'=>[['name','Full name','text',true,'e.g. Ruth Chebet'],['phone','Phone number','tel',true,'e.g. 0712345678'],['email','Email address','email',false,'Optional email'],['relationship','Relationship','text',false,'Mother, Father, Guardian…']]],
-        'classes'=>['title'=>'Add class or stream','fields'=>[['name','Class name','text',true,'e.g. Grade 6'],['stream','Stream','text',false,'e.g. East'],['academic_year','Academic year','number',false,'e.g. 2026']]],
-        'teachers'=>['title'=>'Add teacher','fields'=>[['name','Full name','text',true,'e.g. Jane Wanjiku'],['email','Email address','email',false,'Optional email'],['phone','Phone number','tel',false,'Optional phone'],['employee_number','Employee number','text',false,'e.g. TCH-001']]],
-        'subjects'=>['title'=>'Add learning area','fields'=>[['name','Learning area','text',true,'e.g. Mathematics'],['code','Subject code','text',false,'e.g. MAT']]],
-        'exams'=>['title'=>'Create assessment','fields'=>[['name','Assessment name','text',true,'e.g. Term 2 Assessment'],['term','Term','text',true,'e.g. Term 2'],['academic_year','Academic year','number',true,'e.g. 2026'],['start_date','Start date','date',false,''],['end_date','End date','date',false,'']]],
-        'announcements'=>['title'=>'Create announcement','fields'=>[['title','Announcement title','text',true,'Enter a clear title'],['body','Message','textarea',true,'Write the message for the school community']]],
-        'events'=>['title'=>'Add school event','fields'=>[['title','Event title','text',true,'e.g. Parents meeting'],['event_date','Event date','date',true,''],['location','Location','text',false,'e.g. School hall'],['description','Description','textarea',false,'Optional details']]],
+        'parents' => [
+            'title' => 'Add parent or guardian',
+            'fields' => [
+                ['name', 'Full name', 'text', true, 'e.g. Ruth Chebet'],
+                ['phone', 'Phone number', 'tel', true, 'e.g. 0712345678'],
+                ['email', 'Email address', 'email', false, 'Optional email'],
+                ['relationship', 'Relationship', 'text', false, 'Mother, Father, Guardian…'],
+            ],
+        ],
+        'classes' => [
+            'title' => 'Add class or stream',
+            'fields' => [
+                ['name', 'Class name', 'text', true, 'e.g. Grade 6'],
+                ['stream', 'Stream', 'text', false, 'e.g. East'],
+                ['academic_year', 'Academic year', 'number', false, 'e.g. 2026'],
+            ],
+        ],
+        'teachers' => [
+            'title' => 'Add teacher',
+            'fields' => [
+                ['name', 'Full name', 'text', true, 'e.g. Jane Wanjiku'],
+                ['email', 'Email address', 'email', false, 'Optional email'],
+                ['phone', 'Phone number', 'tel', false, 'Optional phone'],
+                ['employee_number', 'Employee number', 'text', false, 'e.g. TCH-001'],
+            ],
+        ],
+        'subjects' => [
+            'title' => 'Add learning area',
+            'fields' => [
+                ['name', 'Learning area', 'text', true, 'e.g. Mathematics'],
+                ['code', 'Subject code', 'text', false, 'e.g. MAT'],
+            ],
+        ],
+        'exams' => [
+            'title' => 'Create assessment',
+            'fields' => [
+                ['name', 'Assessment name', 'text', true, 'e.g. Term 2 Assessment'],
+                ['term', 'Term', 'text', true, 'e.g. Term 2'],
+                ['academic_year', 'Academic year', 'number', true, 'e.g. 2026'],
+                ['start_date', 'Start date', 'date', false, ''],
+                ['end_date', 'End date', 'date', false, ''],
+            ],
+        ],
+        'announcements' => [
+            'title' => 'Create announcement',
+            'fields' => [
+                ['title', 'Announcement title', 'text', true, 'Enter a clear title'],
+                ['body', 'Message', 'textarea', true, 'Write the message for the school community'],
+            ],
+        ],
+        'events' => [
+            'title' => 'Add school event',
+            'fields' => [
+                ['title', 'Event title', 'text', true, 'e.g. Parents meeting'],
+                ['event_date', 'Event date', 'date', true, ''],
+                ['location', 'Location', 'text', false, 'e.g. School hall'],
+                ['description', 'Description', 'textarea', false, 'Optional details'],
+            ],
+        ],
     ];
 @endphp
 
 <div class="school-ops">
     <header class="ops-hero">
-        <div><span class="eyebrow">School operations</span><h1>Academic &amp; School Records</h1><p>{{ $descriptions[$section] ?? 'Manage academic and administrative records from one secure workspace.' }}</p></div>
-        <div class="hero-actions"><a href="{{ route('admin.dashboard') }}" class="btn-light">← Dashboard</a><a href="#records" class="btn-primary">View records</a></div>
+        <div>
+            <span class="eyebrow">School operations</span>
+            <h1>Academic &amp; School Records</h1>
+            <p>{{ $descriptions[$section] ?? 'Manage academic and administrative records from one secure workspace.' }}</p>
+        </div>
+        <div class="hero-actions">
+            <a href="{{ route('admin.dashboard') }}" class="btn-light">← Dashboard</a>
+            <a href="#records" class="btn-primary">View records</a>
+        </div>
     </header>
 
-    @if(session('success'))<div class="notice success"><b>✓ Saved successfully</b><span>{{ session('success') }}</span></div>@endif
-    @if($errors->any())<div class="notice error"><b>! Action could not be completed</b><span>{{ $errors->first() }}</span></div>@endif
+    @if(session('success'))
+        <div class="notice success">
+            <b>✓ Saved successfully</b>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="notice error">
+            <b>! Action could not be completed</b>
+            <span>{{ $errors->first() }}</span>
+        </div>
+    @endif
 
     <nav class="ops-nav" aria-label="School operations">
-        @foreach($labels as $key=>$label)<a href="{{ route('admin.operations',['section'=>$key]) }}" class="{{ $section===$key?'active':'' }}"><span>{{ $icons[$key] }}</span>{{ $label }}</a>@endforeach
+        @foreach($labels as $key => $label)
+            <a href="{{ route('admin.operations', ['section' => $key]) }}" class="{{ $section === $key ? 'active' : '' }}">
+                <span>{{ $icons[$key] }}</span>{{ $label }}
+            </a>
+        @endforeach
     </nav>
 
-    <div class="section-title"><div><span class="eyebrow muted">{{ $labels[$section] ?? 'Records' }}</span><h2>{{ $labels[$section] ?? 'School Records' }}</h2><p>{{ $descriptions[$section] ?? '' }}</p></div><div class="total-box"><small>Total records</small><strong>{{ number_format($total) }}</strong></div></div>
+    <div class="section-title">
+        <div>
+            <span class="eyebrow muted">{{ $labels[$section] ?? 'Records' }}</span>
+            <h2>{{ $labels[$section] ?? 'School Records' }}</h2>
+            <p>{{ $descriptions[$section] ?? '' }}</p>
+        </div>
+        <div class="total-box">
+            <small>Total records</small>
+            <strong>{{ number_format($total) }}</strong>
+        </div>
+    </div>
 
     @if(isset($configs[$section]))
-        @php($cfg=$configs[$section])
-        <section class="panel create-panel"><div class="panel-head"><div><span class="eyebrow muted">Create</span><h3>{{ $cfg['title'] }}</h3></div><span class="required-note"><b>*</b> Required</span></div>
-            <form method="POST" action="{{ route('admin.operations.store') }}">@csrf<input type="hidden" name="section" value="{{ $section }}"><div class="form-grid">
-                @foreach($cfg['fields'] as $field)<label class="field {{ $field[2]==='textarea'?'wide':'' }}"><span>{{ $field[1] }} @if($field[3])<b>*</b>@endif</span>@if($field[2]==='textarea')<textarea name="{{ $field[0] }}" placeholder="{{ $field[4] }}" {{ $field[3]?'required':'' }}>{{ old($field[0]) }}</textarea>@else<input type="{{ $field[2] }}" name="{{ $field[0] }}" value="{{ old($field[0]) }}" placeholder="{{ $field[4] }}" {{ $field[3]?'required':'' }}>@endif</label>@endforeach
-                @if($section==='subjects')<label class="field"><span>Assigned teacher</span><select name="teacher_id"><option value="">Unassigned</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}" {{ old('teacher_id')==$teacher->id?'selected':'' }}>{{ $teacher->name }}</option>@endforeach</select></label>@endif
-                @if($section==='announcements')<label class="check wide"><input type="checkbox" name="published" value="1" {{ old('published',true)?'checked':'' }}><span><b>Publish immediately</b><small>Make this announcement visible after saving.</small></span></label>@endif
-            </div><div class="form-footer"><small>School records are protected by administrator access.</small><button class="btn-primary" type="submit">Save {{ $labels[$section] ?? 'record' }}</button></div></form>
+        @php($cfg = $configs[$section])
+        <section class="panel create-panel">
+            <div class="panel-head">
+                <div>
+                    <span class="eyebrow muted">Create</span>
+                    <h3>{{ $cfg['title'] }}</h3>
+                </div>
+                <span class="required-note"><b>*</b> Required</span>
+            </div>
+
+            <form method="POST" action="{{ route('admin.operations.store') }}">
+                @csrf
+                <input type="hidden" name="section" value="{{ $section }}">
+                <div class="form-grid">
+                    @foreach($cfg['fields'] as $field)
+                        <label class="field {{ $field[2] === 'textarea' ? 'wide' : '' }}">
+                            <span>{{ $field[1] }} @if($field[3])<b>*</b>@endif</span>
+                            @if($field[2] === 'textarea')
+                                <textarea name="{{ $field[0] }}" placeholder="{{ $field[4] }}" {{ $field[3] ? 'required' : '' }}>{{ old($field[0]) }}</textarea>
+                            @else
+                                <input type="{{ $field[2] }}" name="{{ $field[0] }}" value="{{ old($field[0]) }}" placeholder="{{ $field[4] }}" {{ $field[3] ? 'required' : '' }}>
+                            @endif
+                        </label>
+                    @endforeach
+
+                    @if($section === 'subjects')
+                        <label class="field">
+                            <span>Assigned teacher</span>
+                            <select name="teacher_id">
+                                <option value="">Unassigned</option>
+                                @foreach($teachers as $teacher)
+                                    <option value="{{ $teacher->id }}" {{ old('teacher_id') == $teacher->id ? 'selected' : '' }}>{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    @endif
+
+                    @if($section === 'announcements')
+                        <label class="check wide">
+                            <input type="checkbox" name="published" value="1" {{ old('published', true) ? 'checked' : '' }}>
+                            <span><b>Publish immediately</b><small>Make this announcement visible after saving.</small></span>
+                        </label>
+                    @endif
+                </div>
+
+                <div class="form-footer">
+                    <small>School records are protected by administrator access.</small>
+                    <button class="btn-primary" type="submit">Save {{ $labels[$section] ?? 'record' }}</button>
+                </div>
+            </form>
         </section>
     @endif
 
-    @if($section==='attendance')
-        <section class="panel"><div class="panel-head"><div><span class="eyebrow muted">Daily records</span><h3>Record attendance</h3></div><span class="badge">Present · Absent · Late · Excused</span></div><form method="POST" action="{{ route('admin.operations.attendance') }}">@csrf<div class="form-grid"><label class="field wide"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label><label class="field"><span>Date <b>*</b></span><input type="date" name="attendance_date" value="{{ old('attendance_date',date('Y-m-d')) }}" required></label><label class="field"><span>Status <b>*</b></span><select name="status" required><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option><option value="excused">Excused</option></select></label><label class="field wide"><span>Notes</span><textarea name="notes" placeholder="Optional attendance note"></textarea></label></div><div class="form-footer"><small>Use the learner's admission number to confirm the correct record.</small><button class="btn-primary" type="submit">Save attendance</button></div></form></section>
+    @if($section === 'attendance')
+        <section class="panel">
+            <div class="panel-head">
+                <div><span class="eyebrow muted">Daily records</span><h3>Record attendance</h3></div>
+                <span class="badge">Present · Absent · Late · Excused</span>
+            </div>
+            <form method="POST" action="{{ route('admin.operations.attendance') }}">
+                @csrf
+                <div class="form-grid">
+                    <label class="field wide"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label>
+                    <label class="field"><span>Date <b>*</b></span><input type="date" name="attendance_date" value="{{ old('attendance_date', date('Y-m-d')) }}" required></label>
+                    <label class="field"><span>Status <b>*</b></span><select name="status" required><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option><option value="excused">Excused</option></select></label>
+                    <label class="field wide"><span>Notes</span><textarea name="notes" placeholder="Optional attendance note"></textarea></label>
+                </div>
+                <div class="form-footer"><small>Use the learner's admission number to confirm the correct record.</small><button class="btn-primary" type="submit">Save attendance</button></div>
+            </form>
+        </section>
     @endif
 
-    @if($section==='results')
-        <section class="panel cbc"><div class="panel-head"><div><span class="eyebrow muted">Competency-Based Assessment</span><h3>Record CBC assessment</h3></div><div class="legend"><b>EE</b> Exceeding <b>ME</b> Meeting <b>AE</b> Approaching <b>BE</b> Below</div></div><form method="POST" action="{{ route('admin.operations.results') }}" id="cbc-form">@csrf<div class="form-grid"><label class="field"><span>Assessment <b>*</b></span><select name="exam_id" required><option value="">Select assessment</option>@foreach($exams as $exam)<option value="{{ $exam->id }}">{{ $exam->name }} — {{ $exam->term }} {{ $exam->academic_year }}</option>@endforeach</select></label><label class="field"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label><label class="field"><span>Learning area <b>*</b></span><select name="subject_id" required><option value="">Select learning area</option>@foreach($subjects as $subject)<option value="{{ $subject->id }}">{{ $subject->name }}</option>@endforeach</select></label><label class="field"><span>Assessment status <b>*</b></span><select name="assessment_status" id="assessment-status" required><option value="present">Assessment completed</option><option value="missed">Missed assessment</option></select></label><label class="field" id="marks-field"><span>Score (0–100) <b>*</b></span><input type="number" name="marks" id="marks" min="0" max="100" step="0.01" placeholder="Enter score"></label><label class="field wide"><span>Teacher / assessor remarks</span><textarea name="remarks" placeholder="Optional learning feedback"></textarea></label></div><div class="scale">@foreach([['EE1','90–100'],['EE2','75–89'],['ME1','58–74'],['ME2','41–57'],['AE1','31–40'],['AE2','21–30'],['BE1','11–20'],['BE2','0–10']] as $band)<div><b>{{ $band[0] }}</b><span>{{ $band[1] }}</span></div>@endforeach</div><div class="form-footer"><small>Achievement level and points are calculated by the system.</small><button class="btn-primary" type="submit">Save CBC assessment</button></div></form></section>
-        <script>(function(){const s=document.getElementById('assessment-status'),m=document.getElementById('marks'),f=document.getElementById('marks-field');if(!s||!m)return;function sync(){const x=s.value==='missed';m.required=!x;m.disabled=x;if(f)f.classList.toggle('disabled',x);if(x)m.value='';}s.addEventListener('change',sync);sync();})();</script>
+    @if($section === 'results')
+        <section class="panel cbc">
+            <div class="panel-head">
+                <div><span class="eyebrow muted">Competency-Based Assessment</span><h3>Record CBC assessment</h3></div>
+                <div class="legend"><b>EE</b> Exceeding <b>ME</b> Meeting <b>AE</b> Approaching <b>BE</b> Below</div>
+            </div>
+            <form method="POST" action="{{ route('admin.operations.results') }}" id="cbc-form">
+                @csrf
+                <div class="form-grid">
+                    <label class="field"><span>Assessment <b>*</b></span><select name="exam_id" required><option value="">Select assessment</option>@foreach($exams as $exam)<option value="{{ $exam->id }}">{{ $exam->name }} — {{ $exam->term }} {{ $exam->academic_year }}</option>@endforeach</select></label>
+                    <label class="field"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label>
+                    <label class="field"><span>Learning area <b>*</b></span><select name="subject_id" required><option value="">Select learning area</option>@foreach($subjects as $subject)<option value="{{ $subject->id }}">{{ $subject->name }}</option>@endforeach</select></label>
+                    <label class="field"><span>Assessment status <b>*</b></span><select name="assessment_status" id="assessment-status" required><option value="present">Assessment completed</option><option value="missed">Missed assessment</option></select></label>
+                    <label class="field" id="marks-field"><span>Score (0–100) <b>*</b></span><input type="number" name="marks" id="marks" min="0" max="100" step="0.01" placeholder="Enter score"></label>
+                    <label class="field wide"><span>Teacher / assessor remarks</span><textarea name="remarks" placeholder="Optional learning feedback"></textarea></label>
+                </div>
+                <div class="scale">
+                    @foreach([['EE1','90–100'],['EE2','75–89'],['ME1','58–74'],['ME2','41–57'],['AE1','31–40'],['AE2','21–30'],['BE1','11–20'],['BE2','0–10']] as $band)
+                        <div><b>{{ $band[0] }}</b><span>{{ $band[1] }}</span></div>
+                    @endforeach
+                </div>
+                <div class="form-footer"><small>Achievement level and points are calculated by the system.</small><button class="btn-primary" type="submit">Save CBC assessment</button></div>
+            </form>
+        </section>
+        <script>
+            (function () {
+                const status = document.getElementById('assessment-status');
+                const marks = document.getElementById('marks');
+                const field = document.getElementById('marks-field');
+                if (!status || !marks) return;
+                function sync() {
+                    const missed = status.value === 'missed';
+                    marks.required = !missed;
+                    marks.disabled = missed;
+                    if (field) field.classList.toggle('disabled', missed);
+                    if (missed) marks.value = '';
+                }
+                status.addEventListener('change', sync);
+                sync();
+            }());
+        </script>
     @endif
 
-    <section class="panel records" id="records"><div class="panel-head"><div><span class="eyebrow muted">Records</span><h3>{{ $labels[$section] ?? ucfirst($section) }}</h3><p>Search and review existing school records.</p></div><span class="count">{{ number_format($total) }} total</span></div>
-        <div class="search-area"><form method="GET" class="search-form" role="search"><input type="hidden" name="section" value="{{ $section }}"><div class="search-input"><span>⌕</span><input name="search" value="{{ request('search') }}" autocomplete="off" data-live-search="true" aria-label="Search {{ strtolower($labels[$section] ?? 'records') }}" placeholder="Search by name, phone, email, ID or details…"></div><button class="btn-primary" type="submit">Search</button>@if(request('search'))<a class="btn-muted" href="{{ route('admin.operations',['section'=>$section]) }}">Clear</a>@endif</form><small>Live results appear as you type.</small></div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Record details</th><th>Actions</th></tr></thead><tbody>
-        @forelse($records as $row)<tr><td><span class="id">#{{ $row->id }}</span></td><td>
-            @if($section==='parents')<strong>{{ $row->name }}</strong><small>{{ $row->phone }}@if($row->email) · {{ $row->email }}@endif</small>@if($row->relationship)<em>{{ $row->relationship }}</em>@endif
-            @elseif($section==='classes')<strong>{{ $row->name }}</strong><small>{{ $row->stream ?: 'No stream assigned' }} · {{ $row->academic_year ?: 'Academic year not set' }}</small>
-            @elseif($section==='teachers')<strong>{{ $row->name }}</strong><small>{{ $row->employee_number ?: 'No employee number' }}@if($row->phone) · {{ $row->phone }}@endif@if($row->email) · {{ $row->email }}@endif</small>
-            @elseif($section==='subjects')<strong>{{ $row->name }}</strong><small>{{ $row->code ?: 'No subject code' }}</small>
-            @elseif($section==='attendance')<strong>{{ $row->student_name ?: 'Unknown learner' }}</strong><small>{{ $row->admission_number ?: 'No admission number' }} · {{ $row->attendance_date }}</small><em class="status {{ strtolower($row->status) }}">{{ ucfirst($row->status) }}</em>
-            @elseif($section==='results')<strong>{{ $row->student_name ?: 'Unknown learner' }}</strong><small>{{ $row->subject_name ?: 'Learning area unavailable' }} · {{ $row->exam_name ?: 'Assessment unavailable' }}</small><div class="result"><em>{{ $row->assessment_status==='missed'?'MISSED':($row->achievement_level ?: 'Pending') }}</em>@if($row->marks!==null)<span>{{ number_format((float)$row->marks,2) }}/100</span>@endif@if($row->achievement_points)<span>{{ $row->achievement_points }} pts</span>@endif</div>
-            @elseif($section==='exams')<strong>{{ $row->name }}</strong><small>{{ $row->term }} · {{ $row->academic_year }}@if($row->start_date) · {{ $row->start_date }}@endif</small>
-            @elseif($section==='announcements')<strong>{{ $row->title }}</strong><small>{{ \Illuminate\Support\Str::limit((string)$row->body,140) }}</small><em class="status {{ !empty($row->published)?'published':'draft' }}">{{ !empty($row->published)?'Published':'Draft' }}</em>
-            @elseif($section==='events')<strong>{{ $row->title }}</strong><small>{{ $row->event_date }}@if($row->location) · {{ $row->location }}@endif</small>
-            @else @foreach((array)$row as $key=>$value) @if(!in_array($key,['id','created_at','updated_at'],true))<small><b>{{ ucwords(str_replace('_',' ',$key)) }}:</b> {{ \Illuminate\Support\Str::limit((string)$value,100) }}</small>@endif @endforeach @endif
-        </td><td>@if($section==='results')<a class="action" href="{{ route('admin.report-cards.show',[$row->student_id,$row->exam_id]) }}">View report</a><a class="action" href="{{ route('admin.report-cards.download',[$row->student_id,$row->exam_id]) }}">Download</a><form method="POST" action="{{ route('admin.report-cards.notify',[$row->student_id,$row->exam_id]) }}" style="display:inline">@csrf<button class="action" type="submit">Send</button></form>@else<span class="muted-dash">—</span>@endif</td></tr>
-        @empty<tr><td colspan="3"><div class="empty"><div>⌕</div><b>No records found</b><span>{{ request('search')?'Try another search term or clear the filter.':'Records will appear here when they are available.' }}</span>@if(request('search'))<a href="{{ route('admin.operations',['section'=>$section]) }}">Clear search</a>@endif</div></td></tr>@endforelse
-        </tbody></table></div><div class="pagination">{{ $records->links() }}</div>
+    <section class="panel records" id="records">
+        <div class="panel-head">
+            <div><span class="eyebrow muted">Records</span><h3>{{ $labels[$section] ?? ucfirst($section) }}</h3><p>Search and review existing school records.</p></div>
+            <span class="count">{{ number_format($total) }} total</span>
+        </div>
+
+        <div class="search-area">
+            <form method="GET" class="search-form" role="search">
+                <input type="hidden" name="section" value="{{ $section }}">
+                <div class="search-input">
+                    <span>⌕</span>
+                    <input name="search" value="{{ request('search') }}" autocomplete="off" data-live-search="true" aria-label="Search {{ strtolower($labels[$section] ?? 'records') }}" placeholder="Search by name, phone, email, ID or details…">
+                </div>
+                <button class="btn-primary" type="submit">Search</button>
+                @if(request('search'))
+                    <a class="btn-muted" href="{{ route('admin.operations', ['section' => $section]) }}">Clear</a>
+                @endif
+            </form>
+            <small>Live results appear as you type.</small>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Record details</th><th>Actions</th></tr></thead>
+                <tbody>
+                    @forelse($records as $row)
+                        <tr>
+                            <td><span class="id">#{{ $row->id }}</span></td>
+                            <td>
+                                @switch($section)
+                                    @case('parents')
+                                        <strong>{{ $row->name }}</strong>
+                                        <small>{{ $row->phone }}@if($row->email) · {{ $row->email }}@endif</small>
+                                        @if($row->relationship)<em>{{ $row->relationship }}</em>@endif
+                                        @break
+                                    @case('classes')
+                                        <strong>{{ $row->name }}</strong>
+                                        <small>{{ $row->stream ?: 'No stream assigned' }} · {{ $row->academic_year ?: 'Academic year not set' }}</small>
+                                        @break
+                                    @case('teachers')
+                                        <strong>{{ $row->name }}</strong>
+                                        <small>{{ $row->employee_number ?: 'No employee number' }}@if($row->phone) · {{ $row->phone }}@endif @if($row->email) · {{ $row->email }}@endif</small>
+                                        @break
+                                    @case('subjects')
+                                        <strong>{{ $row->name }}</strong>
+                                        <small>{{ $row->code ?: 'No subject code' }}</small>
+                                        @break
+                                    @case('attendance')
+                                        <strong>{{ $row->student_name ?: 'Unknown learner' }}</strong>
+                                        <small>{{ $row->admission_number ?: 'No admission number' }} · {{ $row->attendance_date }}</small>
+                                        <em class="status {{ strtolower($row->status) }}">{{ ucfirst($row->status) }}</em>
+                                        @break
+                                    @case('results')
+                                        <strong>{{ $row->student_name ?: 'Unknown learner' }}</strong>
+                                        <small>{{ $row->subject_name ?: 'Learning area unavailable' }} · {{ $row->exam_name ?: 'Assessment unavailable' }}</small>
+                                        <div class="result">
+                                            <em>{{ $row->assessment_status === 'missed' ? 'MISSED' : ($row->achievement_level ?: 'Pending') }}</em>
+                                            @if($row->marks !== null)<span>{{ number_format((float) $row->marks, 2) }}/100</span>@endif
+                                            @if($row->achievement_points)<span>{{ $row->achievement_points }} pts</span>@endif
+                                        </div>
+                                        @break
+                                    @case('exams')
+                                        <strong>{{ $row->name }}</strong>
+                                        <small>{{ $row->term }} · {{ $row->academic_year }}@if($row->start_date) · {{ $row->start_date }}@endif</small>
+                                        @break
+                                    @case('announcements')
+                                        <strong>{{ $row->title }}</strong>
+                                        <small>{{ \Illuminate\Support\Str::limit((string) $row->body, 140) }}</small>
+                                        <em class="status {{ !empty($row->published) ? 'published' : 'draft' }}">{{ !empty($row->published) ? 'Published' : 'Draft' }}</em>
+                                        @break
+                                    @case('events')
+                                        <strong>{{ $row->title }}</strong>
+                                        <small>{{ $row->event_date }}@if($row->location) · {{ $row->location }}@endif</small>
+                                        @break
+                                    @default
+                                        @foreach((array) $row as $key => $value)
+                                            @if(!in_array($key, ['id', 'created_at', 'updated_at'], true))
+                                                <small><b>{{ ucwords(str_replace('_', ' ', $key)) }}:</b> {{ \Illuminate\Support\Str::limit((string) $value, 100) }}</small>
+                                            @endif
+                                        @endforeach
+                                @endswitch
+                            </td>
+                            <td>
+                                @if($section === 'results')
+                                    <a class="action" href="{{ route('admin.report-cards.show', [$row->student_id, $row->exam_id]) }}">View report</a>
+                                    <a class="action" href="{{ route('admin.report-cards.download', [$row->student_id, $row->exam_id]) }}">Download</a>
+                                    <form method="POST" action="{{ route('admin.report-cards.notify', [$row->student_id, $row->exam_id]) }}" style="display:inline">
+                                        @csrf
+                                        <button class="action" type="submit">Send</button>
+                                    </form>
+                                @else
+                                    <span class="muted-dash">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3">
+                                <div class="empty">
+                                    <div>⌕</div>
+                                    <b>No records found</b>
+                                    <span>{{ request('search') ? 'Try another search term or clear the filter.' : 'Records will appear here when they are available.' }}</span>
+                                    @if(request('search'))<a href="{{ route('admin.operations', ['section' => $section]) }}">Clear search</a>@endif
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">{{ $records->links() }}</div>
     </section>
 </div>
 
 <style>
-.school-ops{--navy:#14253d;--blue:#1769df;--blue-dark:#0e56bd;--soft:#edf5ff;--border:#dfe7f1;--muted:#748298;color:var(--navy)}.school-ops *{box-sizing:border-box}.school-ops a{text-decoration:none}.ops-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:29px 30px;border-radius:18px;margin-bottom:18px;color:#fff;background:linear-gradient(135deg,#12243d,#1b416d 62%,#1769df);box-shadow:0 14px 32px rgba(20,37,61,.14)}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:9px;font-weight:900;display:block;opacity:.82}.eyebrow.muted{color:#748298;opacity:1;margin-bottom:4px}.ops-hero h1{font-size:28px;letter-spacing:-.03em;margin:7px 0 6px}.ops-hero p{font-size:12px;line-height:1.6;color:#dce9f8;margin:0;max-width:700px}.hero-actions{display:flex;gap:8px;flex:none}.btn-primary,.btn-light,.btn-muted{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:10px 14px;font-size:11px;font-weight:850;cursor:pointer}.btn-primary{background:var(--blue);color:#fff;box-shadow:0 5px 13px rgba(23,105,223,.18)}.btn-primary:hover{background:var(--blue-dark)}.btn-light{color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}.btn-muted{background:#eef2f7;color:#4d5c70}.notice{display:flex;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:15px;border:1px solid}.notice b,.notice span{display:block;font-size:11px}.notice span{margin-top:2px}.notice.success{background:#f0fbf6;border-color:#c7ead8;color:#176844}.notice.error{background:#fff7f6;border-color:#f0d0cb;color:#a32920}.ops-nav{display:flex;gap:7px;overflow-x:auto;padding:2px 1px 13px}.ops-nav a{display:flex;align-items:center;gap:7px;white-space:nowrap;border:1px solid var(--border);background:#fff;color:#59697d;border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}.ops-nav a.active{color:var(--blue);background:var(--soft);border-color:#b9d4f7}.ops-nav a span{font-size:13px}.section-title{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin:6px 0 16px}.section-title h2{margin:0;font-size:21px;letter-spacing:-.02em}.section-title p{margin:4px 0 0;color:var(--muted);font-size:11px}.total-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 13px;min-width:100px}.total-box small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:800}.total-box strong{font-size:17px}.panel{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 7px 22px rgba(28,49,77,.05);margin-bottom:17px;overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:17px 19px;border-bottom:1px solid #edf1f6}.panel-head h3{margin:0;font-size:15px}.panel-head p{margin:3px 0 0;color:var(--muted);font-size:10px}.required-note,.badge,.count{font-size:9px;padding:7px 9px;border:1px solid #e7edf4;background:#f8fafc;color:var(--muted);border-radius:7px}.required-note b{color:#c7382d}.panel form{padding:18px 19px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:6px}.field.wide{grid-column:1/-1}.field>span{font-size:10px;font-weight:850;color:#34455d}.field>span b{color:#c7382d}.field input,.field select,.field textarea{width:100%;border:1px solid #d5dfeb;border-radius:9px;background:#fbfcfe;color:#1d2d43;padding:10px 11px;font:inherit;font-size:11px;outline:none}.field textarea{min-height:82px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:#70a6e9;background:#fff;box-shadow:0 0 0 3px rgba(23,105,223,.08)}.check{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #e2e9f1;border-radius:9px;background:#fafcff}.check input{accent-color:var(--blue);margin-top:2px}.check b,.check small{display:block}.check b{font-size:10px}.check small{font-size:9px;color:var(--muted);margin-top:2px}.form-footer{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:16px;padding-top:14px;border-top:1px solid #edf1f6}.form-footer small{font-size:9px;color:#8793a4}.cbc{border-color:#cddff5;background:linear-gradient(180deg,#fff,#fbfdff)}.legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:9px;color:#607086}.legend b{background:var(--soft);color:var(--blue);padding:4px 6px;border-radius:5px}.scale{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:15px}.scale div{text-align:center;border:1px solid #e2e9f2;background:#fafcff;border-radius:8px;padding:8px 3px}.scale b{display:block;color:var(--blue);font-size:10px}.scale span{font-size:8px;color:#8794a6}.disabled{opacity:.58}.search-area{padding:14px 19px;background:#fafcff;border-bottom:1px solid #edf1f6}.search-form{display:flex;align-items:center;gap:8px;padding:0!important}.search-input{position:relative;flex:1}.search-input span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#8492a4;font-size:18px}.search-input input{width:100%;height:39px;border:1px solid #d5dfeb;border-radius:9px;padding:0 11px 0 34px;font-size:11px;outline:none}.search-input input:focus{border-color:#70a6e9;box-shadow:0 0 0 3px rgba(23,105,223,.08)}.search-area>small{display:block;color:#8a96a6;font-size:8px;margin-top:6px}.table-wrap{overflow-x:auto}.records table{width:100%;border-collapse:collapse;min-width:670px}.records th{background:#f8fafc;text-align:left;text-transform:uppercase;letter-spacing:.06em;color:#68778b;font-size:8px;padding:10px 15px;border-bottom:1px solid #e5ebf2}.records td{padding:12px 15px;border-bottom:1px solid #eef2f6;vertical-align:top}.records tbody tr:hover{background:#fbfdff}.id{display:inline-flex;background:#f1f4f8;color:#65748a;border-radius:6px;padding:5px 7px;font-size:9px;font-weight:850}.records td strong,.records td small,.records td em{display:block}.records td strong{font-size:11px;color:#20324a}.records td small{font-size:9px;color:#7b899b;line-height:1.5;margin-top:3px}.records td em{font-style:normal;width:max-content;margin-top:5px;padding:4px 7px;border-radius:6px;font-size:8px;font-weight:850;background:#f0f3f7;color:#627185}.records .status.present,.records .status.published{background:#eaf8f1;color:#16704d}.records .status.absent{background:#fff0ee;color:#b52e24}.records .status.late{background:#fff7df;color:#946600}.records .status.excused{background:var(--soft);color:var(--blue)}.records .status.draft{background:#f0f3f7;color:#68778b}.result{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.result em{background:var(--soft)!important;color:var(--blue)!important}.result span{font-size:8px;color:#68778b;background:#f2f5f8;padding:4px 6px;border-radius:6px;margin-top:5px}.action{color:var(--blue);font-size:9px;font-weight:850;margin-right:9px;display:inline-block;margin-bottom:4px}.action:hover{text-decoration:underline}.muted-dash{color:#b1bac6}.empty{text-align:center;padding:43px 20px;color:#7b899b}.empty>div{width:40px;height:40px;display:grid;place-items:center;margin:0 auto 9px;background:#f0f4f8;border-radius:11px;font-size:19px}.empty b{display:block;color:#405168;font-size:12px}.empty span{display:block;font-size:9px;margin:4px 0 9px}.empty a{font-size:9px;color:var(--blue);font-weight:850}.pagination{padding:13px 17px;border-top:1px solid #edf1f6}.pagination svg{max-width:15px}.pagination a,.pagination span{font-size:9px!important}
+.school-ops{--navy:#14253d;--blue:#1769df;--blue-dark:#0e56bd;--soft:#edf5ff;--border:#dfe7f1;--muted:#748298;color:var(--navy)}
+.school-ops *{box-sizing:border-box}.school-ops a{text-decoration:none}.ops-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:29px 30px;border-radius:18px;margin-bottom:18px;color:#fff;background:linear-gradient(135deg,#12243d,#1b416d 62%,#1769df);box-shadow:0 14px 32px rgba(20,37,61,.14)}
+.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:9px;font-weight:900;display:block;opacity:.82}.eyebrow.muted{color:#748298;opacity:1;margin-bottom:4px}.ops-hero h1{font-size:28px;letter-spacing:-.03em;margin:7px 0 6px}.ops-hero p{font-size:12px;line-height:1.6;color:#dce9f8;margin:0;max-width:700px}.hero-actions{display:flex;gap:8px;flex:none}.btn-primary,.btn-light,.btn-muted{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:10px 14px;font-size:11px;font-weight:850;cursor:pointer}.btn-primary{background:var(--blue);color:#fff;box-shadow:0 5px 13px rgba(23,105,223,.18)}.btn-primary:hover{background:var(--blue-dark)}.btn-light{color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}.btn-muted{background:#eef2f7;color:#4d5c70}
+.notice{display:flex;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:15px;border:1px solid}.notice b,.notice span{display:block;font-size:11px}.notice span{margin-top:2px}.notice.success{background:#f0fbf6;border-color:#c7ead8;color:#176844}.notice.error{background:#fff7f6;border-color:#f0d0cb;color:#a32920}
+.ops-nav{display:flex;gap:7px;overflow-x:auto;padding:2px 1px 13px}.ops-nav a{display:flex;align-items:center;gap:7px;white-space:nowrap;border:1px solid var(--border);background:#fff;color:#59697d;border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}.ops-nav a.active{color:var(--blue);background:var(--soft);border-color:#b9d4f7}.ops-nav a span{font-size:13px}.section-title{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin:6px 0 16px}.section-title h2{margin:0;font-size:21px;letter-spacing:-.02em}.section-title p{margin:4px 0 0;color:var(--muted);font-size:11px}.total-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 13px;min-width:100px}.total-box small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:800}.total-box strong{font-size:17px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 7px 22px rgba(28,49,77,.05);margin-bottom:17px;overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:17px 19px;border-bottom:1px solid #edf1f6}.panel-head h3{margin:0;font-size:15px}.panel-head p{margin:3px 0 0;color:var(--muted);font-size:10px}.required-note,.badge,.count{font-size:9px;padding:7px 9px;border:1px solid #e7edf4;background:#f8fafc;color:var(--muted);border-radius:7px}.required-note b{color:#c7382d}.panel form{padding:18px 19px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:6px}.field.wide{grid-column:1/-1}.field>span{font-size:10px;font-weight:850;color:#34455d}.field>span b{color:#c7382d}.field input,.field select,.field textarea{width:100%;border:1px solid #d5dfeb;border-radius:9px;background:#fbfcfe;color:#1d2d43;padding:10px 11px;font:inherit;font-size:11px;outline:none}.field textarea{min-height:82px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:#70a6e9;background:#fff;box-shadow:0 0 0 3px rgba(23,105,223,.08)}
+.check{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #e2e9f1;border-radius:9px;background:#fafcff}.check input{accent-color:var(--blue);margin-top:2px}.check b,.check small{display:block}.check b{font-size:10px}.check small{font-size:9px;color:var(--muted);margin-top:2px}.form-footer{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:16px;padding-top:14px;border-top:1px solid #edf1f6}.form-footer small{font-size:9px;color:#8793a4}.cbc{border-color:#cddff5;background:linear-gradient(180deg,#fff,#fbfdff)}.legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:9px;color:#607086}.legend b{background:var(--soft);color:var(--blue);padding:4px 6px;border-radius:5px}.scale{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:15px}.scale div{text-align:center;border:1px solid #e2e9f2;background:#fafcff;border-radius:8px;padding:8px 3px}.scale b{display:block;color:var(--blue);font-size:10px}.scale span{font-size:8px;color:#8794a6}.disabled{opacity:.58}
+.search-area{padding:14px 19px;background:#fafcff;border-bottom:1px solid #edf1f6}.search-form{display:flex;align-items:center;gap:8px;padding:0!important}.search-input{position:relative;flex:1}.search-input span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#8492a4;font-size:18px}.search-input input{width:100%;height:39px;border:1px solid #d5dfeb;border-radius:9px;padding:0 11px 0 34px;font-size:11px;outline:none}.search-input input:focus{border-color:#70a6e9;box-shadow:0 0 0 3px rgba(23,105,223,.08)}.search-area>small{display:block;color:#8a96a6;font-size:8px;margin-top:6px}.table-wrap{overflow-x:auto}.records table{width:100%;border-collapse:collapse;min-width:670px}.records th{background:#f8fafc;text-align:left;text-transform:uppercase;letter-spacing:.06em;color:#68778b;font-size:8px;padding:10px 15px;border-bottom:1px solid #e5ebf2}.records td{padding:12px 15px;border-bottom:1px solid #eef2f6;vertical-align:top}.records tbody tr:hover{background:#fbfdff}.id{display:inline-flex;background:#f1f4f8;color:#65748a;border-radius:6px;padding:5px 7px;font-size:9px;font-weight:850}.records td strong,.records td small,.records td em{display:block}.records td strong{font-size:11px;color:#20324a}.records td small{font-size:9px;color:#7b899b;line-height:1.5;margin-top:3px}.records td em{font-style:normal;width:max-content;margin-top:5px;padding:4px 7px;border-radius:6px;font-size:8px;font-weight:850;background:#f0f3f7;color:#627185}.records .status.present,.records .status.published{background:#eaf8f1;color:#16704d}.records .status.absent{background:#fff0ee;color:#b52e24}.records .status.late{background:#fff7df;color:#946600}.records .status.excused{background:var(--soft);color:var(--blue)}.records .status.draft{background:#f0f3f7;color:#68778b}.result{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.result em{background:var(--soft)!important;color:var(--blue)!important}.result span{font-size:8px;color:#68778b;background:#f2f5f8;padding:4px 6px;border-radius:6px;margin-top:5px}.action{color:var(--blue);font-size:9px;font-weight:850;margin-right:9px;display:inline-block;margin-bottom:4px;background:none;border:0;padding:0}.action:hover{text-decoration:underline}.muted-dash{color:#b1bac6}.empty{text-align:center;padding:43px 20px;color:#7b899b}.empty>div{width:40px;height:40px;display:grid;place-items:center;margin:0 auto 9px;background:#f0f4f8;border-radius:11px;font-size:19px}.empty b{display:block;color:#405168;font-size:12px}.empty span{display:block;font-size:9px;margin:4px 0 9px}.empty a{font-size:9px;color:var(--blue);font-weight:850}.pagination{padding:13px 17px;border-top:1px solid #edf1f6}.pagination svg{max-width:15px}.pagination a,.pagination span{font-size:9px!important}
 @media(max-width:900px){.ops-hero{flex-direction:column;align-items:flex-start}.hero-actions{width:100%}.hero-actions>*{flex:1}.panel-head{align-items:flex-start;flex-direction:column}.scale{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:640px){.ops-hero{padding:21px 18px}.ops-hero h1{font-size:22px}.section-title{flex-direction:column;align-items:flex-start}.total-box{width:100%}.form-grid{grid-template-columns:1fr}.field.wide,.check.wide{grid-column:auto}.form-footer,.search-form{flex-direction:column;align-items:stretch}.form-footer .btn-primary,.search-form .btn-primary,.search-form .btn-muted{width:100%}.scale{grid-template-columns:repeat(2,1fr)}.records table{min-width:610px}}
 </style>
