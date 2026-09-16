@@ -30,6 +30,7 @@
     $roleBadge = $roleBadgeLabels[$role] ?? $roleLabel;
     $userName = trim((string) ($user->name ?? 'Administrator'));
     if ($userName === '') $userName = $roleLabel;
+    $sameAsRole = strcasecmp($userName, $roleLabel) === 0;
     if (!$active) {
         if ($currentRoute === 'admin.dashboard') $active = 'dashboard';
         elseif (strpos($currentRoute, 'admin.students.') === 0) $active = 'students';
@@ -48,8 +49,12 @@
         <div><strong>{{ $settings['school_name'] ?? 'School Manager' }}</strong><small>School Administration Portal</small></div>
     </div>
     <div class="admin-user">
-        <span>{{ $userName }}</span>
-        <span class="admin-role">{{ $roleBadge }}</span>
+        @if($sameAsRole)
+            <span>{{ $roleLabel }}</span>
+        @else
+            <span>{{ $userName }}</span>
+            <span class="admin-role">{{ $roleBadge }}</span>
+        @endif
         <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
     </div>
 </header>
