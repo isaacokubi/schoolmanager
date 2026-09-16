@@ -4,7 +4,8 @@
     $currentRoute = request()->route() ? request()->route()->getName() : '';
     $section = request()->query('section');
     $active = $activeSection ?? null;
-    $role = strtolower((string) (auth()->user()->role ?? 'admin'));
+    $user = auth()->user();
+    $role = strtolower((string) ($user->role ?? 'admin'));
     $roleLabels = [
         'admin' => 'School Administrator',
         'administrator' => 'School Administrator',
@@ -16,6 +17,19 @@
         'student' => 'Learner',
     ];
     $roleLabel = $roleLabels[$role] ?? ucwords(str_replace(['_', '-'], ' ', $role));
+    $roleBadgeLabels = [
+        'admin' => 'Administrator',
+        'administrator' => 'Administrator',
+        'superadmin' => 'System Admin',
+        'manager' => 'Manager',
+        'teacher' => 'Teacher',
+        'parent' => 'Parent / Guardian',
+        'guardian' => 'Parent / Guardian',
+        'student' => 'Learner',
+    ];
+    $roleBadge = $roleBadgeLabels[$role] ?? $roleLabel;
+    $userName = trim((string) ($user->name ?? 'Administrator'));
+    if ($userName === '') $userName = $roleLabel;
     if (!$active) {
         if ($currentRoute === 'admin.dashboard') $active = 'dashboard';
         elseif (strpos($currentRoute, 'admin.students.') === 0) $active = 'students';
@@ -34,8 +48,8 @@
         <div><strong>{{ $settings['school_name'] ?? 'School Manager' }}</strong><small>School Administration Portal</small></div>
     </div>
     <div class="admin-user">
-        <span>{{ auth()->user()->name ?? 'Administrator' }}</span>
-        <span class="admin-role">{{ $roleLabel }}</span>
+        <span>{{ $userName }}</span>
+        <span class="admin-role">{{ $roleBadge }}</span>
         <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
     </div>
 </header>
