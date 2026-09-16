@@ -8,7 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-class OperationsController extends Controller
+class OperationsController
+extends Controller
 {
     private $tables = [
         'parents' => 'parents', 'classes' => 'school_classes', 'teachers' => 'teachers',
@@ -143,7 +144,21 @@ class OperationsController extends Controller
             }
         }
 
-        return $query->paginate(10)->withQueryString();
+        $records = $query->paginate(10)->withQueryString();
+
+        if ($section === 'results') {
+            $cbc = app(CbcReportCardService::class);
+            $records->getCollection()->transform(function ($row) use ($cbc) {
+                if ($row->assessment_status === 'missed') {
+                    $row->achievement_level = 'MISSED';
+                } elseif ($row->marks !== null) {
+                    $row->achievement_level = $cbc->level((float) $row->marks)['code'];
+                }
+                return $row;
+            });
+        }
+
+        return $records;
     }
 
     public function store(Request $request, CbcReportCardService $reportCards)
@@ -230,6 +245,13 @@ class OperationsController extends Controller
 
     private function rules($section, $id = null)
     {
+        $activeExam = Rule::exists('exams', 'id')->where(function ($query) {
+            $query->whereNull('archived_at');
+        });
+        $activeSubject = Rule::exists('subjects', 'id')->where(function ($query) {
+            $query->whereNull('archived_at');
+        });
+
         $rules = [
             'parents' => [
                 'name' => 'required|string|max:150',
@@ -242,8 +264,8 @@ class OperationsController extends Controller
             'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', 'regex:/^(?:\+254|0)7\d{8}$/'], 'employee_number' => ['nullable', 'string', 'max:50']],
             'subjects' => ['name' => 'required|string|max:100', 'code' => ['nullable', 'string', 'max:30'], 'teacher_id' => 'nullable|exists:teachers,id'],
             'attendance' => ['student_id' => 'required|exists:students,id', 'attendance_date' => 'required|date', 'status' => 'required|in:present,absent,late,excused', 'notes' => 'nullable|string|max:500'],
-            'exams' => ['name' => 'required|string|max:150', 'term' => 'required|string|max:50', 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
-            'results' => ['exam_id' => 'required|exists:exams,id', 'student_id' => 'required|exists:students,id', 'subject_id' => 'required|exists:subjects,id', 'assessment_status' => 'required|in:present,missed', 'marks' => 'nullable|required_if:assessment_status,present|numeric|min:0|max:100', 'remarks' => 'nullable|string|max:500'],
+            'exams' => ['name' => 'required|string|max:150', 'term' => ['required', Rule::in(['Term 1', 'Term 2', 'Term 3'])], 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
+            'results' => ['exam_id' => ['required', $activeExam], 'student_id' => 'required|exists:students,id', 'subject_id' => ['required', $activeSubject], 'assessment_status' => 'required|in:present,missed', 'marks' => 'nullable|required_if:assessment_status,present|numeric|min:0|max:100', 'remarks' => 'nullable|string|max:500'],
             'announcements' => ['title' => 'required|string|max:200', 'body' => 'required|string|max:10000', 'published' => 'nullable|boolean'],
             'events' => ['title' => 'required|string|max:200', 'event_date' => 'required|date', 'location' => 'nullable|string|max:200', 'description' => 'nullable|string|max:10000'],
         ];
