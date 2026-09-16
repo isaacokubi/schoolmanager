@@ -6,9 +6,10 @@
     $active = $activeSection ?? null;
     $user = auth()->user();
     $role = strtolower((string) ($user->role ?? 'admin'));
-    $roleLabels = ['admin'=>'School Administrator','administrator'=>'School Administrator','superadmin'=>'System Administrator','manager'=>'School Manager','teacher'=>'Teacher','parent'=>'Parent / Guardian','guardian'=>'Parent / Guardian','student'=>'Learner'];
+    $isManager = in_array($role, ['manager', 'operations_manager', 'operations-manager'], true);
+    $roleLabels = ['admin'=>'School Administrator','administrator'=>'School Administrator','superadmin'=>'System Administrator','manager'=>'School Manager','operations_manager'=>'Operations Manager','operations-manager'=>'Operations Manager','teacher'=>'Teacher','parent'=>'Parent / Guardian','guardian'=>'Parent / Guardian','student'=>'Learner'];
     $roleLabel = $roleLabels[$role] ?? ucwords(str_replace(['_', '-'], ' ', $role));
-    $roleBadgeLabels = ['admin'=>'Administrator','administrator'=>'Administrator','superadmin'=>'System Admin','manager'=>'Manager','teacher'=>'Teacher','parent'=>'Parent / Guardian','guardian'=>'Parent / Guardian','student'=>'Learner'];
+    $roleBadgeLabels = ['admin'=>'Administrator','administrator'=>'Administrator','superadmin'=>'System Admin','manager'=>'Manager','operations_manager'=>'Operations Manager','operations-manager'=>'Operations Manager','teacher'=>'Teacher','parent'=>'Parent / Guardian','guardian'=>'Parent / Guardian','student'=>'Learner'];
     $roleBadge = $roleBadgeLabels[$role] ?? $roleLabel;
     $userName = trim((string) ($user->name ?? 'Administrator'));
     if ($userName === '') $userName = $roleLabel;
@@ -26,7 +27,7 @@
 @endphp
 <div class="admin-shell">
 <header class="admin-top">
-    <div class="admin-top-brand"><div class="admin-mark">{{ strtoupper(substr($settings['school_name'] ?? 'S', 0, 1)) }}</div><div><strong>{{ $settings['school_name'] ?? 'School Manager' }}</strong><small>School Administration Portal</small></div></div>
+    <div class="admin-top-brand"><div class="admin-mark">{{ strtoupper(substr($settings['school_name'] ?? 'S', 0, 1)) }}</div><div><strong>{{ $settings['school_name'] ?? 'School Manager' }}</strong><small>{{ $isManager ? 'School Operations Portal' : 'School Administration Portal' }}</small></div></div>
     <div class="admin-user">@if($sameAsRole)<span>{{ $roleLabel }}</span>@else<span>{{ $userName }}</span><span class="admin-role">{{ $roleBadge }}</span>@endif<form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form></div>
 </header>
 <div class="admin-layout">
@@ -49,10 +50,15 @@
     <a class="{{ $active==='announcements'?'active':'' }}" href="{{ route('admin.operations',['section'=>'announcements']) }}">! &nbsp; Announcements</a>
     <a class="{{ $active==='events'?'active':'' }}" href="{{ route('admin.operations',['section'=>'events']) }}">◷ &nbsp; School Calendar</a>
 
-    <div class="sidebar-section">FINANCE & REPORTING</div>
-    <a class="{{ $active==='payments'?'active':'' }}" href="{{ route('admin.payments.index') }}">▣ &nbsp; Fees & Payments</a>
-    <a class="{{ $active==='reports'?'active':'' }}" href="{{ route('admin.reports') }}">▥ &nbsp; Reports & Analytics</a>
-    <a class="{{ $active==='settings'?'active':'' }}" href="{{ route('admin.settings') }}">⚙ &nbsp; School Settings</a>
+    @if(!$isManager)
+        <div class="sidebar-section">FINANCE & REPORTING</div>
+        <a class="{{ $active==='payments'?'active':'' }}" href="{{ route('admin.payments.index') }}">▣ &nbsp; Fees & Payments</a>
+        <a class="{{ $active==='reports'?'active':'' }}" href="{{ route('admin.reports') }}">▥ &nbsp; Reports & Analytics</a>
+        <a class="{{ $active==='settings'?'active':'' }}" href="{{ route('admin.settings') }}">⚙ &nbsp; School Settings</a>
+    @else
+        <div class="sidebar-section">ACADEMIC REPORTING</div>
+        <a class="{{ $active==='reports'?'active':'' }}" href="{{ route('admin.reports',['report'=>'results']) }}">▥ &nbsp; Academic Reports</a>
+    @endif
     <div class="sidebar-footer"><a href="{{ url('/') }}" target="_blank" rel="noopener">View public website ↗</a></div>
 </aside>
 <main class="admin-main"><div class="admin-breadcrumb"><a href="{{ route('admin.dashboard') }}">Dashboard</a><span>/</span><span>@yield('page_title','Administration')</span></div>@yield('admin_content')</main>
