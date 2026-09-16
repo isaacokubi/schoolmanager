@@ -120,11 +120,27 @@ class OperationsController extends Controller
     {
         $section = $request->input('section');
         abort_unless(isset($this->tables[$section]), 404);
-        abort_unless(DB::table($this->tables[$section])->where('id', $id)->whereNull('archived_at')->exists(), 404);
-        $data = $this->prepare($section, $request->validate($this->rules($section, $id)), $request, $id);
-        try { DB::table($this->tables[$section])->where('id', $id)->update($data + ['updated_at' => now()]); }
-        catch (\Throwable $e) { report($e); return back()->withErrors(['record' => 'The record could not be updated. Check for duplicate values or related records.'])->withInput(); }
-        if ($section === 'results') { try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); } }
+        $table = $this->tables[$section];
+        abort_unless(DB::table($table)->where('id', $id)->whereNull('archived_at')->exists(), 404);
+        $validated = $request->validate($this->rules($section, $id));
+
+        if ($section === 'parents') {
+            $studentId = $validated['student_id'] ?? null;
+            unset($validated['student_id']);
+            DB::transaction(function () use ($id, $validated, $studentId) {
+                $oldStudent = DB::table('students')->where('parent_id', $id)->first();
+                if ($oldStudent && (string) $oldStudent->id !== (string) $studentId) {
+                    DB::table('students')->where('id', $oldStudent->id)->update(['parent_id' => null, 'updated_at' => now()]);
+                }
+                DB::table('parents')->where('id', $id)->update($validated + ['updated_at' => now()]);
+                if ($studentId) DB::table('students')->where('id', $studentId)->update(['parent_id' => $id, 'updated_at' => now()]);
+            });
+        } else {
+            $data = $this->prepare($section, $validated, $request, $id);
+            try { DB::table($table)->where('id', $id)->update($data + ['updated_at' => now()]); }
+            catch (\Throwable $e) { report($e); return back()->withErrors(['record' => 'The record could not be updated. Check for duplicate values or related records.'])->withInput(); }
+            if ($section === 'results') { try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); } }
+        }
         return redirect()->route('admin.operations', ['section' => $section])->with('success', 'Record updated successfully.');
     }
 
