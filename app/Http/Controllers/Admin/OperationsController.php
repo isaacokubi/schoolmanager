@@ -174,10 +174,11 @@ class OperationsController extends Controller
         $activeTeacher = Rule::exists('teachers', 'id')->whereNull('archived_at');
         $activeExam = Rule::exists('exams', 'id')->whereNull('archived_at');
         $activeSubject = Rule::exists('subjects', 'id')->whereNull('archived_at');
+        $kenyaMobile = 'regex:/^(?:\+254|0)(?:1|7)\d{8}$/';
         $rules = [
-            'parents' => ['name' => 'required|string|max:150', 'phone' => ['required', 'regex:/^(?:\+254|0)7\d{8}$/'], 'email' => 'nullable|email|max:150', 'relationship' => 'nullable|string|max:50', 'student_id' => 'nullable|exists:students,id'],
+            'parents' => ['name' => 'required|string|max:150', 'phone' => ['required', $kenyaMobile], 'email' => 'nullable|email|max:150', 'relationship' => 'nullable|string|max:50', 'student_id' => 'nullable|exists:students,id'],
             'classes' => ['name' => 'required|string|max:100', 'stream' => 'nullable|string|max:50', 'academic_year' => 'nullable|integer|min:2000|max:2100', 'class_teacher_id' => ['nullable', $activeTeacher]],
-            'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', 'regex:/^(?:\+254|0)7\d{8}$/'], 'employee_number' => ['nullable', 'string', 'max:50']],
+            'teachers' => ['name' => 'required|string|max:150', 'email' => 'nullable|email|max:150', 'phone' => ['nullable', $kenyaMobile], 'employee_number' => ['nullable', 'string', 'max:50']],
             'subjects' => ['name' => 'required|string|max:100', 'code' => ['nullable', 'string', 'max:30'], 'teacher_id' => ['nullable', $activeTeacher]],
             'attendance' => ['student_id' => 'required|exists:students,id', 'attendance_date' => 'required|date', 'status' => 'required|in:present,absent,late,excused', 'notes' => 'nullable|string|max:500'],
             'exams' => ['name' => 'required|string|max:150', 'term' => ['required', Rule::in(['Term 1', 'Term 2', 'Term 3'])], 'academic_year' => 'required|integer|min:2000|max:2100', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date'],
