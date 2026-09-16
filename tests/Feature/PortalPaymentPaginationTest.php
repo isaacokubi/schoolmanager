@@ -19,14 +19,15 @@ class PortalPaymentPaginationTest extends TestCase
         DB::table('portal_profiles')->insert(['user_id'=>$user->id,'portal_type'=>'parent','active'=>true,'created_at'=>now(),'updated_at'=>now()]);
         $student = DB::table('students')->insertGetId(['admission_number'=>'P-001','name'=>'Portal Learner','parent_id'=>$parent,'parent_name'=>'Portal Parent','parent_phone'=>'+254712345678','fee_balance'=>50000,'created_at'=>now(),'updated_at'=>now()]);
 
-        for ($i=1; $i<=21; $i++) {
+        for ($i=1; $i<=41; $i++) {
             DB::table('payments')->insert(['student_id'=>$student,'user_id'=>$user->id,'payer_role'=>'parent','payer_name'=>'Portal Parent','parent_phone'=>'254712345678','payment_type'=>'school_fees','channel'=>'mpesa_stk','amount'=>1000,'account_reference'=>'PORTAL-'.$i,'status'=>'completed','verification_status'=>'verified','mpesa_receipt'=>'REC-'.$i,'created_at'=>now()->subMinutes($i),'updated_at'=>now()->subMinutes($i)]);
         }
 
         $this->actingAs($user)->get(route('portal.payments',['payments_page'=>2]))
             ->assertOk()
-            ->assertSee('Showing 21–21 of 21 payments')
+            ->assertSee('Showing 21–40 of 41 payments')
             ->assertSee('PORTAL-21')
-            ->assertDontSee('PORTAL-1');
+            ->assertSee('PORTAL-40')
+            ->assertDontSee('PORTAL-41');
     }
 }
