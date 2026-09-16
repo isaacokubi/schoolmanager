@@ -36,21 +36,20 @@ class AdminSearchController extends Controller
     {
         $like = '%' . $term . '%';
 
-        return match ($scope) {
-            'students' => $this->students($like),
-            'admissions' => $this->admissions($like),
-            'parents' => $this->simpleTable('parents', ['name', 'phone', 'email', 'relationship'], $like, 'Parents / Guardians', 'parents'),
-            'classes' => $this->classes($like),
-            'teachers' => $this->simpleTable('teachers', ['name', 'employee_number', 'phone', 'email'], $like, 'Teachers', 'teachers'),
-            'subjects' => $this->simpleTable('subjects', ['name', 'code'], $like, 'Learning Areas', 'subjects'),
-            'attendance' => $this->attendance($like),
-            'exams' => $this->simpleTable('exams', ['name', 'term', 'academic_year'], $like, 'Assessments', 'exams'),
-            'results' => $this->results($like),
-            'announcements' => $this->simpleTable('announcements', ['title', 'body'], $like, 'Announcements', 'announcements'),
-            'events' => $this->simpleTable('events', ['title', 'location', 'description', 'event_date'], $like, 'School Calendar', 'events'),
-            'payments' => $this->payments($like),
-            default => [],
-        };
+        if ($scope === 'students') return $this->students($like);
+        if ($scope === 'admissions') return $this->admissions($like);
+        if ($scope === 'parents') return $this->simpleTable('parents', ['name', 'phone', 'email', 'relationship'], $like, 'Parents / Guardians', 'parents');
+        if ($scope === 'classes') return $this->classes($like);
+        if ($scope === 'teachers') return $this->simpleTable('teachers', ['name', 'employee_number', 'phone', 'email'], $like, 'Teachers', 'teachers');
+        if ($scope === 'subjects') return $this->simpleTable('subjects', ['name', 'code'], $like, 'Learning Areas', 'subjects');
+        if ($scope === 'attendance') return $this->attendance($like);
+        if ($scope === 'exams') return $this->simpleTable('exams', ['name', 'term', 'academic_year'], $like, 'Assessments', 'exams');
+        if ($scope === 'results') return $this->results($like);
+        if ($scope === 'announcements') return $this->simpleTable('announcements', ['title', 'body'], $like, 'Announcements', 'announcements');
+        if ($scope === 'events') return $this->simpleTable('events', ['title', 'location', 'description', 'event_date'], $like, 'School Calendar', 'events');
+        if ($scope === 'payments') return $this->payments($like);
+
+        return [];
     }
 
     private function students(string $like): array
@@ -72,11 +71,13 @@ class AdminSearchController extends Controller
             ->orderBy('students.name')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->name,
-                'subtitle' => trim(($row->admission_number ?: 'No admission number') . ' · ' . ($row->class_name ? $row->class_name . ($row->stream ? ' — ' . $row->stream : '') : 'Unassigned')),
-                'url' => route('admin.students.edit', $row->id),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->name,
+                    'subtitle' => trim(($row->admission_number ?: 'No admission number') . ' · ' . ($row->class_name ? $row->class_name . ($row->stream ? ' — ' . $row->stream : '') : 'Unassigned')),
+                    'url' => route('admin.students.edit', $row->id),
+                ];
+            })->all();
     }
 
     private function admissions(string $like): array
@@ -93,11 +94,13 @@ class AdminSearchController extends Controller
             ->orderByDesc('id')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->student_name,
-                'subtitle' => 'Admission · ' . ($row->requested_class ?: 'Class not specified') . ' · ' . ucfirst((string) $row->status),
-                'url' => route('admin.admissions.index', ['search' => $row->student_name]),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->student_name,
+                    'subtitle' => 'Admission · ' . ($row->requested_class ?: 'Class not specified') . ' · ' . ucfirst((string) $row->status),
+                    'url' => route('admin.admissions.index', ['search' => $row->student_name]),
+                ];
+            })->all();
     }
 
     private function classes(string $like): array
@@ -112,11 +115,13 @@ class AdminSearchController extends Controller
             ->orderBy('name')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->name . ($row->stream ? ' — ' . $row->stream : ''),
-                'subtitle' => 'Class / stream · ' . ($row->academic_year ?: 'Academic year not set'),
-                'url' => route('admin.operations', ['section' => 'classes', 'search' => $row->name]),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->name . ($row->stream ? ' — ' . $row->stream : ''),
+                    'subtitle' => 'Class / stream · ' . ($row->academic_year ?: 'Academic year not set'),
+                    'url' => route('admin.operations', ['section' => 'classes', 'search' => $row->name]),
+                ];
+            })->all();
     }
 
     private function attendance(string $like): array
@@ -133,11 +138,13 @@ class AdminSearchController extends Controller
             ->orderByDesc('attendance.attendance_date')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->student_name ?: 'Learner',
-                'subtitle' => 'Attendance · ' . ucfirst((string) $row->status) . ' · ' . $row->attendance_date,
-                'url' => route('admin.operations', ['section' => 'attendance', 'search' => $row->student_name]),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->student_name ?: 'Learner',
+                    'subtitle' => 'Attendance · ' . ucfirst((string) $row->status) . ' · ' . $row->attendance_date,
+                    'url' => route('admin.operations', ['section' => 'attendance', 'search' => $row->student_name]),
+                ];
+            })->all();
     }
 
     private function results(string $like): array
@@ -158,11 +165,13 @@ class AdminSearchController extends Controller
             ->orderByDesc('results.id')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->student_name ?: 'Learner',
-                'subtitle' => trim('Result · ' . ($row->exam_name ?: 'Assessment') . ' · ' . ($row->subject_name ?: 'Learning area')),
-                'url' => route('admin.operations', ['section' => 'results', 'search' => $row->student_name]),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->student_name ?: 'Learner',
+                    'subtitle' => trim('Result · ' . ($row->exam_name ?: 'Assessment') . ' · ' . ($row->subject_name ?: 'Learning area')),
+                    'url' => route('admin.operations', ['section' => 'results', 'search' => $row->student_name]),
+                ];
+            })->all();
     }
 
     private function payments(string $like): array
@@ -181,11 +190,13 @@ class AdminSearchController extends Controller
             ->orderByDesc('payments.id')
             ->limit(self::LIMIT)
             ->get()
-            ->map(fn ($row) => [
-                'title' => $row->student_name ?: ($row->account_reference ?: 'Payment'),
-                'subtitle' => 'Payment · KES ' . number_format((float) $row->amount, 2) . ' · ' . ucfirst((string) $row->status),
-                'url' => route('admin.payments.index', ['search' => $row->student_name ?: ($row->account_reference ?: '')]),
-            ])->all();
+            ->map(function ($row) {
+                return [
+                    'title' => $row->student_name ?: ($row->account_reference ?: 'Payment'),
+                    'subtitle' => 'Payment · KES ' . number_format((float) $row->amount, 2) . ' · ' . ucfirst((string) $row->status),
+                    'url' => route('admin.payments.index', ['search' => $row->student_name ?: ($row->account_reference ?: '')]),
+                ];
+            })->all();
     }
 
     private function simpleTable(string $table, array $columns, string $like, string $label, string $section): array
