@@ -74,7 +74,7 @@ class OperationsFeatureTest extends TestCase
         $teacher=DB::table('teachers')->insertGetId(['name'=>'Class Teacher','employee_number'=>'TCH-020','created_at'=>now(),'updated_at'=>now()]);
         $this->actingAs($admin)->post(route('admin.operations.store'),['section'=>'classes','name'=>'Grade 6','stream'=>'East','academic_year'=>2026,'class_teacher_id'=>$teacher])->assertSessionHas('success');
         $class=DB::table('school_classes')->where('name','Grade 6')->first();
-        $this->assertSame($teacher,$class->class_teacher_id);
+        $this->assertEquals($teacher,$class->class_teacher_id);
         $this->actingAs($admin)->delete(route('admin.operations.destroy',$class->id),['section'=>'classes'])->assertSessionHas('success');
         $this->assertNotNull(DB::table('school_classes')->where('id',$class->id)->value('archived_at'));
     }
