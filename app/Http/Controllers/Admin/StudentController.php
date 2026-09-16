@@ -14,25 +14,18 @@ class StudentController extends Controller
         $query = DB::table('students')
             ->leftJoin('parents', 'parents.id', '=', 'students.parent_id')
             ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
-            ->select(
-                'students.*',
-                'parents.name as linked_parent_name',
-                'school_classes.name as linked_class_name',
-                'school_classes.stream as linked_class_stream'
-            )
+            ->select('students.*', 'parents.name as linked_parent_name', 'school_classes.name as linked_class_name', 'school_classes.stream as linked_class_stream')
             ->orderByDesc('students.id');
 
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
             $digits = preg_replace('/\D+/', '', $search);
-
             $query->where(function ($q) use ($search, $digits) {
                 $q->where('students.name', 'like', "%{$search}%")
                     ->orWhere('students.admission_number', 'like', "%{$search}%")
                     ->orWhere('students.class_name', 'like', "%{$search}%")
                     ->orWhere('parents.name', 'like', "%{$search}%")
                     ->orWhere('students.parent_phone', 'like', "%{$search}%");
-
                 if ($digits && $digits !== $search) {
                     $q->orWhere('students.parent_phone', 'like', "%{$digits}%");
                 }
@@ -50,11 +43,7 @@ class StudentController extends Controller
         }
 
         $students = $query->paginate(10)->withQueryString();
-        $classes = DB::table('school_classes')
-            ->orderBy('academic_year', 'desc')
-            ->orderBy('name')
-            ->orderBy('stream')
-            ->get();
+        $classes = DB::table('school_classes')->orderBy('academic_year', 'desc')->orderBy('name')->orderBy('stream')->get();
 
         return view('admin.students.index', compact('students', 'classes'));
     }
@@ -73,6 +62,7 @@ class StudentController extends Controller
         $data = $this->validated($request);
         $this->syncLegacyClassName($data);
         $data['parent_phone'] = $this->normalizeKenyanPhone($data['parent_phone'] ?? null);
+        unset($data['fee_balance']);
 
         DB::table('students')->insert($data + [
             'fee_balance' => 0,
@@ -107,10 +97,7 @@ class StudentController extends Controller
 
         DB::table('students')->where('id', $student)->update($data + ['updated_at' => now()]);
 
-        return redirect()->route('admin.students.index')->with(
-            'success',
-            'Student updated successfully. Fee balances can only change through recorded fee transactions.'
-        );
+        return redirect()->route('admin.students.index')->with('success', 'Student updated successfully. Fee balances can only change through recorded fee transactions.');
     }
 
     public function destroy($student)
@@ -121,9 +108,7 @@ class StudentController extends Controller
             DB::table('students')->where('id', $student)->delete();
             return back()->with('success', 'Student deleted successfully.');
         } catch (\Throwable $e) {
-            return back()->withErrors([
-                'student' => 'This student cannot be deleted because related records exist. Preserve the record and resolve its linked records instead.',
-            ]);
+            return back()->withErrors(['student' => 'This student cannot be deleted because related records exist. Preserve the record and resolve its linked records instead.']);
         }
     }
 
@@ -156,7 +141,6 @@ class StudentController extends Controller
         if (!$phone) {
             return null;
         }
-
         $digits = preg_replace('/\D+/', '', $phone);
         if (str_starts_with($digits, '254')) {
             return '+' . $digits;
@@ -164,7 +148,6 @@ class StudentController extends Controller
         if (str_starts_with($digits, '07') && strlen($digits) === 10) {
             return '+254' . substr($digits, 1);
         }
-
         return $phone;
     }
 }
