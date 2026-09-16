@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,6 +14,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        // Application bootstrapping may be registered here.
+        Paginator::defaultView('vendor.pagination.admin');
     }
 }
