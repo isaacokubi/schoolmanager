@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdmissionController;
+use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdmissionManagementController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OperationsController;
@@ -36,6 +37,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/search', AdminSearchController::class)->name('admin.search');
     Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
     Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
     Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
