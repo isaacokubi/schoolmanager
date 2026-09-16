@@ -28,16 +28,29 @@
 @endif
 
 <div class="student-stats">
-    <div class="student-stat"><span>Total records</span><strong>{{ number_format($total) }}</strong><small>Records matching the current filters</small></div>
-    <div class="student-stat"><span>On this page</span><strong>{{ number_format($students->count()) }}</strong><small>Visible student records</small></div>
-    <div class="student-stat"><span>Outstanding on page</span><strong>KES {{ number_format($outstanding, 2) }}</strong><small>Positive balances among visible records</small></div>
+    <div class="student-stat">
+        <span>Total students</span>
+        <strong>{{ number_format($total) }}</strong>
+        <small>Students matching the current filters</small>
+    </div>
+    <div class="student-stat">
+        <span>Visible on page</span>
+        <strong>{{ number_format($students->count()) }}</strong>
+        <small>Records currently displayed</small>
+    </div>
+    <div class="student-stat">
+        <span>Outstanding on page</span>
+        <strong>KES {{ number_format($outstanding, 2) }}</strong>
+        <small>Positive balances among visible students</small>
+    </div>
 </div>
 
 <div class="card student-filter-card">
-    <form method="get" class="student-filters" role="search">
+    <form method="get" class="student-filters" role="search" aria-label="Filter student registry">
         <div class="filter-search">
             <label for="student-search">Search students</label>
-            <input id="student-search" name="search" value="{{ request('search') }}" autocomplete="off" placeholder="Name, admission no., class, guardian or phone">
+            <input id="student-search" type="search" name="search" value="{{ request('search') }}" autocomplete="off" spellcheck="false" placeholder="Name, admission no., class, guardian or phone" aria-describedby="student-search-help">
+            <small id="student-search-help" class="filter-help">Search across learner, admission, class, guardian and phone details.</small>
         </div>
         <div>
             <label for="class-filter">Class / stream</label>
@@ -70,10 +83,10 @@
 <div class="card student-table-card">
     <div class="section-head">
         <div>
-            <h2>Students</h2>
-            <p>Financial balances are read-only here and should be changed through recorded fee transactions.</p>
+            <h2>Student records</h2>
+            <p>Fee balances are read-only here and should be changed through recorded fee transactions.</p>
         </div>
-        <span class="record-count">{{ number_format($total) }} {{ $total === 1 ? 'record' : 'records' }}</span>
+        <span class="record-count">{{ number_format($total) }} {{ $total === 1 ? 'student' : 'students' }}</span>
     </div>
 
     <div class="table-wrap student-table-wrap">
@@ -86,7 +99,7 @@
                     <th class="guardian-col">Parent / guardian</th>
                     <th class="phone-col">Phone</th>
                     <th class="balance-col">Fee balance</th>
-                    <th class="status-col">Status</th>
+                    <th class="status-col">Fee status</th>
                     <th class="actions-col">Actions</th>
                 </tr>
             </thead>
@@ -100,7 +113,7 @@
                     <td data-label="Parent / guardian">{{ $student->linked_parent_name ?: ($student->parent_name ?: 'Not linked') }}</td>
                     <td data-label="Phone">{{ $student->parent_phone ? preg_replace('/^(?:\+254|0)(\d{3})(\d{3})(\d{3})$/', '+254 $1 $2 $3', $student->parent_phone) : '—' }}</td>
                     <td data-label="Fee balance"><strong class="{{ $balance > 0 ? 'balance-due' : 'balance-clear' }}">KES {{ number_format($balance, 2) }}</strong></td>
-                    <td data-label="Status"><span class="status-pill {{ $balance > 0 ? 'warning' : 'success' }}">{{ $balance > 0 ? 'Outstanding' : 'Clear' }}</span></td>
+                    <td data-label="Fee status"><span class="status-pill {{ $balance > 0 ? 'warning' : 'success' }}">{{ $balance > 0 ? 'Outstanding' : 'Clear' }}</span></td>
                     <td data-label="Actions" class="actions-cell">
                         <a class="table-action" href="{{ route('admin.students.edit',$student->id) }}">Edit</a>
                         <form method="post" action="{{ route('admin.students.destroy',$student->id) }}" class="delete-form" onsubmit="return confirm('Delete this student record? Use this only when the record has no linked financial, attendance, examination or admission history.')">
@@ -143,7 +156,7 @@
 </div>
 
 <style>
-.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:900;color:#1769df;margin-bottom:7px}.student-page-head{align-items:center}.student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.student-stat{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid #e2e9f3;border-radius:15px;padding:16px 18px;box-shadow:0 7px 22px rgba(24,45,75,.045);min-width:0}.student-stat span{display:block;color:#697a90;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.student-stat strong{display:block;color:#15243a;font-size:23px;line-height:1.3;margin:4px 0;overflow-wrap:anywhere}.student-stat small{color:#8a98aa;font-size:12px;line-height:1.45}.student-filter-card{margin-bottom:18px}.student-filters{display:grid;grid-template-columns:minmax(250px,1.7fr) minmax(190px,1fr) minmax(170px,.8fr) auto;gap:12px;align-items:end}.student-filters label{display:block;font-size:12px;font-weight:850;color:#52637a;margin-bottom:6px}.student-filters input,.student-filters select{width:100%;box-sizing:border-box;padding:12px 12px;border:1px solid #d5dfeb;border-radius:10px;background:#fff;color:#26384f;font:inherit;font-size:14px;line-height:1.4;outline:none}.student-filters input:focus,.student-filters select:focus{border-color:#5590e8;box-shadow:0 0 0 3px rgba(23,105,223,.1)}.filter-actions{display:flex;gap:8px}.student-filter-card .btn{font-size:13px;padding:11px 15px}.student-table-card{overflow:hidden}.student-table-card .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.student-table-card .section-head h2{font-size:20px}.student-table-card .section-head p{max-width:680px;font-size:13px}.record-count{white-space:nowrap;background:#f2f6fb;color:#607189;border:1px solid #e1e8f1;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800}.student-table-wrap{border:0;border-radius:0;background:#fff}.student-table{width:100%;min-width:1120px;table-layout:fixed;font-size:13.5px;line-height:1.45}.student-table th{white-space:nowrap;font-size:11.5px;line-height:1.25;padding:12px 14px;color:#52637a;background:#f6f8fb}.student-table td{vertical-align:middle;padding:13px 14px;font-size:13.5px;color:#34475f;overflow-wrap:anywhere}.student-table td strong{font-size:13.5px}.student-table tbody tr:hover{background:#fbfdff}.student-col{width:16%}.admission-col{width:15%}.class-col{width:14%}.guardian-col{width:15%}.phone-col{width:13%}.balance-col{width:12%}.status-col{width:8%}.actions-col{width:11%}.mono{font-variant-numeric:tabular-nums;letter-spacing:.01em;color:#44566f;overflow-wrap:anywhere}.balance-due{color:#a65b00;white-space:nowrap}.balance-clear{color:#16724b;white-space:nowrap}.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:10.5px;font-weight:900;white-space:nowrap}.status-pill.success{background:#eaf8f1;color:#157347}.status-pill.warning{background:#fff5df;color:#9a5a00}.actions-cell{white-space:nowrap}.delete-form{display:inline;margin:0}.table-action{display:inline-flex;align-items:center;border:0;background:transparent;color:#1769df;text-decoration:none;font:inherit;font-size:12.5px;font-weight:850;cursor:pointer;padding:5px 4px}.table-action:hover{text-decoration:underline}.table-action.danger{color:#b42318}.student-pagination{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px 0 2px;border-top:1px solid #edf1f6;margin-top:2px}.pagination-summary{font-size:13px;color:#748399}.pagination-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}.page-link{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 11px;box-sizing:border-box;border:1px solid #dce4ee;border-radius:9px;background:#fff;color:#42566f;text-decoration:none;font-size:12.5px;font-weight:800}.page-link:hover{border-color:#9bbbe7;color:#1769df;background:#f7faff}.page-link.current{border-color:#1769df;background:#1769df;color:#fff}.page-link.disabled{color:#a6b1bf;background:#f7f9fb;border-color:#e7ecf2;cursor:not-allowed}.empty-state{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:48px 20px;color:#7a899d;text-align:center}.empty-state strong{color:#25364e;font-size:15px}.empty-state .btn{margin-top:7px}
+.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:900;color:#1769df;margin-bottom:7px}.student-page-head{align-items:center}.student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.student-stat{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid #e2e9f3;border-radius:15px;padding:16px 18px;box-shadow:0 7px 22px rgba(24,45,75,.045);min-width:0}.student-stat span{display:block;color:#697a90;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.student-stat strong{display:block;color:#15243a;font-size:23px;line-height:1.3;margin:4px 0;overflow-wrap:anywhere}.student-stat small{color:#8a98aa;font-size:12px;line-height:1.45}.student-filter-card{margin-bottom:18px}.student-filters{display:grid;grid-template-columns:minmax(250px,1.7fr) minmax(190px,1fr) minmax(170px,.8fr) auto;gap:12px;align-items:end}.student-filters label{display:block;font-size:12px;font-weight:850;color:#52637a;margin-bottom:6px}.student-filters input,.student-filters select{width:100%;box-sizing:border-box;padding:12px 12px;border:1px solid #d5dfeb;border-radius:10px;background:#fff;color:#26384f;font:inherit;font-size:14px;line-height:1.4;outline:none}.student-filters input:focus,.student-filters select:focus{border-color:#5590e8;box-shadow:0 0 0 3px rgba(23,105,223,.1)}.filter-help{display:block;color:#8290a3;font-size:11px;line-height:1.4;margin-top:5px}.filter-actions{display:flex;gap:8px}.student-filter-card .btn{font-size:13px;padding:11px 15px}.student-table-card{overflow:hidden}.student-table-card .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.student-table-card .section-head h2{font-size:20px}.student-table-card .section-head p{max-width:680px;font-size:13px}.record-count{white-space:nowrap;background:#f2f6fb;color:#607189;border:1px solid #e1e8f1;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800}.student-table-wrap{border:0;border-radius:0;background:#fff}.student-table{width:100%;min-width:1120px;table-layout:fixed;font-size:13.5px;line-height:1.45}.student-table th{white-space:nowrap;font-size:11.5px;line-height:1.25;padding:12px 14px;color:#52637a;background:#f6f8fb}.student-table td{vertical-align:middle;padding:13px 14px;font-size:13.5px;color:#34475f;overflow-wrap:anywhere}.student-table td strong{font-size:13.5px}.student-table tbody tr:hover{background:#fbfdff}.student-col{width:16%}.admission-col{width:15%}.class-col{width:14%}.guardian-col{width:15%}.phone-col{width:13%}.balance-col{width:12%}.status-col{width:8%}.actions-col{width:11%}.mono{font-variant-numeric:tabular-nums;letter-spacing:.01em;color:#44566f;overflow-wrap:anywhere}.balance-due{color:#a65b00;white-space:nowrap}.balance-clear{color:#16724b;white-space:nowrap}.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:10.5px;font-weight:900;white-space:nowrap}.status-pill.success{background:#eaf8f1;color:#157347}.status-pill.warning{background:#fff5df;color:#9a5a00}.actions-cell{white-space:nowrap}.delete-form{display:inline;margin:0}.table-action{display:inline-flex;align-items:center;border:0;background:transparent;color:#1769df;text-decoration:none;font:inherit;font-size:12.5px;font-weight:850;cursor:pointer;padding:5px 4px}.table-action:hover{text-decoration:underline}.table-action.danger{color:#b42318}.student-pagination{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px 0 2px;border-top:1px solid #edf1f6;margin-top:2px}.pagination-summary{font-size:13px;color:#748399}.pagination-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}.page-link{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 11px;box-sizing:border-box;border:1px solid #dce4ee;border-radius:9px;background:#fff;color:#42566f;text-decoration:none;font-size:12.5px;font-weight:800}.page-link:hover{border-color:#9bbbe7;color:#1769df;background:#f7faff}.page-link.current{border-color:#1769df;background:#1769df;color:#fff}.page-link.disabled{color:#a6b1bf;background:#f7f9fb;border-color:#e7ecf2;cursor:not-allowed}.empty-state{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:48px 20px;color:#7a899d;text-align:center}.empty-state strong{color:#25364e;font-size:15px}.empty-state .btn{margin-top:7px}
 @media(max-width:1180px){.student-filters{grid-template-columns:1fr 1fr}.filter-search{grid-column:1/-1}.filter-actions{grid-column:1/-1}.student-stats{grid-template-columns:1fr 1fr}.student-stat:last-child{grid-column:1/-1}}
 @media(max-width:800px){.student-page-head{display:block}.student-stats{grid-template-columns:1fr}.student-stat:last-child{grid-column:auto}.student-filters{grid-template-columns:1fr}.filter-search,.filter-actions{grid-column:auto}.filter-actions{justify-content:flex-start}.student-table{min-width:1120px}.student-table-card{overflow-x:auto}.student-table-card .section-head{min-width:760px}.student-pagination{min-width:760px;align-items:flex-start;flex-direction:column}.pagination-controls{justify-content:flex-start}}
 @media(max-width:560px){.admin-actions .btn{width:100%;text-align:center;box-sizing:border-box}.student-stat strong{font-size:20px}.student-pagination{gap:12px}.pagination-controls{width:100%}.page-link{min-width:34px}}
