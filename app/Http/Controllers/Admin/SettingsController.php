@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
 {
@@ -37,17 +38,23 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             'school_name' => 'required|string|max:150',
-            'school_phone' => 'nullable|string|max:40',
+            'school_phone' => ['nullable', 'string', 'max:40'],
             'school_email' => 'nullable|email|max:150',
             'school_address' => 'nullable|string|max:500',
             'academic_year' => 'nullable|integer|min:2000|max:2100',
             'academic_term' => 'nullable|string|max:50',
-            'currency' => 'required|string|size:3',
-            'timezone' => 'required|string|max:100',
+            'currency' => ['required', 'string', 'size:3', 'in:KES'],
+            'timezone' => ['required', 'timezone'],
             'mission' => 'nullable|string|max:2000',
             'vision' => 'nullable|string|max:2000',
             'values' => 'nullable|string|max:2000',
-            'head_of_institution_user_id' => 'nullable|integer|exists:users,id',
+            'head_of_institution_user_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->whereIn('role', ['admin', 'manager']);
+                }),
+            ],
             'school_badge' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'school_stamp' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'remove_school_badge' => 'nullable|boolean',
@@ -68,15 +75,16 @@ class SettingsController extends Controller
     private function processImageSetting(Request $request, string $key, string $removeKey): void
     {
         $current = DB::table('settings')->where('key', $key)->value('value');
+        $disk = Storage::disk(config('filesystems.upload_disk', 'public'));
         if ($request->boolean($removeKey) && $current) {
-            Storage::disk('public')->delete($current);
+            $disk->delete($current);
             $this->saveSetting($key, '');
             $current = '';
         }
 
         if ($request->hasFile($key)) {
-            if ($current) Storage::disk('public')->delete($current);
-            $path = $request->file($key)->store('school', 'public');
+            if ($current) $disk->delete($current);
+            $path = $request->file($key)->store('school', config('filesystems.upload_disk', 'public'));
             $this->saveSetting($key, $path);
         }
     }
@@ -94,7 +102,9 @@ class SettingsController extends Controller
         $values = $this->defaults;
         try {
             foreach (DB::table('settings')->get() as $setting) $values[$setting->key] = $setting->value;
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            report($e);
+        }
         return $values;
     }
 }
