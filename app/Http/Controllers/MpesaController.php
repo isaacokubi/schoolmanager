@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\MpesaService;
+use App\Jobs\SendPaymentReceiptJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class MpesaController extends Controller
@@ -381,22 +381,19 @@ class MpesaController extends Controller
             return ['status' => 'completed', 'payment' => $payment, 'amount' => $amount, 'receipt' => $receipt];
         });
 
-        if ($result['status'] === 'completed' && !empty($result['payment']->student_id)) {
-            $payment = $result['payment'];
-            $student = DB::table('students')->where('id', $payment->student_id)->first();
-            $recipient = $student?->email;
-            if ($recipient) {
-                try {
-                    Mail::raw(
-                        'M-Pesa payment verified. Receipt: ' . $result['receipt'] . ', Amount: KES ' . number_format((float) $result['amount'], 2),
-                        function ($message) use ($recipient) {
-                            $message->to($recipient)->subject('M-Pesa School Fees Payment Verified');
-                        }
-                    );
-                } catch (Throwable $e) {
-                    report($e);
-                }
-            }
+        if ($result['status'] === 'completed') {
+            SendPaymentReceiptJob::dispatch($result['payment']->id)
+                ->afterCommit();
+
+            DB::table('payment_audits')->insert([
+                'payment_id' => $result['payment']->id,
+                'event' => 'receipt_queued',
+                'details' => json_encode([
+                    'receipt_number' => $result['receipt'],
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);

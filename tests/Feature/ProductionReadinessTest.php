@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Jobs\SendPaymentReceiptJob;
+use App\Services\PaymentReceiptService;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use App\Services\CbcReportCardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -175,6 +179,203 @@ class ProductionReadinessTest extends TestCase
         $payment=DB::table('payments')->where('mpesa_receipt','MAN123')->first();
         $this->assertSame(4000.0,(float)DB::table('students')->where('id',$student)->value('fee_balance'));
         $this->assertDatabaseHas('payment_audits',['payment_id'=>$payment->id,'event'=>'manual_payment_verified']);
+    }
+
+    public function test_verified_mpesa_callback_queues_payment_receipt_after_commit(): void
+    {
+        Queue::fake();
+
+        $parent = DB::table('parents')->insertGetId([
+            'name' => 'Receipt Parent',
+            'phone' => '0712345678',
+            'email' => 'receipt-parent@example.test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $student = $this->student('REC-001', 'Receipt Learner', $parent, 5000);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 2000,
+            'account_reference' => 'REC-001',
+            'checkout_request_id' => 'ws_CO_RECEIPT_001',
+            'status' => 'pending',
+            'verification_status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/mpesa/callback', [
+            'Body' => [
+                'stkCallback' => [
+                    'CheckoutRequestID' => 'ws_CO_RECEIPT_001',
+                    'ResultCode' => 0,
+                    'CallbackMetadata' => [
+                        'Item' => [
+                            ['Name' => 'MpesaReceiptNumber', 'Value' => 'REC123'],
+                            ['Name' => 'Amount', 'Value' => 2000],
+                            ['Name' => 'PhoneNumber', 'Value' => 254712345678],
+                        ],
+                    ],
+                ],
+            ],
+        ])->assertOk()->assertJson(['ResultCode' => 0]);
+
+        Queue::assertPushed(
+            SendPaymentReceiptJob::class,
+            function ($job) use ($payment) {
+                return $job->paymentId === $payment;
+            }
+        );
+
+        $this->assertDatabaseHas('payment_audits', [
+            'payment_id' => $payment,
+            'event' => 'receipt_queued',
+        ]);
+    }
+
+    public function test_payment_receipt_requires_parent_or_sponsor_recipient(): void
+    {
+        Mail::fake();
+
+        $admin = $this->user('admin', 'school-admin@example.test');
+        $student = $this->student('REC-002', 'No Recipient Learner', null, 5000);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 1500,
+            'account_reference' => 'REC-002',
+            'mpesa_receipt' => 'REC124',
+            'status' => 'completed',
+            'verification_status' => 'verified',
+            'paid_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(PaymentReceiptService::class)->sendForPayment($payment);
+
+        $this->assertFalse($result['sent']);
+        $this->assertFalse($result['retryable']);
+        $this->assertSame(
+            'No parent or sponsor receipt recipient was found.',
+            $result['reason']
+        );
+
+        Mail::assertNothingSent();
+
+        $this->assertDatabaseHas('payment_audits', [
+            'payment_id' => $payment,
+            'event' => 'receipt_delivery_failed',
+        ]);
+
+        $this->assertNotNull($admin);
+    }
+
+    public function test_payment_receipt_sends_pdf_to_parent_and_bccs_admin(): void
+    {
+        Mail::fake();
+
+        DB::table('settings')->insert([
+            'key' => 'school_name',
+            'value' => 'Production School',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $parent = DB::table('parents')->insertGetId([
+            'name' => 'Receipt Parent',
+            'phone' => '0712345678',
+            'email' => 'receipt-parent@example.test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $admin = $this->user('admin', 'admin-receipts@example.test');
+        $student = $this->student('REC-003', 'Receipt Learner', $parent, 5000);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 2500,
+            'account_reference' => 'REC-003',
+            'mpesa_receipt' => 'REC125',
+            'status' => 'completed',
+            'verification_status' => 'verified',
+            'paid_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(PaymentReceiptService::class)->sendForPayment($payment);
+
+        $this->assertTrue($result['sent']);
+        $this->assertSame(['receipt-parent@example.test'], $result['recipients']);
+
+
+        $this->assertDatabaseHas('payment_audits', [
+            'payment_id' => $payment,
+            'event' => 'receipt_sent',
+        ]);
+
+        $this->assertNotNull($admin);
+    }
+
+    public function test_payment_receipt_is_idempotent_when_job_runs_twice(): void
+    {
+        Mail::fake();
+
+        $parent = DB::table('parents')->insertGetId([
+            'name' => 'Idempotent Parent',
+            'phone' => '0712345678',
+            'email' => 'idempotent-parent@example.test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $student = $this->student('REC-004', 'Idempotent Learner', $parent, 5000);
+
+        $payment = DB::table('payments')->insertGetId([
+            'student_id' => $student,
+            'parent_phone' => '254712345678',
+            'payment_type' => 'school_fees',
+            'channel' => 'mpesa_stk',
+            'amount' => 3000,
+            'account_reference' => 'REC-004',
+            'mpesa_receipt' => 'REC126',
+            'status' => 'completed',
+            'verification_status' => 'verified',
+            'paid_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $service = app(PaymentReceiptService::class);
+
+        $first = $service->sendForPayment($payment);
+        $second = $service->sendForPayment($payment);
+
+        $this->assertTrue($first['sent']);
+        $this->assertTrue($second['sent']);
+        $this->assertTrue($second['already_sent']);
+
+        $this->assertSame(
+            1,
+            DB::table('payment_audits')
+                ->where('payment_id', $payment)
+                ->where('event', 'receipt_sent')
+                ->count()
+        );
+
     }
 
     public function test_cbc_service_does_not_send_duplicate_notifications_for_unchanged_report(): void
