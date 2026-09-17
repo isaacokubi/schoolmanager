@@ -11,7 +11,7 @@ $storagePrefix = '/storage/';
 $publicDiskDriver = strtolower(trim((string) getenv('PUBLIC_DISK_DRIVER')));
 $publicStorageUrl = rtrim(trim((string) (getenv('PUBLIC_DISK_URL') ?: getenv('AWS_URL'))), '/');
 
-if ($publicDiskDriver === 's3' && $publicStorageUrl !== '' && str_starts_with($uri, $storagePrefix)) {
+if ($publicDiskDriver === 's3' && $publicStorageUrl !== '' && strpos($uri, $storagePrefix) === 0) {
     $relativePath = ltrim(substr($uri, strlen($storagePrefix)), '/');
     if ($relativePath !== '') {
         $segments = array_map('rawurlencode', explode('/', $relativePath));
