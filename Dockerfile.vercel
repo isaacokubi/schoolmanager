@@ -53,9 +53,9 @@ RUN mkdir -p \
     && rm -rf public/storage \
     && ln -s ../storage/app/public public/storage
 
-# Package deterministic public demo media into the deployment image. These
-# files use the same paths as the existing seeded school_media records, so
-# the homepage works even though runtime local storage is ephemeral on Vercel.
+# Package deterministic public demo media into the deployment image. The
+# filenames intentionally match the existing school_media database records.
+# The old 44 MB MP4 is NOT used; this path now contains a fresh 3.4 MB MP4.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl file \
     && curl -L --fail --silent --show-error --retry 3 \
@@ -68,13 +68,13 @@ RUN apt-get update \
         -o storage/app/public/school-media/demo-20260917201812-02fc9a8cbc.jpg \
         https://samplefile.com/samples/download/image/jpeg/jpeg_500x300_sample_file_15KB.jpeg/ \
     && curl -L --fail --silent --show-error --retry 3 \
-        -o storage/app/public/school-media/demo-school-video-3-4mb.mp4 \
+        -o storage/app/public/school-media/demo-20260917201836-4b089bf7e9.mp4 \
         https://samplefile.com/samples/download/video/mp4/mp4_60s_sample_file_3.4MB.mp4/ \
     && file storage/app/public/school-media/demo-20260917201809-3b9f556a57.jpg | grep -Eiq 'JPEG|image' \
     && file storage/app/public/school-media/demo-20260917201810-f6989e8c29.jpg | grep -Eiq 'JPEG|image' \
     && file storage/app/public/school-media/demo-20260917201812-02fc9a8cbc.jpg | grep -Eiq 'JPEG|image' \
-    && file storage/app/public/school-media/demo-school-video-3-4mb.mp4 | grep -Eiq 'ISO Media|MPEG-4|MP4' \
-    && test "$(stat -c%s storage/app/public/school-media/demo-school-video-3-4mb.mp4)" -lt 4300000 \
+    && file storage/app/public/school-media/demo-20260917201836-4b089bf7e9.mp4 | grep -Eiq 'ISO Media|MPEG-4|MP4' \
+    && test "$(stat -c%s storage/app/public/school-media/demo-20260917201836-4b089bf7e9.mp4)" -lt 4300000 \
     && rm -rf /var/lib/apt/lists/*
 
 # Allow FrankenPHP/Caddy to read the application and Laravel
