@@ -42,7 +42,10 @@ RUN composer dump-autoload \
     --optimize \
     --classmap-authoritative
 
-# Laravel runtime directories and the conventional public-media link.
+# Laravel runtime directories. Do NOT create public/storage as a symlink.
+# /storage/{path} is an application media endpoint and must reach Laravel so
+# HTTP Range requests are handled consistently instead of being intercepted
+# by the web server as a static file.
 RUN mkdir -p \
     storage/app/public/school-media \
     storage/framework/cache \
@@ -50,8 +53,7 @@ RUN mkdir -p \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
-    && rm -rf public/storage \
-    && ln -s ../storage/app/public public/storage
+    && rm -rf public/storage
 
 # Package deterministic public demo media into the deployment image. The
 # filenames intentionally match the existing school_media database records.
@@ -81,8 +83,7 @@ RUN apt-get update \
 # to write runtime cache/log directories and local media.
 RUN chown -R www-data:www-data \
     storage \
-    bootstrap/cache \
-    public/storage
+    bootstrap/cache
 
 # Vercel supplies PORT. FrankenPHP must listen on it.
 CMD ["sh", "-c", "frankenphp php-server --root=public --listen=:$PORT"]
