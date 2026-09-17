@@ -1,23 +1,52 @@
-FROM php:7.4-apache
+FROM dunglas/frankenphp:php8.3-bookworm
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
-    PORT=80
+WORKDIR /app
 
-RUN a2enmod rewrite \
-    && sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# Laravel / database / image / archive extensions.
+RUN install-php-extensions \
+    bcmath \
+    ctype \
+    curl \
+    dom \
+    fileinfo \
+    gd \
+    intl \
+    mbstring \
+    mysqli \
+    opcache \
+    pcntl \
+    pdo_mysql \
+    zip
 
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
-
+# Install PHP dependencies first for Docker layer caching.
 COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --classmap-authoritative
+
+# Application source.
 COPY . .
 
-RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader \
-    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwX storage bootstrap/cache
+# Laravel runtime directories.
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
 
-EXPOSE 80
+# Allow FrankenPHP/Caddy to read the application and Laravel
+# to write runtime cache/log directories.
+RUN chown -R www-data:www-data \
+    storage \
+    bootstrap/cache
 
-CMD ["apache2-foreground"]
+# Vercel supplies PORT. FrankenPHP must listen on it.
+CMD ["sh", "-c", "frankenphp php-server --root=public --listen=:$PORT"]
