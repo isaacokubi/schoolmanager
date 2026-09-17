@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdmissionManagementController;
@@ -20,6 +19,7 @@ use App\Http\Controllers\PortalPaymentController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\StorageCompatibilityController;
 use App\Http\Controllers\TeacherAssessmentController;
 use App\Http\Controllers\TeacherPortalController;
 
@@ -30,15 +30,12 @@ Route::get('/admissions', [PublicController::class, 'admissions'])->name('admiss
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
-// Backward-compatible URL bridge for older Blade records that still store /storage/ paths.
-// Local/public storage remains served normally by the web server; S3-compatible disks redirect
-// to their canonical object URL so existing media keeps working after migration.
-Route::get('/storage/{path}', function (string $path) {
-    $diskName = config('filesystems.upload_disk', 'public');
-    if ($diskName === 'public') abort(404);
-
-    return redirect()->away(Storage::disk($diskName)->url($path));
-})->where('path', '.*')->name('storage.compat');
+// Backward-compatible URL bridge for older records that still store /storage/ paths.
+// Local/public storage is served normally by the web server; non-public upload disks
+// redirect to their canonical object URL so existing media keeps working after migration.
+Route::get('/storage/{path}', StorageCompatibilityController::class)
+    ->where('path', '.*')
+    ->name('storage.compat');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
