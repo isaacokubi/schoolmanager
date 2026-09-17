@@ -776,5 +776,481 @@
     }
 }
 
+
+/* FINAL HIGH-CONTRAST TEACHER DASHBOARD */
+
+.teacher-app{
+    color:#1b2b3d !important;
+}
+
+/* Header */
+.teacher-app .teacher-header,
+.teacher-app .teacher-header *{
+    color:#ffffff;
+}
+
+.teacher-app .teacher-header .brand strong{
+    color:#ffffff !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .teacher-header .brand small{
+    color:#d9edf2 !important;
+}
+
+.teacher-app .teacher-header .header-nav a{
+    color:#e8f3f6 !important;
+    font-weight:700 !important;
+}
+
+.teacher-app .teacher-header .header-nav a:hover,
+.teacher-app .teacher-header .header-nav a:focus-visible,
+.teacher-app .teacher-header .header-nav a.active{
+    color:#ffffff !important;
+}
+
+/* Main headings */
+.teacher-app h1,
+.teacher-app h2,
+.teacher-app h3,
+.teacher-app h4{
+    color:#10243e !important;
+}
+
+.teacher-app p{
+    color:#40546a !important;
+}
+
+/* Eyebrows / section labels */
+.teacher-app .eyebrow{
+    color:#17657b !important;
+    font-weight:800 !important;
+}
+
+/* Hero remains white on dark background */
+.teacher-app .hero,
+.teacher-app .hero *{
+    color:#ffffff;
+}
+
+.teacher-app .hero .eyebrow{
+    color:#c9edf3 !important;
+}
+
+.teacher-app .hero h1{
+    color:#ffffff !important;
+}
+
+.teacher-app .hero p{
+    color:#e4f1f4 !important;
+}
+
+.teacher-app .hero-status strong{
+    color:#ffffff !important;
+}
+
+.teacher-app .hero-status small{
+    color:#dbecef !important;
+}
+
+/* Buttons */
+.teacher-app .btn{
+    font-weight:800 !important;
+}
+
+.teacher-app .btn.primary{
+    color:#ffffff !important;
+}
+
+.teacher-app .btn.light{
+    color:#10243e !important;
+    background:#ffffff !important;
+}
+
+.teacher-app .btn.secondary{
+    color:#075e78 !important;
+    background:#edf7f8 !important;
+}
+
+.teacher-app .btn:hover,
+.teacher-app .btn:focus-visible{
+    text-decoration:none;
+}
+
+/* Statistics cards */
+.teacher-app .stat{
+    background:#ffffff !important;
+    color:#1b2b3d !important;
+}
+
+.teacher-app .stat span{
+    color:#4d6075 !important;
+    font-weight:800 !important;
+}
+
+.teacher-app .stat strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .stat small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .stat b{
+    color:#075e78 !important;
+    font-weight:850 !important;
+}
+
+/* Workflow cards */
+.teacher-app .action{
+    color:#24384d !important;
+    background:#ffffff !important;
+}
+
+.teacher-app .action strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .action small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .action .icon{
+    color:#075e78 !important;
+    font-weight:900 !important;
+}
+
+.teacher-app .action > span:last-child{
+    color:#075e78 !important;
+    font-weight:900 !important;
+}
+
+/* Primary workflow card */
+.teacher-app .action.primary,
+.teacher-app .action.primary *{
+    color:#ffffff !important;
+}
+
+.teacher-app .action.primary small{
+    color:#e3f2f5 !important;
+}
+
+/* Cards */
+.teacher-app .card{
+    color:#24384d !important;
+    background:#ffffff !important;
+}
+
+.teacher-app .card-heading h2,
+.teacher-app .section-heading h2{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .card-heading p,
+.teacher-app .section-heading p{
+    color:#53677c !important;
+}
+
+/* Links */
+.teacher-app a.link,
+.teacher-app .card a.link,
+.teacher-app .subject b,
+.teacher-app .stat b{
+    color:#075e78 !important;
+    font-weight:850 !important;
+}
+
+.teacher-app a.link:hover,
+.teacher-app a.link:focus-visible,
+.teacher-app .subject b:hover{
+    color:#03485d !important;
+}
+
+/* Profile */
+.teacher-app .profile-grid > div > span{
+    color:#53677c !important;
+    font-weight:750 !important;
+}
+
+.teacher-app .profile-grid > div > strong{
+    color:#10243e !important;
+    font-weight:800 !important;
+}
+
+/* Learning areas */
+.teacher-app .subject{
+    color:#24384d !important;
+}
+
+.teacher-app .subject strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .subject small{
+    color:#53677c !important;
+}
+
+.teacher-app .subject b{
+    color:#075e78 !important;
+}
+
+/* Pill / assigned badge */
+.teacher-app .pill{
+    color:#075e78 !important;
+    background:#e5f3f6 !important;
+    border:1px solid #b9dce4 !important;
+    font-weight:850 !important;
+}
+
+/* Attendance */
+.teacher-app .attendance-rate strong,
+.teacher-app .attendance-counts b{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .attendance-rate span,
+.teacher-app .attendance-counts span{
+    color:#53677c !important;
+    font-weight:700 !important;
+}
+
+.teacher-app .scope-note{
+    color:#40546a !important;
+    background:#f0f4f8 !important;
+    border:1px solid #d4dee8 !important;
+    font-weight:600 !important;
+}
+
+/* Attention */
+.teacher-app .attention-list strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .attention-list small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .attention-icon{
+    color:#075e78 !important;
+    background:#e5f3f6 !important;
+    border-color:#b9dce4 !important;
+    font-weight:900 !important;
+}
+
+/* Performance */
+.teacher-app .performance-top strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .performance-top span{
+    color:#075e78 !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .performance small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .bar{
+    background:#dbe4ec !important;
+}
+
+.teacher-app .bar i{
+    background:#0f766e !important;
+}
+
+/* Exam/activity rows */
+.teacher-app .list-row{
+    color:#24384d !important;
+}
+
+.teacher-app .list-row strong{
+    color:#10243e !important;
+    font-weight:800 !important;
+}
+
+.teacher-app .list-row small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .list-row > span{
+    color:#075e78 !important;
+    font-weight:800 !important;
+}
+
+/* Announcements */
+.teacher-app .announcement p{
+    color:#33465b !important;
+    font-weight:600 !important;
+}
+
+/* Events */
+.teacher-app .event .date-badge{
+    color:#075e78 !important;
+    background:#e5f3f6 !important;
+}
+
+.teacher-app .event .date-badge b{
+    color:#10243e !important;
+}
+
+.teacher-app .event .date-badge small{
+    color:#075e78 !important;
+    font-weight:800 !important;
+}
+
+/* Results table */
+.teacher-app .table-wrap{
+    color:#24384d !important;
+}
+
+.teacher-app table{
+    color:#24384d !important;
+}
+
+.teacher-app table th{
+    color:#10243e !important;
+    background:#e8f0f5 !important;
+    font-weight:850 !important;
+}
+
+.teacher-app table td{
+    color:#263b50 !important;
+    background:#ffffff !important;
+    font-weight:600 !important;
+}
+
+.teacher-app table td strong{
+    color:#10243e !important;
+    font-weight:850 !important;
+}
+
+.teacher-app table td small{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app table td.remark{
+    color:#263b50 !important;
+    font-weight:700 !important;
+}
+
+/* CBC achievement badges */
+.teacher-app .achievement{
+    color:#075985 !important;
+    background:#e0f2fe !important;
+    border:1px solid #9dd8f5 !important;
+    font-weight:900 !important;
+}
+
+/* Table action buttons */
+.teacher-app .table-actions .btn{
+    color:#075e78 !important;
+    font-weight:850 !important;
+}
+
+.teacher-app .table-actions .btn.secondary{
+    color:#075e78 !important;
+    background:#edf7f8 !important;
+    border-color:#b9dce4 !important;
+}
+
+/* Empty states */
+.teacher-app .empty{
+    color:#53677c !important;
+    font-weight:600 !important;
+}
+
+.teacher-app .empty a{
+    color:#075e78 !important;
+    font-weight:850 !important;
+}
+
+/* Notices */
+.teacher-app .notice.success,
+.teacher-app .notice.success *{
+    color:#166534 !important;
+    font-weight:700 !important;
+}
+
+.teacher-app .notice.danger,
+.teacher-app .notice.danger *{
+    color:#991b1b !important;
+    font-weight:700 !important;
+}
+
+.teacher-app .alert,
+.teacher-app .alert *{
+    color:#854d0e !important;
+    font-weight:700 !important;
+}
+
+/* Inputs */
+.teacher-app input,
+.teacher-app select,
+.teacher-app textarea{
+    color:#10243e !important;
+    background:#ffffff !important;
+    border-color:#b9c8d6 !important;
+}
+
+.teacher-app input::placeholder,
+.teacher-app textarea::placeholder{
+    color:#66788d !important;
+    opacity:1 !important;
+}
+
+/* Prevent low-opacity inherited text */
+.teacher-app .card *,
+.teacher-app .stat *,
+.teacher-app .action *,
+.teacher-app .list-row *{
+    text-shadow:none;
+}
+
+/* Keyboard focus */
+.teacher-app a:focus-visible,
+.teacher-app button:focus-visible,
+.teacher-app input:focus-visible,
+.teacher-app select:focus-visible,
+.teacher-app textarea:focus-visible{
+    outline:3px solid #0f766e !important;
+    outline-offset:3px !important;
+}
+
+/* Mobile contrast */
+@media (max-width:700px){
+    .teacher-app .hero p{
+        color:#e4f1f4 !important;
+    }
+
+    .teacher-app .card-heading p,
+    .teacher-app .section-heading p,
+    .teacher-app .stat small,
+    .teacher-app .action small,
+    .teacher-app .list-row small,
+    .teacher-app .profile-grid > div > span,
+    .teacher-app .subject small{
+        color:#4f6378 !important;
+    }
+
+    .teacher-app table td,
+    .teacher-app table td.remark{
+        color:#263b50 !important;
+    }
+}
+
 </style>
 @endsection
