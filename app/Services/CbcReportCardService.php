@@ -91,20 +91,11 @@ class CbcReportCardService
         return compact('student', 'exam', 'results', 'complete', 'points', 'average', 'attendance', 'parent', 'classTeacher', 'headOfInstitution', 'schoolBadgeData', 'schoolStampData', 'classTeacherSignatureData', 'headSignatureData', 'parentSignatureData', 'parentSignedAt');
     }
 
-    /**
-     * Return a self-contained image data URI for HTML and DomPDF.
-     * Signature files are stored on the public disk, but older records may contain
-     * /storage/ URLs or full public-disk URLs. Normalize all supported forms here.
-     * SVG is explicitly normalized to image/svg+xml because some PHP fileinfo builds
-     * report SVG as image/svg, which DomPDF 1.x does not reliably recognize.
-     * WebP is converted to PNG when GD supports it because DomPDF installations
-     * commonly have incomplete WebP support even though browsers can display it.
-     */
     private function imageData(?string $path): ?string
     {
         if (!$path) return null;
 
-        $disk = Storage::disk('public');
+        $disk = Storage::disk(config('filesystems.upload_disk', 'public'));
         $relativePath = trim($path);
         $parsed = parse_url($relativePath);
 
@@ -116,22 +107,18 @@ class CbcReportCardService
         $relativePath = preg_replace('#^storage/#', '', $relativePath);
         $relativePath = urldecode($relativePath);
 
-        if (!$disk->exists($relativePath)) {
-            return null;
-        }
+        if (!$disk->exists($relativePath)) return null;
 
         $bytes = $disk->get($relativePath);
-        if ($bytes === false || $bytes === '') {
-            return null;
-        }
+        if ($bytes === false || $bytes === '') return null;
 
-        $absolutePath = $disk->path($relativePath);
+        $absolutePath = method_exists($disk, 'path') ? $disk->path($relativePath) : null;
         $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
         $mime = null;
 
         if ($extension === 'svg') {
             $mime = 'image/svg+xml';
-        } elseif (function_exists('mime_content_type') && is_file($absolutePath)) {
+        } elseif ($absolutePath && function_exists('mime_content_type') && is_file($absolutePath)) {
             $mime = mime_content_type($absolutePath) ?: null;
         }
 
@@ -144,7 +131,7 @@ class CbcReportCardService
             else $mime = 'application/octet-stream';
         }
 
-        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp') && function_exists('imagepng')) {
+        if ($mime === 'image/webp' && $absolutePath && function_exists('imagecreatefromwebp') && function_exists('imagepng')) {
             $source = @imagecreatefromwebp($absolutePath);
             if ($source !== false) {
                 ob_start();
@@ -179,8 +166,9 @@ class CbcReportCardService
         $existing = DB::table('report_cards')->where('student_id', $studentId)->where('exam_id', $examId)->first();
         if ($existing && $existing->content_hash === $hash && $existing->notification_status === 'sent') return ['complete' => true, 'sent' => 0, 'reason' => 'Report already sent for this version.'];
 
+        $disk = Storage::disk(config('filesystems.upload_disk', 'public'));
         if ($existing && $existing->content_hash !== $hash && $existing->parent_signature_path) {
-            Storage::disk('public')->delete($existing->parent_signature_path);
+            $disk->delete($existing->parent_signature_path);
         }
         $payload = ['student_id' => $studentId, 'exam_id' => $examId, 'content_hash' => $hash, 'generated_at' => now(), 'notification_status' => 'pending', 'parent_signature_path' => null, 'parent_signed_by' => null, 'parent_signed_at' => null, 'updated_at' => now()];
         if ($existing) DB::table('report_cards')->where('id', $existing->id)->update($payload); else DB::table('report_cards')->insert($payload + ['created_at' => now()]);
