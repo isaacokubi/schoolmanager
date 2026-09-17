@@ -13,11 +13,12 @@ class SystemAuditTest extends TestCase
 
     public function test_health_endpoint_reports_database_connectivity_without_environment_details(): void
     {
-        $this->getJson('/api/health')
-            ->assertOk()
-            ->assertJsonPath('status', 'ok')
-            ->assertJsonMissingPath('environment')
-            ->assertJsonMissingPath('app');
+        $response = $this->getJson('/api/health')->assertOk();
+        $payload = $response->json();
+
+        $this->assertSame('ok', $payload['status'] ?? null);
+        $this->assertArrayNotHasKey('environment', $payload);
+        $this->assertArrayNotHasKey('app', $payload);
     }
 
     public function test_upload_disk_is_configurable_and_defaults_to_public(): void
