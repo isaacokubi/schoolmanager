@@ -121,7 +121,7 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::post('/teacher/assessments', [TeacherAssessmentController::class, 'store'])->middleware('portal.role:teacher')->name('portal.teacher-assessments.store');
     Route::get('/teacher/learners', [TeacherPortalController::class, 'learners'])->middleware('portal.role:teacher')->name('portal.teacher-learners');
     Route::get('/teacher/attendance', [TeacherPortalController::class, 'attendance'])->middleware('portal.role:teacher')->name('portal.teacher-attendance');
-    Route::post('/teacher/attendance', [TeacherPortalController::class, 'storeAttendance'])->middleware('throttle:10,1')->name('portal.teacher-attendance.store');
+    Route::post('/teacher/attendance', [TeacherPortalController::class, 'storeAttendance'])->name('portal.teacher-attendance.store');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
     Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
