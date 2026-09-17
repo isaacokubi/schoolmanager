@@ -47,7 +47,7 @@ RUN composer dump-autoload \
 # the image (for example, seeded/demo media). Runtime uploads must still use
 # persistent object storage when the app runs on Vercel.
 RUN mkdir -p \
-    storage/app/public \
+    storage/app/public/school-media \
     storage/framework/cache \
     storage/framework/sessions \
     storage/framework/views \
@@ -55,6 +55,19 @@ RUN mkdir -p \
     bootstrap/cache \
     && rm -rf public/storage \
     && ln -s ../storage/app/public public/storage
+
+# Package one small, browser-compatible demo MP4 into the deployment image.
+# This fixture is 3.4 MB, safely below the application's 4.3 MB video limit
+# and leaves headroom below Vercel's 4.5 MB request-body limit for uploads.
+# The upstream publishes stable download URLs and SHA256 manifests.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && curl -L --fail --silent --show-error --retry 3 \
+        -o storage/app/public/school-media/demo-school-video-3-4mb.mp4 \
+        https://samplefile.com/samples/download/video/mp4/mp4_60s_sample_file_3.4MB.mp4/ \
+    && test "$(stat -c%s storage/app/public/school-media/demo-school-video-3-4mb.mp4)" -lt 4300000 \
+    && file storage/app/public/school-media/demo-school-video-3-4mb.mp4 | grep -Eiq 'ISO Media|MPEG-4|MP4' \
+    && rm -rf /var/lib/apt/lists/*
 
 # Allow FrankenPHP/Caddy to read the application and Laravel
 # to write runtime cache/log directories and local media.
