@@ -94,6 +94,3 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
 });
-
-Route::post('/api/mpesa/callback', [MpesaController::class, 'callback'])->middleware('api')->name('mpesa.callback');
-Route::get('/broadcasting/auth', function () { return response()->json(['ok' => true]); })->middleware('auth');
