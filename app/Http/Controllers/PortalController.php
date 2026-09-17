@@ -105,7 +105,7 @@ class PortalController extends Controller
                     $result->cbc_code = $result->assessment_status === 'missed' ? 'MISSED' : $level['code'];
                     $result->cbc_label = $result->assessment_status === 'missed' ? 'Missed Assessment' : $level['label'];
                     $result->cbc_points = $result->assessment_status === 'missed' ? null : $level['points'];
-                    $result->cbc_remark = $cbc->remark($result->marks === null ? null : (float) $result->marks, $result->assessment_status);
+                    $result->cbc_remark = trim((string) ($result->remarks ?? '')) ?: 'No remark recorded';
                 }
 
                 $dashboardStats = [
@@ -153,7 +153,9 @@ class PortalController extends Controller
 
         $announcements = DB::table('announcements')->where('published', true)->where(function ($query) { $query->whereNull('published_at')->orWhere('published_at', '<=', now()); })->orderByDesc('published_at')->orderByDesc('created_at')->limit(5)->get();
         $upcomingEvents = DB::table('events')->whereDate('event_date', '>=', now()->toDateString())->orderBy('event_date')->limit(5)->get();
-        return view('portal.dashboard', compact('user', 'profile', 'students', 'studentMetrics', 'teacher', 'subjects', 'attendanceSummary', 'recentResults', 'announcements', 'upcomingEvents', 'dashboardStats', 'teacherPerformance', 'teacherExams', 'teacherAttendanceRate', 'teacherAverageMarks', 'teacherMissedCount', 'teacherRosterCount'));
+
+        $view = $profile && $profile->portal_type === 'teacher' ? 'portal.teacher-dashboard' : 'portal.dashboard';
+        return view($view, compact('user', 'profile', 'students', 'studentMetrics', 'teacher', 'subjects', 'attendanceSummary', 'recentResults', 'announcements', 'upcomingEvents', 'dashboardStats', 'teacherPerformance', 'teacherExams', 'teacherAttendanceRate', 'teacherAverageMarks', 'teacherMissedCount', 'teacherRosterCount'));
     }
 
     public function logout(Request $request)
