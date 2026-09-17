@@ -78,7 +78,7 @@
         </div>
         <div class="grid">
             @foreach($announcements as $announcement)
-                <article class="card announcement-card"><span class="badge">Announcement</span><h3>{{ $announcement->title }}</h3><p>{{ $announcement->body }}</p>@if($announcement->published_at)<small class="muted">Published {{ CarbonCarbon::parse($announcement->published_at)->format('d M Y') }}</small>@endif</article>
+                <article class="card announcement-card"><span class="badge">Announcement</span><h3>{{ $announcement->title }}</h3><p>{{ $announcement->body }}</p>@if($announcement->published_at)<small class="muted">Published {{ Carbon\Carbon::parse($announcement->published_at)->format('d M Y') }}</small>@endif</article>
             @endforeach
         </div>
     </div>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
         <div class="grid">
             @foreach($events as $event)
-                <article class="card"><span class="badge">{{ CarbonCarbon::parse($event->event_date)->format('d M') }}</span><h3>{{ $event->title }}</h3><p><strong>{{ CarbonCarbon::parse($event->event_date)->format('l, d F Y') }}</strong>@if($event->location)<br>{{ $event->location }}@endif</p>@if($event->description)<p class="muted">{{ $event->description }}</p>@endif</article>
+                <article class="card"><span class="badge">{{ Carbon\Carbon::parse($event->event_date)->format('d M') }}</span><h3>{{ $event->title }}</h3><p><strong>{{ Carbon\Carbon::parse($event->event_date)->format('l, d F Y') }}</strong>@if($event->location)<br>{{ $event->location }}@endif</p>@if($event->description)<p class="muted">{{ $event->description }}</p>@endif</article>
             @endforeach
         </div>
     </div>
