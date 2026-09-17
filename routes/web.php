@@ -32,8 +32,8 @@ Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('t
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
 // Public media endpoint. Keep /storage/{path} compatible with existing records.
-// Explicitly honor HTTP Range requests so browser video playback/seeking works
-// reliably even when the local PHP runtime does not delegate Range handling.
+// Images are returned explicitly as binary inline responses. Videos retain
+// explicit HTTP Range support for browser playback and seeking.
 Route::get('/storage/{path}', function (Request $request, string $path) {
     $disk = Storage::disk('public');
 
@@ -49,7 +49,7 @@ Route::get('/storage/{path}', function (Request $request, string $path) {
 
     try {
         $absolutePath = $disk->path($path);
-        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $mime = strtolower((string) ($disk->mimeType($path) ?: 'application/octet-stream'));
         $size = filesize($absolutePath);
     } catch (\Throwable $e) {
         abort(404);
@@ -60,12 +60,25 @@ Route::get('/storage/{path}', function (Request $request, string $path) {
     }
 
     $size = (int) $size;
+
+    // Image assets must be sent directly as their real binary content. This
+    // avoids the browser interpreting an error/redirect payload as an image.
+    if (str_starts_with($mime, 'image/')) {
+        return response()->file($absolutePath, [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) $size,
+            'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
+            'Cache-Control' => 'public, max-age=86400, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     $lastModified = filemtime($absolutePath);
     $etag = sprintf('"%s-%s"', dechex($size), dechex($lastModified ?: 0));
     $commonHeaders = [
         'Content-Type' => $mime,
         'Accept-Ranges' => 'bytes',
-        'Cache-Control' => 'public, max-age=31536000, immutable',
+        'Cache-Control' => 'public, max-age=86400, must-revalidate',
         'ETag' => $etag,
         'X-Content-Type-Options' => 'nosniff',
     ];
