@@ -16,13 +16,20 @@ class ReportsController extends Controller
         $report = $request->get('report', 'overview');
         abort_unless(in_array($report, ['overview', 'students', 'fees', 'attendance', 'results', 'admissions'], true), 404);
 
-        $data = ['report' => $report, 'generatedAt' => now()];
-        $data['studentCount'] = $this->countTable('students');
-        $data['parentCount'] = $this->countTable('parents');
-        $data['teacherCount'] = $this->countTable('teachers');
-        $data['classCount'] = $this->countTable('school_classes');
+        $data = [
+            'report' => $report,
+            'generatedAt' => now(),
+            'studentCount' => $this->countTable('students'),
+            'parentCount' => $this->countTable('parents'),
+            'teacherCount' => $this->countTable('teachers'),
+            'classCount' => $this->countTable('school_classes'),
+        ];
 
-        if (in_array($report, ['overview', 'students'], true)) {
+        if ($report === 'overview') {
+            $this->loadExecutiveOverview($data);
+        }
+
+        if ($report === 'students') {
             $data['students'] = DB::table('students')
                 ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
                 ->leftJoin('parents', 'parents.id', '=', 'students.parent_id')
@@ -33,78 +40,133 @@ class ReportsController extends Controller
                 ->withQueryString();
         }
 
-        if (in_array($report, ['overview', 'fees'], true)) {
-            $amountColumn = $this->paymentAmountColumn();
-            $data['payments'] = DB::table('payments')
-                ->leftJoin('students', 'students.id', '=', 'payments.student_id')
-                ->select('payments.*', 'students.name as student_name', 'students.admission_number')
-                ->latest('payments.id')
-                ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'payments_page')
-                ->withQueryString();
-            $data['paymentAmountColumn'] = $amountColumn;
-            $data['paymentTotal'] = $amountColumn ? (float) DB::table('payments')->where(function ($q) {
-                $q->whereNull('status')->orWhereIn('status', ['completed', 'paid', 'success']);
-            })->sum($amountColumn) : 0;
-            $data['outstanding'] = $this->studentBalanceTotal();
+        if ($report === 'fees') {
+            $this->loadFeesReport($data);
         }
 
-        if (in_array($report, ['overview', 'attendance'], true)) {
-            $data['attendance'] = DB::table('attendance')
-                ->leftJoin('students', 'students.id', '=', 'attendance.student_id')
-                ->select('attendance.attendance_date', 'attendance.status', 'students.name as student_name', 'students.admission_number')
-                ->orderByDesc('attendance.attendance_date')
-                ->orderBy('students.name')
-                ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'attendance_page')
-                ->withQueryString();
-            $data['attendanceSummary'] = DB::table('attendance')
-                ->select('status', DB::raw('COUNT(*) as total'))
-                ->groupBy('status')
-                ->pluck('total', 'status');
+        if ($report === 'attendance') {
+            $this->loadAttendanceReport($data);
         }
 
-        if (in_array($report, ['overview', 'results'], true)) {
-            $resultsQuery = DB::table('results')
-                ->leftJoin('students', 'students.id', '=', 'results.student_id')
-                ->leftJoin('subjects', 'subjects.id', '=', 'results.subject_id')
-                ->leftJoin('exams', 'exams.id', '=', 'results.exam_id')
-                ->whereNull('results.archived_at')
-                ->select('results.marks', 'results.grade', 'results.assessment_status', 'results.achievement_level', 'results.achievement_points', 'students.name as student_name', 'students.admission_number', 'subjects.name as subject_name', 'exams.name as exam_name', 'results.id');
-
-            $data['resultCount'] = (clone $resultsQuery)->count('results.id');
-            $data['averageMarks'] = (float) ((clone $resultsQuery)->whereNotNull('results.marks')->avg('results.marks') ?: 0);
-            $data['missedAssessmentCount'] = (clone $resultsQuery)->where('results.assessment_status', 'missed')->count('results.id');
-            $data['cbcLevelSummary'] = $this->cbcLevelSummary($resultsQuery);
-
-            $data['results'] = $resultsQuery
-                ->orderByDesc('results.id')
-                ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'results_page')
-                ->withQueryString();
-
-            $data['results']->getCollection()->transform(function ($row) use ($cbc) {
-                if ($row->assessment_status === 'missed') {
-                    $row->achievement_level = 'MISSED';
-                    $row->achievement_points = null;
-                } elseif ($row->marks !== null) {
-                    $level = $cbc->level((float) $row->marks);
-                    $row->achievement_level = $level['code'];
-                    $row->achievement_points = $level['points'];
-                }
-                return $row;
-            });
+        if ($report === 'results') {
+            $this->loadResultsReport($data, $cbc);
         }
 
-        if (in_array($report, ['overview', 'admissions'], true)) {
-            $data['applications'] = DB::table('admission_applications')
-                ->orderByDesc('id')
-                ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'admissions_page')
-                ->withQueryString();
-            $data['applicationSummary'] = DB::table('admission_applications')
-                ->select('status', DB::raw('COUNT(*) as total'))
-                ->groupBy('status')
-                ->pluck('total', 'status');
+        if ($report === 'admissions') {
+            $this->loadAdmissionsReport($data);
         }
 
         return view('admin.reports.index', $data);
+    }
+
+    private function loadExecutiveOverview(array &$data): void
+    {
+        $amountColumn = $this->paymentAmountColumn();
+        $data['paymentAmountColumn'] = $amountColumn;
+        $data['paymentTotal'] = $amountColumn ? (float) DB::table('payments')->where(function ($q) {
+            $q->whereNull('status')->orWhereIn('status', ['completed', 'paid', 'success']);
+        })->sum($amountColumn) : 0;
+        $data['outstanding'] = $this->studentBalanceTotal();
+
+        $data['attendanceSummary'] = DB::table('attendance')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $data['applicationSummary'] = DB::table('admission_applications')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $results = DB::table('results')->whereNull('archived_at');
+        $data['resultCount'] = (clone $results)->count();
+        $data['averageMarks'] = (float) ((clone $results)->whereNotNull('marks')->avg('marks') ?: 0);
+        $data['missedAssessmentCount'] = (clone $results)->where('assessment_status', 'missed')->count();
+        $data['cbcLevelSummary'] = $this->cbcLevelSummary($results);
+
+        $data['recentPayments'] = DB::table('payments')
+            ->leftJoin('students', 'students.id', '=', 'payments.student_id')
+            ->select('payments.created_at', 'payments.status', 'payments.mpesa_receipt', 'students.name as student_name', $amountColumn ? 'payments.'.$amountColumn.' as amount' : DB::raw('0 as amount'))
+            ->latest('payments.id')
+            ->limit(5)
+            ->get();
+
+        $data['recentApplications'] = DB::table('admission_applications')
+            ->select('created_at', 'student_name', 'requested_class', 'status')
+            ->latest('id')
+            ->limit(5)
+            ->get();
+    }
+
+    private function loadFeesReport(array &$data): void
+    {
+        $amountColumn = $this->paymentAmountColumn();
+        $data['paymentAmountColumn'] = $amountColumn;
+        $data['payments'] = DB::table('payments')
+            ->leftJoin('students', 'students.id', '=', 'payments.student_id')
+            ->select('payments.*', 'students.name as student_name', 'students.admission_number')
+            ->latest('payments.id')
+            ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'payments_page')
+            ->withQueryString();
+        $data['paymentTotal'] = $amountColumn ? (float) DB::table('payments')->where(function ($q) {
+            $q->whereNull('status')->orWhereIn('status', ['completed', 'paid', 'success']);
+        })->sum($amountColumn) : 0;
+        $data['outstanding'] = $this->studentBalanceTotal();
+    }
+
+    private function loadAttendanceReport(array &$data): void
+    {
+        $data['attendance'] = DB::table('attendance')
+            ->leftJoin('students', 'students.id', '=', 'attendance.student_id')
+            ->select('attendance.attendance_date', 'attendance.status', 'students.name as student_name', 'students.admission_number')
+            ->orderByDesc('attendance.attendance_date')
+            ->orderBy('students.name')
+            ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'attendance_page')
+            ->withQueryString();
+        $data['attendanceSummary'] = DB::table('attendance')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+    }
+
+    private function loadResultsReport(array &$data, CbcReportCardService $cbc): void
+    {
+        $resultsQuery = DB::table('results')
+            ->leftJoin('students', 'students.id', '=', 'results.student_id')
+            ->leftJoin('subjects', 'subjects.id', '=', 'results.subject_id')
+            ->leftJoin('exams', 'exams.id', '=', 'results.exam_id')
+            ->whereNull('results.archived_at')
+            ->select('results.marks', 'results.grade', 'results.assessment_status', 'results.achievement_level', 'results.achievement_points', 'students.name as student_name', 'students.admission_number', 'subjects.name as subject_name', 'exams.name as exam_name', 'results.id');
+
+        $data['resultCount'] = (clone $resultsQuery)->count('results.id');
+        $data['averageMarks'] = (float) ((clone $resultsQuery)->whereNotNull('results.marks')->avg('results.marks') ?: 0);
+        $data['missedAssessmentCount'] = (clone $resultsQuery)->where('results.assessment_status', 'missed')->count('results.id');
+        $data['cbcLevelSummary'] = $this->cbcLevelSummary($resultsQuery);
+        $data['results'] = $resultsQuery->orderByDesc('results.id')->paginate(self::REPORT_PAGE_SIZE, ['*'], 'results_page')->withQueryString();
+
+        $data['results']->getCollection()->transform(function ($row) use ($cbc) {
+            if ($row->assessment_status === 'missed') {
+                $row->achievement_level = 'MISSED';
+                $row->achievement_points = null;
+            } elseif ($row->marks !== null) {
+                $level = $cbc->level((float) $row->marks);
+                $row->achievement_level = $level['code'];
+                $row->achievement_points = $level['points'];
+            }
+            return $row;
+        });
+    }
+
+    private function loadAdmissionsReport(array &$data): void
+    {
+        $data['applications'] = DB::table('admission_applications')
+            ->orderByDesc('id')
+            ->paginate(self::REPORT_PAGE_SIZE, ['*'], 'admissions_page')
+            ->withQueryString();
+        $data['applicationSummary'] = DB::table('admission_applications')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
     }
 
     private function cbcLevelSummary($resultsQuery)
