@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdmissionManagementController;
@@ -28,6 +29,37 @@ Route::get('/academics', [PublicController::class, 'academics'])->name('academic
 Route::get('/admissions', [PublicController::class, 'admissions'])->name('admissions');
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
+
+// Public local-media endpoint. This keeps the existing /storage/... URLs working
+// even when the hosting platform does not create Laravel's storage symlink.
+// If the public disk is switched to S3-compatible storage later, redirect to
+// the disk's generated public URL instead of assuming a local filesystem path.
+Route::get('/storage/{path}', function (string $path) {
+    $disk = Storage::disk('public');
+
+    if (!$disk->exists($path)) {
+        abort(404);
+    }
+
+    if (config('filesystems.disks.public.driver') !== 'local') {
+        return redirect()->away($disk->url($path));
+    }
+
+    try {
+        $absolutePath = $disk->path($path);
+    } catch (\Throwable $e) {
+        abort(404);
+    }
+
+    if (!is_file($absolutePath) || !is_readable($absolutePath)) {
+        abort(404);
+    }
+
+    return response()->file($absolutePath, [
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->where('path', '.*')->name('media.file');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -89,7 +121,7 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::post('/teacher/assessments', [TeacherAssessmentController::class, 'store'])->middleware('portal.role:teacher')->name('portal.teacher-assessments.store');
     Route::get('/teacher/learners', [TeacherPortalController::class, 'learners'])->middleware('portal.role:teacher')->name('portal.teacher-learners');
     Route::get('/teacher/attendance', [TeacherPortalController::class, 'attendance'])->middleware('portal.role:teacher')->name('portal.teacher-attendance');
-    Route::post('/teacher/attendance', [TeacherPortalController::class, 'storeAttendance'])->middleware('portal.role:teacher')->name('portal.teacher-attendance.store');
+    Route::post('/teacher/attendance', [TeacherPortalController::class, 'storeAttendance'])->middleware('throttle:10,1')->name('portal.teacher-attendance.store');
     Route::get('/report-cards/{student}/{exam}', [ReportCardController::class, 'show'])->name('portal.report-cards.show');
     Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
