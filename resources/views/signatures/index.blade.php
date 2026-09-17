@@ -12,7 +12,8 @@
     @if($errors->any())<div class="errors"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     @php($signaturePath = auth()->user()->role === 'teacher' ? ($teacher->signature_path ?? null) : auth()->user()->signature_path)
     @if($signaturePath)
-        <div style="margin:18px 0;padding:14px;background:#f8fafc;border:1px solid #d9e2eb;border-radius:8px"><strong>Current signature</strong><br><img src="{{ asset('storage/'.$signaturePath) }}" alt="Current signature" style="display:block;max-width:320px;max-height:110px;margin-top:10px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;padding:8px"></div>
+        @php($signatureUrl = \Illuminate\Support\Facades\Storage::disk(config('filesystems.upload_disk', 'public'))->url(ltrim($signaturePath, '/')))
+        <div style="margin:18px 0;padding:14px;background:#f8fafc;border:1px solid #d9e2eb;border-radius:8px"><strong>Current signature</strong><br><img src="{{ $signatureUrl }}" alt="Current signature" style="display:block;max-width:320px;max-height:110px;margin-top:10px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;padding:8px"></div>
     @else
         <div style="margin:18px 0;padding:14px;background:#fff8e8;border:1px solid #f0d48a;border-radius:8px">No signature has been uploaded yet.</div>
     @endif

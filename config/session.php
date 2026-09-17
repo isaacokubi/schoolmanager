@@ -4,7 +4,7 @@ return [
     'driver' => env('SESSION_DRIVER', 'file'),
     'lifetime' => env('SESSION_LIFETIME', 120),
     'expire_on_close' => false,
-    'encrypt' => false,
+    'encrypt' => env('SESSION_ENCRYPT', false),
     'files' => storage_path('framework/sessions'),
     'connection' => env('SESSION_CONNECTION'),
     'table' => 'sessions',
@@ -13,7 +13,7 @@ return [
     'cookie' => env('SESSION_COOKIE', 'schoolmanager_session'),
     'path' => '/',
     'domain' => env('SESSION_DOMAIN'),
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
     'http_only' => true,
-    'same_site' => 'lax',
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
 ];

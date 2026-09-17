@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -22,6 +23,12 @@ class MpesaService
             throw new RuntimeException('M-Pesa consumer credentials are not configured. Set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.');
         }
 
+        $cacheKey = 'schoolmanager:mpesa:access-token:' . hash('sha256', $key . '|' . $this->baseUrl());
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+
         try {
             $response = Http::timeout(20)
                 ->withBasicAuth($key, $secret)
@@ -36,6 +43,9 @@ class MpesaService
                 throw new RuntimeException('M-Pesa OAuth response did not contain an access token.');
             }
 
+            // Daraja tokens are normally valid for about one hour. Keep a safety
+            // margin so workers do not reuse an expired token near its boundary.
+            Cache::put($cacheKey, $token, now()->addMinutes(55));
             return $token;
         } catch (RuntimeException $e) {
             throw $e;
@@ -44,13 +54,6 @@ class MpesaService
         }
     }
 
-    /**
-     * Query the status of an existing STK Push using its CheckoutRequestID.
-     *
-     * This does not invent a payment receipt. A successful query only proves
-     * Safaricom processed the STK request; final fee verification still requires
-     * a valid callback containing payment metadata.
-     */
     public function stkQuery(string $checkoutRequestId): array
     {
         $shortcode = trim((string) env('MPESA_SHORTCODE'));
@@ -86,7 +89,6 @@ class MpesaService
             }
 
             $payload = $response->json();
-
             if (!is_array($payload)) {
                 throw new RuntimeException('M-Pesa STK Query returned an invalid response.');
             }

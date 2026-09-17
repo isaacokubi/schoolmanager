@@ -19,6 +19,7 @@ use App\Http\Controllers\PortalPaymentController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\StorageCompatibilityController;
 use App\Http\Controllers\TeacherAssessmentController;
 use App\Http\Controllers\TeacherPortalController;
 
@@ -28,6 +29,13 @@ Route::get('/academics', [PublicController::class, 'academics'])->name('academic
 Route::get('/admissions', [PublicController::class, 'admissions'])->name('admissions');
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
+
+// Backward-compatible URL bridge for older records that still store /storage/ paths.
+// Local/public storage is served normally by the web server; non-public upload disks
+// redirect to their canonical object URL so existing media keeps working after migration.
+Route::get('/storage/{path}', StorageCompatibilityController::class)
+    ->where('path', '.*')
+    ->name('storage.compat');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -94,6 +102,3 @@ Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix(
     Route::post('/report-cards/{student}/{exam}/sign', [ReportCardController::class, 'sign'])->name('portal.report-cards.sign');
     Route::get('/report-cards/{student}/{exam}/download', [ReportCardController::class, 'download'])->name('portal.report-cards.download');
 });
-
-Route::post('/api/mpesa/callback', [MpesaController::class, 'callback'])->middleware('api')->name('mpesa.callback');
-Route::get('/broadcasting/auth', function () { return response()->json(['ok' => true]); })->middleware('auth');
