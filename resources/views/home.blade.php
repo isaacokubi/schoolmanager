@@ -124,44 +124,74 @@
 </section>
 @endif
 
-
 @if($schoolMedia->count())
-<section class="section media-showcase">
+<section class="section media-showcase" aria-labelledby="school-media-heading">
     <div class="container">
-        <div class="section-head">
+        <div class="section-head media-showcase-head">
             <div>
                 <p class="eyebrow">Life at {{ $settings['school_name'] ?? 'our school' }}</p>
-                <h2>See our school in action</h2>
-                <p>Explore classrooms, learning activities, school events, sports and the everyday moments that make our school community special.</p>
+                <h2 id="school-media-heading">Our school in action</h2>
+                <p>Take a closer look at learning, collaboration, sports, facilities and the everyday experiences that shape our school community.</p>
             </div>
-            <a class="btn secondary" href="{{ route('contact') }}">Visit or contact us</a>
+            <div class="media-showcase-meta" aria-label="Published media count">
+                <span class="media-count">{{ $schoolMedia->count() }}</span>
+                <span>published {{ $schoolMedia->count() === 1 ? 'story' : 'stories' }}</span>
+            </div>
         </div>
 
-        <div class="school-gallery">
+        <div class="school-gallery" role="list">
             @foreach($schoolMedia as $item)
-                <article class="school-media-card {{ $item->type === 'video' ? 'is-video' : '' }}">
+                @php
+                    $mediaUrl = '/storage/' . ltrim($item->path, '/');
+                    $isVideo = $item->type === 'video';
+                    $mediaTitle = trim((string) ($item->title ?: ''));
+                    $mediaCaption = trim((string) ($item->caption ?: ''));
+                    $mediaAlt = $mediaTitle ?: ($mediaCaption ?: 'School life and learning at ' . ($settings['school_name'] ?? 'our school'));
+                @endphp
+
+                <article class="school-media-card {{ $isVideo ? 'is-video' : '' }}" role="listitem">
                     <div class="school-media-frame">
-                        @if($item->type === 'image')
-                            <img
-                                src="{{ Storage::disk('public')->url($item->path) }}"
-                                alt="{{ $item->title ?: 'Makini Academy school activity' }}"
-                                loading="lazy">
-                        @else
-                            <video controls preload="metadata" playsinline>
-                                <source src="{{ Storage::disk('public')->url($item->path) }}" type="{{ $item->mime_type }}">
-                                Your browser does not support this video.
+                        @if($isVideo)
+                            <video
+                                class="school-media-video"
+                                controls
+                                preload="metadata"
+                                playsinline
+                                muted
+                                aria-label="{{ $mediaAlt }}">
+                                <source src="{{ $mediaUrl }}" type="{{ $item->mime_type ?: 'video/mp4' }}">
+                                Your browser does not support the school video.
                             </video>
-                            <span class="school-video-badge">VIDEO</span>
+                            <span class="school-video-badge" aria-hidden="true">▶ VIDEO</span>
+                        @else
+                            <img
+                                src="{{ $mediaUrl }}"
+                                alt="{{ $mediaAlt }}"
+                                loading="lazy"
+                                decoding="async"
+                                width="960"
+                                height="640"
+                                onerror="this.hidden=true;this.parentElement.classList.add('media-failed');this.parentElement.querySelector('.media-fallback').hidden=false;">
+                            <div class="media-fallback" hidden role="img" aria-label="School image unavailable">
+                                <span aria-hidden="true">IMG</span>
+                                <strong>Image temporarily unavailable</strong>
+                            </div>
                         @endif
                     </div>
 
                     <div class="school-media-content">
-                        <span class="school-media-type">{{ $item->type === 'video' ? 'School video' : 'School life' }}</span>
-                        @if($item->title)
-                            <h3>{{ $item->title }}</h3>
+                        <div class="school-media-content-top">
+                            <span class="school-media-type">{{ $isVideo ? 'School video' : 'School life' }}</span>
+                            @if($isVideo)
+                                <span class="school-media-pill">Media</span>
+                            @endif
+                        </div>
+
+                        @if($mediaTitle)
+                            <h3>{{ $mediaTitle }}</h3>
                         @endif
-                        @if($item->caption)
-                            <p>{{ $item->caption }}</p>
+                        @if($mediaCaption)
+                            <p>{{ $mediaCaption }}</p>
                         @endif
                     </div>
                 </article>
@@ -171,7 +201,7 @@
 </section>
 
 <style>
-.media-showcase{background:#f7fafc}.school-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.school-media-card{background:#fff;border:1px solid #e1e9f1;border-radius:17px;overflow:hidden;box-shadow:0 8px 26px rgba(20,42,70,.055);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.school-media-card:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(20,42,70,.1);border-color:#cfdae6}.school-media-frame{height:230px;background:#10243b;position:relative;overflow:hidden}.school-media-frame img,.school-media-frame video{display:block;width:100%;height:100%;object-fit:cover}.school-media-frame img{transition:transform .35s ease}.school-media-card:hover .school-media-frame img{transform:scale(1.025)}.school-video-badge{position:absolute;top:11px;right:11px;background:rgba(7,29,58,.88);color:#fff;padding:5px 8px;border-radius:7px;font-size:9px;font-weight:900;letter-spacing:.1em}.school-media-content{padding:14px 15px 16px}.school-media-type{display:block;color:#1769df;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}.school-media-content h3{margin:0 0 5px;color:#17243a;font-size:16px;line-height:1.3}.school-media-content p{margin:0;color:#748399;font-size:12px;line-height:1.55}.school-media-card:not(:has(h3)):not(:has(p)) .school-media-content{display:none}@media(max-width:950px){.school-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.school-gallery{grid-template-columns:1fr}.school-media-frame{height:235px}}
+.media-showcase{background:linear-gradient(180deg,#f7fafc 0%,#eef5f1 100%);border-top:1px solid #e6edf1;border-bottom:1px solid #e6edf1}.media-showcase-head{align-items:end}.media-showcase-meta{display:flex;align-items:center;gap:9px;white-space:nowrap;color:#607287;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.media-count{display:grid;place-items:center;min-width:34px;height:34px;padding:0 9px;border-radius:10px;background:#0d6b45;color:#fff;font-size:13px;box-shadow:0 6px 16px rgba(13,107,69,.18)}.school-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.school-media-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #dfe8e3;border-radius:18px;overflow:hidden;box-shadow:0 8px 26px rgba(17,51,38,.06);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.school-media-card:hover{transform:translateY(-4px);box-shadow:0 16px 38px rgba(17,51,38,.11);border-color:#c9dbd2}.school-media-frame{position:relative;aspect-ratio:16/10;background:#12352a;overflow:hidden}.school-media-frame img,.school-media-frame video{display:block;width:100%;height:100%;object-fit:cover}.school-media-frame img{transition:transform .4s ease}.school-media-card:hover .school-media-frame img{transform:scale(1.025)}.school-media-frame video{background:#071d17}.school-video-badge{position:absolute;top:12px;right:12px;z-index:2;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(5,28,21,.88);color:#fff;font-size:9px;font-weight:900;letter-spacing:.1em;backdrop-filter:blur(6px)}.media-fallback{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:7px;background:linear-gradient(145deg,#12352a,#1e4e3d);color:#fff;text-align:center;padding:20px}.media-fallback span{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.12);font-size:10px;font-weight:900;letter-spacing:.08em}.media-fallback strong{font-size:11px;color:#dcebe4}.school-media-content{padding:15px 16px 17px}.school-media-content-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}.school-media-type{color:#087f4f;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.school-media-pill{border:1px solid #d9e8e0;border-radius:999px;padding:3px 7px;color:#647a6e;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}.school-media-content h3{margin:0 0 6px;color:#172c25;font-size:17px;line-height:1.3;letter-spacing:-.015em}.school-media-content p{margin:0;color:#6c7e76;font-size:12px;line-height:1.6}.school-media-card.is-video .school-media-content{background:linear-gradient(180deg,#fff,#fbfdfc)}@media(max-width:950px){.school-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.media-showcase-head{align-items:start}.media-showcase-meta{margin-top:4px}.school-gallery{grid-template-columns:1fr}.school-media-frame{aspect-ratio:16/10}}@media(prefers-reduced-motion:reduce){.school-media-card,.school-media-frame img{transition:none}.school-media-card:hover{transform:none}.school-media-card:hover .school-media-frame img{transform:none}}
 </style>
 @endif
 
