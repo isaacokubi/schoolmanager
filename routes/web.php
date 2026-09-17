@@ -63,7 +63,7 @@ Route::get('/storage/{path}', function (Request $request, string $path) {
 
     // Image assets must be sent directly as their real binary content. This
     // avoids the browser interpreting an error/redirect payload as an image.
-    if (str_starts_with($mime, 'image/')) {
+    if (strpos($mime, 'image/') === 0) {
         return response()->file($absolutePath, [
             'Content-Type' => $mime,
             'Content-Length' => (string) $size,
