@@ -36,8 +36,9 @@ class ReportCardController extends Controller
         $report=$service->build($student,$exam); abort_unless($report,404); if(!$this->canParentSign($request,$report['student']))abort(403);
         $request->validate(['parent_signature'=>'required|image|mimes:jpg,jpeg,png,webp|max:2048']);
         $this->decorate($report,$service); $hash=$service->currentContentHash($report['results'],$student,$exam); $existing=DB::table('report_cards')->where('student_id',$student)->where('exam_id',$exam)->first();
-        if($existing&&$existing->parent_signature_path)Storage::disk('public')->delete($existing->parent_signature_path);
-        $path=$request->file('parent_signature')->store('signatures/parents/report-cards','public');
+        $disk = Storage::disk(config('filesystems.upload_disk', 'public'));
+        if($existing&&$existing->parent_signature_path)$disk->delete($existing->parent_signature_path);
+        $path=$request->file('parent_signature')->store('signatures/parents/report-cards',config('filesystems.upload_disk','public'));
         $payload=['student_id'=>$student,'exam_id'=>$exam,'content_hash'=>$hash,'generated_at'=>$existing&&$existing->generated_at?$existing->generated_at:now(),'parent_signature_path'=>$path,'parent_signed_by'=>$request->user()->id,'parent_signed_at'=>now(),'updated_at'=>now()];
         if($existing)DB::table('report_cards')->where('id',$existing->id)->update($payload);else{ $payload['created_at']=now();$payload['notification_status']='pending';DB::table('report_cards')->insert($payload); }
         return back()->with('success','Your signature has been recorded on this CBC report card.');
@@ -57,14 +58,19 @@ class ReportCardController extends Controller
     {
         $user=$request->user();
         if(in_array($user->role,['admin','manager'],true))return true;
-        $profile=DB::table('portal_profiles')->where('user_id',$user->id)->first();
-        if(!$profile||!$profile->active)return false;
+        $profile=DB::table('portal_profiles')->where('user_id',$user->id)->where('active',true)->first();
+        if(!$profile)return false;
         if($profile->portal_type==='teacher'){
             $teacher=DB::table('teachers')->where('email',$user->email)->first();
             return $teacher && DB::table('results')->join('subjects','subjects.id','=','results.subject_id')->where('results.student_id',$student->id)->where('subjects.teacher_id',$teacher->id)->exists();
         }
-        if($profile->admission_number&&$profile->admission_number===$student->admission_number&&in_array($profile->portal_type,['pupil','parent','sponsor'],true))return true;
-        if($profile->portal_type==='parent'&&$student->parent_id)return DB::table('parents')->where('id',$student->parent_id)->where('email',$user->email)->exists();
+        if($profile->portal_type==='pupil' && $profile->admission_number===$student->admission_number)return true;
+        if(in_array($profile->portal_type,['parent','sponsor'],true)){
+            if($profile->admission_number===$student->admission_number)return true;
+            if($profile->portal_type==='parent' && $student->parent_id){
+                return DB::table('parents')->where('id',$student->parent_id)->where('email',$user->email)->exists();
+            }
+        }
         return false;
     }
 
