@@ -21,21 +21,22 @@ class SystemAuditTest extends TestCase
     {
         $this->assertSame('public', config('filesystems.upload_disk'));
         $this->assertSame(storage_path('app/public'), config('filesystems.disks.public.root'));
-        $this->assertNotEmpty(config('filesystems.disks.s3.driver'));
+        $this->assertSame('s3', config('filesystems.disks.s3.driver'));
     }
 
     public function test_payment_receipts_are_unique_at_database_level(): void
     {
+        if (DB::getDriverName() !== 'sqlite') {
+            $this->assertTrue(true);
+            return;
+        }
+
         $indexes = DB::select("PRAGMA index_list('payments')");
         $indexNames = collect($indexes)->pluck('name')->map(fn ($name) => (string) $name)->all();
 
-        if (DB::getDriverName() === 'sqlite') {
-            $this->assertTrue(
-                collect($indexNames)->contains(fn ($name) => stripos($name, 'mpesa_receipt') !== false),
-                'payments.mpesa_receipt must remain uniquely indexed.'
-            );
-        } else {
-            $this->assertTrue(true);
-        }
+        $this->assertTrue(
+            collect($indexNames)->contains(fn ($name) => stripos($name, 'mpesa_receipt') !== false),
+            'payments.mpesa_receipt must remain uniquely indexed.'
+        );
     }
 }
