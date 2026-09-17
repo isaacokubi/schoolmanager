@@ -34,11 +34,11 @@ class SchoolMediaController extends Controller
                     $type = $request->input('type');
                     $mime = (string) $value->getMimeType();
 
-                    if ($type === 'image' && !str_starts_with($mime, 'image/')) {
+                    if ($type === 'image' && strpos($mime, 'image/') !== 0) {
                         $fail('Please upload a valid image file.');
                     }
 
-                    if ($type === 'video' && !str_starts_with($mime, 'video/')) {
+                    if ($type === 'video' && strpos($mime, 'video/') !== 0) {
                         $fail('Please upload a valid video file.');
                     }
                 },
