@@ -54,8 +54,8 @@
         <div class="media-library">
             @foreach($media as $item)
                 @php
-                    /* Use a relative public-storage URL so localhost/127.0.0.1 or a production host cannot mismatch. */
-                    $mediaUrl = '/storage/' . ltrim($item->path, '/');
+                    /* Always use the Laravel media endpoint. This works without public/storage and supports local + object storage deployments. */
+                    $mediaUrl = route('media.file', ['path' => ltrim((string) $item->path, '/')]) . '?v=' . rawurlencode((string) ($item->updated_at ?: $item->id));
                     $extension = strtoupper(pathinfo($item->path, PATHINFO_EXTENSION));
                     $sizeBytes = null;
                     try {
@@ -70,7 +70,7 @@
                 <article class="media-card">
                     <div class="media-preview {{ $item->type === 'video' ? 'is-video' : '' }}">
                         @if($item->type === 'image')
-                            <img src="{{ $mediaUrl }}" alt="{{ $item->title ?: 'School photo' }}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">
+                            <img src="{{ $mediaUrl }}" alt="{{ $item->title ?: 'School photo' }}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">
                             <div class="media-load-error" hidden>Image unavailable</div>
                         @else
                             <video controls preload="metadata" playsinline><source src="{{ $mediaUrl }}" type="{{ $item->mime_type }}">Your browser does not support this video.</video>
