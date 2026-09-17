@@ -34,6 +34,14 @@ RUN composer install \
 # Application source.
 COPY . .
 
+# The authoritative Composer classmap was generated before the Laravel
+# application source existed in the image. Regenerate it after COPY so
+# App\\Http\\Kernel and all other application classes are discoverable.
+RUN composer dump-autoload \
+    --no-dev \
+    --optimize \
+    --classmap-authoritative
+
 # Laravel runtime directories.
 RUN mkdir -p \
     storage/framework/cache \
