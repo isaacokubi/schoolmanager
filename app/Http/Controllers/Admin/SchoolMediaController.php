@@ -32,27 +32,30 @@ class SchoolMediaController extends Controller
                 'max:51200',
                 function ($attribute, $value, $fail) use ($request) {
                     $type = $request->input('type');
+                    $mime = (string) $value->getMimeType();
 
-                    if ($type === 'image' && !str_starts_with((string) $value->getMimeType(), 'image/')) {
+                    if ($type === 'image' && !str_starts_with($mime, 'image/')) {
                         $fail('Please upload a valid image file.');
                     }
 
-                    if ($type === 'video' && !str_starts_with((string) $value->getMimeType(), 'video/')) {
+                    if ($type === 'video' && !str_starts_with($mime, 'video/')) {
                         $fail('Please upload a valid video file.');
                     }
                 },
             ],
         ]);
 
-        $path = $request->file('media')->store('school-media', 'public');
+        $disk = config('filesystems.upload_disk', 'public');
+        $file = $request->file('media');
+        $path = $file->store('school-media', $disk);
 
         DB::table('school_media')->insert([
             'title' => $validated['title'] ?: null,
             'caption' => $validated['caption'] ?: null,
             'type' => $validated['type'],
             'path' => $path,
-            'mime_type' => $request->file('media')->getMimeType(),
-            'file_size' => $request->file('media')->getSize(),
+            'mime_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
             'sort_order' => (int) (DB::table('school_media')->max('sort_order') ?? 0) + 1,
             'published' => $request->boolean('published', true),
             'created_at' => now(),
@@ -65,7 +68,6 @@ class SchoolMediaController extends Controller
     public function update(Request $request, int $id)
     {
         $media = DB::table('school_media')->where('id', $id)->first();
-
         abort_unless($media, 404);
 
         $validated = $request->validate([
@@ -90,11 +92,11 @@ class SchoolMediaController extends Controller
     public function destroy(int $id)
     {
         $media = DB::table('school_media')->where('id', $id)->first();
-
         abort_unless($media, 404);
 
-        if ($media->path && Storage::disk('public')->exists($media->path)) {
-            Storage::disk('public')->delete($media->path);
+        $disk = Storage::disk(config('filesystems.upload_disk', 'public'));
+        if ($media->path && $disk->exists($media->path)) {
+            $disk->delete($media->path);
         }
 
         DB::table('school_media')->where('id', $id)->delete();
