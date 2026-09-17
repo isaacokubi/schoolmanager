@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const polish = document.createElement('link');
+    polish.rel = 'stylesheet';
+    polish.href = '/css/production-ui.css';
+    polish.dataset.productionUi = 'true';
+    document.head.appendChild(polish);
+
     const mq = window.matchMedia('(max-width: 800px)');
 
     const close = (button, target, backdrop) => {
