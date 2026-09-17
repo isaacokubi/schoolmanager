@@ -62,8 +62,9 @@ class TeacherPortalController extends Controller
         $teacher = $this->teacher($request);
         $subjects = $this->subjects($teacher->id);
         $subjectIds = $subjects->pluck('id');
-        $date = $request->input('date', now()->toDateString());
-        $date = date('Y-m-d', strtotime($date));
+        $requestedDate = $request->input('date', now()->toDateString());
+        $date = date('Y-m-d', strtotime($requestedDate));
+        abort_unless($date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date), 422, 'Please provide a valid attendance date.');
 
         $students = $subjectIds->isEmpty() ? collect() : DB::table('students')
             ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
@@ -80,8 +81,9 @@ class TeacherPortalController extends Controller
         $records = $studentIds->isEmpty() ? collect() : DB::table('attendance')->whereIn('student_id', $studentIds)->whereDate('attendance_date', $date)->get()->keyBy('student_id');
 
         foreach ($students as $student) {
-            $student->attendance_status = optional($records->get($student->id))->status ?: 'present';
-            $student->attendance_notes = optional($records->get($student->id))->notes ?: '';
+            $record = $records->get($student->id);
+            $student->attendance_status = $record ? $record->status : 'present';
+            $student->attendance_notes = $record ? ($record->notes ?: '') : '';
         }
 
         return view('portal.teacher-attendance', compact('teacher', 'subjects', 'students', 'date'));
@@ -99,6 +101,7 @@ class TeacherPortalController extends Controller
         ]);
 
         $subjectIds = $this->subjects($teacher->id)->pluck('id');
+        abort_unless($subjectIds->isNotEmpty(), 403, 'No learning areas are assigned to your teacher account.');
         $allowedStudentIds = DB::table('results')->whereIn('subject_id', $subjectIds)->whereNull('archived_at')->pluck('student_id')->unique();
         $date = $data['attendance_date'];
 
@@ -106,10 +109,13 @@ class TeacherPortalController extends Controller
             foreach ($data['attendance'] as $studentId => $status) {
                 $studentId = (int) $studentId;
                 abort_unless($allowedStudentIds->contains($studentId), 403);
-                DB::table('attendance')->updateOrInsert(
-                    ['student_id' => $studentId, 'attendance_date' => $date],
-                    ['status' => $status, 'notes' => $data['notes'][$studentId] ?? null, 'updated_at' => now(), 'created_at' => now()]
-                );
+                $payload = ['status' => $status, 'notes' => $data['notes'][$studentId] ?? null, 'updated_at' => now()];
+                $exists = DB::table('attendance')->where('student_id', $studentId)->where('attendance_date', $date)->exists();
+                if ($exists) {
+                    DB::table('attendance')->where('student_id', $studentId)->where('attendance_date', $date)->update($payload);
+                } else {
+                    DB::table('attendance')->insert($payload + ['student_id' => $studentId, 'attendance_date' => $date, 'created_at' => now()]);
+                }
             }
         });
 
@@ -118,13 +124,8 @@ class TeacherPortalController extends Controller
 
     private function teacher(Request $request)
     {
-        $profile = DB::table('portal_profiles')
-            ->where('user_id', $request->user()->id)
-            ->where('portal_type', 'teacher')
-            ->where('active', true)
-            ->first();
+        $profile = DB::table('portal_profiles')->where('user_id', $request->user()->id)->where('portal_type', 'teacher')->where('active', true)->first();
         abort_unless($profile, 403);
-
         $teacher = DB::table('teachers')->where('email', $request->user()->email)->whereNull('archived_at')->first();
         abort_unless($teacher, 403, 'Your teacher profile is not linked to your login account.');
         return $teacher;
