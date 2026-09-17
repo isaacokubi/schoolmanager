@@ -124,6 +124,57 @@
 </section>
 @endif
 
+
+@if($schoolMedia->count())
+<section class="section media-showcase">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Life at {{ $settings['school_name'] ?? 'our school' }}</p>
+                <h2>See our school in action</h2>
+                <p>Explore classrooms, learning activities, school events, sports and the everyday moments that make our school community special.</p>
+            </div>
+            <a class="btn secondary" href="{{ route('contact') }}">Visit or contact us</a>
+        </div>
+
+        <div class="school-gallery">
+            @foreach($schoolMedia as $item)
+                <article class="school-media-card {{ $item->type === 'video' ? 'is-video' : '' }}">
+                    <div class="school-media-frame">
+                        @if($item->type === 'image')
+                            <img
+                                src="{{ Storage::disk('public')->url($item->path) }}"
+                                alt="{{ $item->title ?: 'Makini Academy school activity' }}"
+                                loading="lazy">
+                        @else
+                            <video controls preload="metadata" playsinline>
+                                <source src="{{ Storage::disk('public')->url($item->path) }}" type="{{ $item->mime_type }}">
+                                Your browser does not support this video.
+                            </video>
+                            <span class="school-video-badge">VIDEO</span>
+                        @endif
+                    </div>
+
+                    <div class="school-media-content">
+                        <span class="school-media-type">{{ $item->type === 'video' ? 'School video' : 'School life' }}</span>
+                        @if($item->title)
+                            <h3>{{ $item->title }}</h3>
+                        @endif
+                        @if($item->caption)
+                            <p>{{ $item->caption }}</p>
+                        @endif
+                    </div>
+                </article>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<style>
+.media-showcase{background:#f7fafc}.school-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.school-media-card{background:#fff;border:1px solid #e1e9f1;border-radius:17px;overflow:hidden;box-shadow:0 8px 26px rgba(20,42,70,.055);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.school-media-card:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(20,42,70,.1);border-color:#cfdae6}.school-media-frame{height:230px;background:#10243b;position:relative;overflow:hidden}.school-media-frame img,.school-media-frame video{display:block;width:100%;height:100%;object-fit:cover}.school-media-frame img{transition:transform .35s ease}.school-media-card:hover .school-media-frame img{transform:scale(1.025)}.school-video-badge{position:absolute;top:11px;right:11px;background:rgba(7,29,58,.88);color:#fff;padding:5px 8px;border-radius:7px;font-size:9px;font-weight:900;letter-spacing:.1em}.school-media-content{padding:14px 15px 16px}.school-media-type{display:block;color:#1769df;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}.school-media-content h3{margin:0 0 5px;color:#17243a;font-size:16px;line-height:1.3}.school-media-content p{margin:0;color:#748399;font-size:12px;line-height:1.55}.school-media-card:not(:has(h3)):not(:has(p)) .school-media-content{display:none}@media(max-width:950px){.school-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.school-gallery{grid-template-columns:1fr}.school-media-frame{height:235px}}
+</style>
+@endif
+
 @if($events->count())
 <section class="section">
     <div class="container">

@@ -23,6 +23,7 @@
         elseif ($currentRoute === 'admin.settings' || $currentRoute === 'admin.settings.update') $active = 'settings';
         elseif ($currentRoute === 'admin.operations' && $section) $active = $section;
         elseif ($currentRoute === 'admin.operations') $active = 'operations';
+        elseif (strpos($currentRoute, 'admin.media.') === 0) $active = 'media';
     }
 @endphp
 <div class="admin-shell">
@@ -58,6 +59,7 @@
     <a class="{{ $active==='results'?'active':'' }}" href="{{ route('admin.operations',['section'=>'results']) }}"><span>▥</span> CBC Results</a>
     <a class="{{ $active==='announcements'?'active':'' }}" href="{{ route('admin.operations',['section'=>'announcements']) }}"><span>!</span> Announcements</a>
     <a class="{{ $active==='events'?'active':'' }}" href="{{ route('admin.operations',['section'=>'events']) }}"><span>◷</span> School Calendar</a>
+    <a class="{{ $active==='media'?'active':'' }}" href="{{ route('admin.media.index') }}"><span>▧</span> Website Media</a>
 
     @if(!$isManager)
         <div class="sidebar-section">FINANCE & REPORTING</div>

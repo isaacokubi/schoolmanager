@@ -38,6 +38,12 @@ class PublicController extends Controller
             'announcements' => DB::table('announcements')->where('published', true)->orderByDesc('published_at')->orderByDesc('id')->limit(3)->get(),
             'events' => DB::table('events')->whereDate('event_date', '>=', now()->toDateString())->orderBy('event_date')->limit(4)->get(),
             'classes' => DB::table('school_classes')->orderBy('academic_year', 'desc')->orderBy('name')->limit(8)->get(),
+            'schoolMedia' => DB::table('school_media')
+                ->where('published', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->limit(12)
+                ->get(),
         ]);
     }
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SchoolMediaController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MpesaController;
@@ -60,6 +61,10 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 
     Route::middleware('admin.only')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
+        Route::get('/media', [SchoolMediaController::class, 'index'])->name('admin.media.index');
+        Route::post('/media', [SchoolMediaController::class, 'store'])->name('admin.media.store');
+        Route::put('/media/{id}', [SchoolMediaController::class, 'update'])->name('admin.media.update');
+        Route::delete('/media/{id}', [SchoolMediaController::class, 'destroy'])->name('admin.media.destroy');
         Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
         Route::get('/signature', [SignatureController::class, 'show'])->name('signature.index');
         Route::put('/signature', [SignatureController::class, 'update'])->name('signature.update');
