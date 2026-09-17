@@ -26,7 +26,7 @@
     <section class="media-upload-card">
         <div class="section-heading">
             <div><span class="media-eyebrow">Add content</span><h2>Upload a school photo or video</h2><p>Use clear, school-appropriate media for classrooms, CBC learning, sports, events, facilities and community activities.</p></div>
-            <div class="upload-security"><span>✓</span> Up to 50 MB per file</div>
+            <div class="upload-security"><span>✓</span> Images up to 50 MB · videos up to {{ number_format(max(1, (int) env('VIDEO_UPLOAD_MAX_KB', 4300)) / 1000, 1) }} MB</div>
         </div>
         <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data" class="media-form" id="media-upload-form">
             @csrf
