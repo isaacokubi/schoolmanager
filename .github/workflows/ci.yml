@@ -1,0 +1,56 @@
+name: SchoolManager CI
+
+on:
+  push:
+    branches: [main, 'production/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: mbstring, dom, fileinfo, gd, pdo_sqlite
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer files
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+          touch database/database.sqlite
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=database\/database.sqlite/' .env
+          sed -i 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+          php artisan config:clear
+
+      - name: Syntax check
+        run: |
+          find app config routes database -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run test suite
+        run: php artisan test
+
+      - name: Check route registration
+        run: php artisan route:list --except-vendor >/tmp/routes.txt && test -s /tmp/routes.txt
+
+      - name: Audit dependencies
+        run: composer audit --locked
