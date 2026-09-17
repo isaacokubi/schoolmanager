@@ -11,14 +11,14 @@ class TeacherPortalController extends Controller
     {
         $teacher = $this->teacher($request);
         $subjects = $this->subjects($teacher->id);
-        $subjectIds = $subjects->pluck('id');
+        $classIds = $this->classTeacherClassIds($teacher->id);
 
-        $students = $subjectIds->isEmpty() ? collect() : DB::table('students')
+        // The teacher register is a class register: only pupils belonging to a
+        // class for which this teacher is the assigned class teacher are shown.
+        $students = $classIds->isEmpty() ? collect() : DB::table('students')
             ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
             ->whereNull('students.archived_at')
-            ->whereIn('students.id', function ($query) use ($subjectIds) {
-                $query->from('results')->select('student_id')->whereIn('subject_id', $subjectIds)->whereNull('archived_at');
-            })
+            ->whereIn('students.class_id', $classIds)
             ->select('students.*', 'school_classes.name as class_label', 'school_classes.stream')
             ->orderBy('students.name')
             ->distinct()
@@ -34,7 +34,6 @@ class TeacherPortalController extends Controller
 
         $results = $studentIds->isEmpty() ? collect() : DB::table('results')
             ->whereIn('student_id', $studentIds)
-            ->whereIn('subject_id', $subjectIds)
             ->whereNull('archived_at')
             ->select('student_id', DB::raw('COUNT(*) as total_results'), DB::raw('AVG(marks) as average_marks'))
             ->groupBy('student_id')
@@ -61,24 +60,26 @@ class TeacherPortalController extends Controller
     {
         $teacher = $this->teacher($request);
         $subjects = $this->subjects($teacher->id);
-        $subjectIds = $subjects->pluck('id');
+        $classIds = $this->classTeacherClassIds($teacher->id);
         $requestedDate = $request->input('date', now()->toDateString());
         $date = date('Y-m-d', strtotime($requestedDate));
         abort_unless($date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date), 422, 'Please provide a valid attendance date.');
 
-        $students = $subjectIds->isEmpty() ? collect() : DB::table('students')
+        $students = $classIds->isEmpty() ? collect() : DB::table('students')
             ->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
             ->whereNull('students.archived_at')
-            ->whereIn('students.id', function ($query) use ($subjectIds) {
-                $query->from('results')->select('student_id')->whereIn('subject_id', $subjectIds)->whereNull('archived_at');
-            })
+            ->whereIn('students.class_id', $classIds)
             ->select('students.*', 'school_classes.name as class_label', 'school_classes.stream')
             ->orderBy('students.name')
             ->distinct()
             ->get();
 
         $studentIds = $students->pluck('id');
-        $records = $studentIds->isEmpty() ? collect() : DB::table('attendance')->whereIn('student_id', $studentIds)->whereDate('attendance_date', $date)->get()->keyBy('student_id');
+        $records = $studentIds->isEmpty() ? collect() : DB::table('attendance')
+            ->whereIn('student_id', $studentIds)
+            ->whereDate('attendance_date', $date)
+            ->get()
+            ->keyBy('student_id');
 
         foreach ($students as $student) {
             $record = $records->get($student->id);
@@ -100,39 +101,81 @@ class TeacherPortalController extends Controller
             'notes.*' => 'nullable|string|max:500',
         ]);
 
-        $subjectIds = $this->subjects($teacher->id)->pluck('id');
-        abort_unless($subjectIds->isNotEmpty(), 403, 'No learning areas are assigned to your teacher account.');
-        $allowedStudentIds = DB::table('results')->whereIn('subject_id', $subjectIds)->whereNull('archived_at')->pluck('student_id')->unique();
+        $classIds = $this->classTeacherClassIds($teacher->id);
+        abort_unless($classIds->isNotEmpty(), 403, 'No class is assigned to you as class teacher.');
+        $allowedStudentIds = DB::table('students')
+            ->whereNull('archived_at')
+            ->whereIn('class_id', $classIds)
+            ->pluck('id');
         $date = $data['attendance_date'];
 
         DB::transaction(function () use ($data, $allowedStudentIds, $date) {
             foreach ($data['attendance'] as $studentId => $status) {
                 $studentId = (int) $studentId;
                 abort_unless($allowedStudentIds->contains($studentId), 403);
-                $payload = ['status' => $status, 'notes' => $data['notes'][$studentId] ?? null, 'updated_at' => now()];
-                $exists = DB::table('attendance')->where('student_id', $studentId)->where('attendance_date', $date)->exists();
+                $payload = [
+                    'status' => $status,
+                    'notes' => $data['notes'][$studentId] ?? null,
+                    'updated_at' => now(),
+                ];
+                $exists = DB::table('attendance')
+                    ->where('student_id', $studentId)
+                    ->where('attendance_date', $date)
+                    ->exists();
                 if ($exists) {
-                    DB::table('attendance')->where('student_id', $studentId)->where('attendance_date', $date)->update($payload);
+                    DB::table('attendance')
+                        ->where('student_id', $studentId)
+                        ->where('attendance_date', $date)
+                        ->update($payload);
                 } else {
-                    DB::table('attendance')->insert($payload + ['student_id' => $studentId, 'attendance_date' => $date, 'created_at' => now()]);
+                    DB::table('attendance')->insert($payload + [
+                        'student_id' => $studentId,
+                        'attendance_date' => $date,
+                        'created_at' => now(),
+                    ]);
                 }
             }
         });
 
-        return redirect()->route('portal.teacher-attendance', ['date' => $date])->with('success', 'Attendance saved successfully for ' . count($data['attendance']) . ' learner(s).');
+        return redirect()->route('portal.teacher-attendance', ['date' => $date])
+            ->with('success', 'Attendance saved successfully for ' . count($data['attendance']) . ' learner(s).');
     }
 
     private function teacher(Request $request)
     {
-        $profile = DB::table('portal_profiles')->where('user_id', $request->user()->id)->where('portal_type', 'teacher')->where('active', true)->first();
+        $profile = DB::table('portal_profiles')
+            ->where('user_id', $request->user()->id)
+            ->where('portal_type', 'teacher')
+            ->where('active', true)
+            ->first();
         abort_unless($profile, 403);
-        $teacher = DB::table('teachers')->where('email', $request->user()->email)->whereNull('archived_at')->first();
+
+        $teacher = DB::table('teachers')
+            ->where('email', $request->user()->email)
+            ->whereNull('archived_at')
+            ->first();
         abort_unless($teacher, 403, 'Your teacher profile is not linked to your login account.');
+
         return $teacher;
     }
 
     private function subjects($teacherId)
     {
-        return DB::table('subjects')->where('teacher_id', $teacherId)->whereNull('archived_at')->orderBy('name')->get();
+        return DB::table('subjects')
+            ->where('teacher_id', $teacherId)
+            ->whereNull('archived_at')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function classTeacherClassIds($teacherId)
+    {
+        return DB::table('school_classes')
+            ->where('teacher_id', $teacherId)
+            ->where(function ($query) {
+                $query->whereNull('academic_year')
+                    ->orWhere('academic_year', '>=', now()->year);
+            })
+            ->pluck('id');
     }
 }
