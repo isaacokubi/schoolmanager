@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdmissionManagementController;
@@ -31,9 +32,9 @@ Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('t
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
 // Public media endpoint. Keep /storage/{path} compatible with existing records.
-// Laravel/Symfony's BinaryFileResponse handles HTTP Range requests correctly,
-// including browser video seeking, without manually streaming the file.
-Route::get('/storage/{path}', function (string $path) {
+// Explicitly honor HTTP Range requests so browser video playback/seeking works
+// reliably even when the local PHP runtime does not delegate Range handling.
+Route::get('/storage/{path}', function (Request $request, string $path) {
     $disk = Storage::disk('public');
 
     if (!$disk->exists($path)) {
@@ -49,20 +50,123 @@ Route::get('/storage/{path}', function (string $path) {
     try {
         $absolutePath = $disk->path($path);
         $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $size = filesize($absolutePath);
     } catch (\Throwable $e) {
         abort(404);
     }
 
-    if (!is_file($absolutePath) || !is_readable($absolutePath)) {
+    if (!is_file($absolutePath) || !is_readable($absolutePath) || $size === false) {
         abort(404);
     }
 
-    return response()->file($absolutePath, [
+    $size = (int) $size;
+    $lastModified = filemtime($absolutePath);
+    $etag = sprintf('"%s-%s"', dechex($size), dechex($lastModified ?: 0));
+    $commonHeaders = [
         'Content-Type' => $mime,
         'Accept-Ranges' => 'bytes',
         'Cache-Control' => 'public, max-age=31536000, immutable',
+        'ETag' => $etag,
         'X-Content-Type-Options' => 'nosniff',
-    ]);
+    ];
+
+    if ($request->isMethod('HEAD')) {
+        return response('', 200, array_merge($commonHeaders, [
+            'Content-Length' => (string) $size,
+        ]));
+    }
+
+    $rangeHeader = trim((string) $request->header('Range', ''));
+
+    if ($rangeHeader === '') {
+        return response()->stream(function () use ($absolutePath): void {
+            $handle = fopen($absolutePath, 'rb');
+
+            if ($handle === false) {
+                return;
+            }
+
+            try {
+                while (!feof($handle)) {
+                    echo fread($handle, 1024 * 1024);
+                    flush();
+                }
+            } finally {
+                fclose($handle);
+            }
+        }, 200, array_merge($commonHeaders, [
+            'Content-Length' => (string) $size,
+        ]));
+    }
+
+    if (!preg_match('/^bytes=(\d*)-(\d*)$/', $rangeHeader, $matches)) {
+        return response('', 416, array_merge($commonHeaders, [
+            'Content-Range' => "bytes */{$size}",
+        ]));
+    }
+
+    $start = $matches[1] === '' ? null : (int) $matches[1];
+    $end = $matches[2] === '' ? null : (int) $matches[2];
+
+    if ($start === null) {
+        $suffixLength = $end ?? 0;
+
+        if ($suffixLength <= 0) {
+            return response('', 416, array_merge($commonHeaders, [
+                'Content-Range' => "bytes */{$size}",
+            ]));
+        }
+
+        $suffixLength = min($suffixLength, $size);
+        $start = $size - $suffixLength;
+        $end = $size - 1;
+    } else {
+        if ($start >= $size) {
+            return response('', 416, array_merge($commonHeaders, [
+                'Content-Range' => "bytes */{$size}",
+            ]));
+        }
+
+        $end = $end === null ? $size - 1 : min($end, $size - 1);
+
+        if ($end < $start) {
+            return response('', 416, array_merge($commonHeaders, [
+                'Content-Range' => "bytes */{$size}",
+            ]));
+        }
+    }
+
+    $length = $end - $start + 1;
+
+    return response()->stream(function () use ($absolutePath, $start, $length): void {
+        $handle = fopen($absolutePath, 'rb');
+
+        if ($handle === false) {
+            return;
+        }
+
+        try {
+            fseek($handle, $start);
+            $remaining = $length;
+
+            while ($remaining > 0 && !feof($handle)) {
+                $chunk = fread($handle, min(1024 * 1024, $remaining));
+
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+
+                echo $chunk;
+                $remaining -= strlen($chunk);
+                flush();
+            }
+        } finally {
+            fclose($handle);
+        }
+    }, 206, array_merge($commonHeaders, [
+        'Content-Length' => (string) $length,
+        'Content-Range' => "bytes {$start}-{$end}/{$size}",
+    ]));
 })->where('path', '.*')->name('media.file');
 
 Route::middleware('guest')->group(function () {
