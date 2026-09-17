@@ -59,20 +59,29 @@ class DemoSchoolMediaSeeder extends Seeder
                 continue;
             }
 
-            $response = Http::timeout(120)
-                ->connectTimeout(20)
-                ->retry(2, 1000)
-                ->withHeaders(['User-Agent' => 'SchoolManager-DemoMediaSeeder/1.0'])
-                ->get($item['url']);
+            try {
+                $response = Http::timeout(120)
+                    ->retry(2, 1000)
+                    ->withHeaders(['User-Agent' => 'SchoolManager-DemoMediaSeeder/1.0'])
+                    ->get($item['url']);
+            } catch (\Throwable $e) {
+                if ($this->command) {
+                    $this->command->warn(
+                        "Skipped {$item['title']}: download failed - {$e->getMessage()}"
+                    );
+                }
+
+                continue;
+            }
 
             if (!$response->successful()) {
-                $this->command?->warn("Skipped {$item['title']}: download returned HTTP {$response->status()}.");
+                if ($this->command) { $this->command->warn("Skipped {$item['title']}: download returned HTTP {$response->status()}."); }
                 continue;
             }
 
             $body = $response->body();
             if ($body === '') {
-                $this->command?->warn("Skipped {$item['title']}: downloaded file was empty.");
+                if ($this->command) { $this->command->warn("Skipped {$item['title']}: downloaded file was empty."); }
                 continue;
             }
 
@@ -94,7 +103,7 @@ class DemoSchoolMediaSeeder extends Seeder
                 'updated_at' => now(),
             ]);
 
-            $this->command?->info("Added demo {$item['type']}: {$item['title']}");
+            if ($this->command) { $this->command->info("Added demo {$item['type']}: {$item['title']}"); }
         }
     }
 }
