@@ -116,7 +116,7 @@
         <div class="school-gallery" role="list">
             @foreach($schoolMedia as $item)
                 @php
-                    $mediaUrl = '/storage/' . ltrim($item->path, '/');
+                    $mediaUrl = \Illuminate\Support\Facades\Storage::disk(config('filesystems.upload_disk', 'public'))->url(ltrim($item->path, '/'));
                     $isVideo = $item->type === 'video';
                     $mediaTitle = trim((string) ($item->title ?: ''));
                     $mediaCaption = trim((string) ($item->caption ?: ''));
