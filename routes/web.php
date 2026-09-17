@@ -30,10 +30,10 @@ Route::get('/admissions', [PublicController::class, 'admissions'])->name('admiss
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
-// Public media endpoint. It deliberately keeps /storage/{path} compatible with
-// existing database records while serving local files with proper MIME and
-// HTTP Range support so browsers can render images and seek/stream MP4 video.
-Route::get('/storage/{path}', function (\Illuminate\Http\Request $request, string $path) {
+// Public media endpoint. Keep /storage/{path} compatible with existing records.
+// Laravel/Symfony's BinaryFileResponse handles HTTP Range requests correctly,
+// including browser video seeking, without manually streaming the file.
+Route::get('/storage/{path}', function (string $path) {
     $disk = Storage::disk('public');
 
     if (!$disk->exists($path)) {
@@ -48,77 +48,18 @@ Route::get('/storage/{path}', function (\Illuminate\Http\Request $request, strin
 
     try {
         $absolutePath = $disk->path($path);
-        $size = filesize($absolutePath);
         $mime = $disk->mimeType($path) ?: 'application/octet-stream';
     } catch (\Throwable $e) {
         abort(404);
     }
 
-    if (!is_file($absolutePath) || !is_readable($absolutePath) || $size === false) {
+    if (!is_file($absolutePath) || !is_readable($absolutePath)) {
         abort(404);
     }
 
-    $size = (int) $size;
-    $start = 0;
-    $end = $size - 1;
-    $status = 200;
-
-    $range = $request->header('Range');
-    if ($range && preg_match('/bytes=(\d*)-(\d*)/i', $range, $matches)) {
-        $rangeStart = $matches[1] !== '' ? (int) $matches[1] : null;
-        $rangeEnd = $matches[2] !== '' ? (int) $matches[2] : null;
-
-        if ($rangeStart === null && $rangeEnd !== null) {
-            $rangeStart = max(0, $size - $rangeEnd);
-            $rangeEnd = $size - 1;
-        } else {
-            $rangeStart = $rangeStart ?? 0;
-            $rangeEnd = $rangeEnd ?? ($size - 1);
-        }
-
-        if ($rangeStart < 0 || $rangeStart >= $size || $rangeEnd < $rangeStart) {
-            return response('', 416, [
-                'Content-Range' => 'bytes */' . $size,
-                'Accept-Ranges' => 'bytes',
-            ]);
-        }
-
-        $end = min($rangeEnd, $size - 1);
-        $start = $rangeStart;
-        $status = 206;
-    }
-
-    $length = $end - $start + 1;
-
-    return response()->stream(function () use ($absolutePath, $start, $length) {
-        $handle = fopen($absolutePath, 'rb');
-        if ($handle === false) {
-            return;
-        }
-
-        try {
-            fseek($handle, $start);
-            $remaining = $length;
-            while ($remaining > 0 && !feof($handle)) {
-                $chunk = fread($handle, min(1024 * 1024, $remaining));
-                if ($chunk === false || $chunk === '') {
-                    break;
-                }
-                echo $chunk;
-                $remaining -= strlen($chunk);
-                if (function_exists('ob_flush')) {
-                    @ob_flush();
-                }
-                flush();
-            }
-        } finally {
-            fclose($handle);
-        }
-    }, $status, [
+    return response()->file($absolutePath, [
         'Content-Type' => $mime,
-        'Content-Length' => (string) $length,
         'Accept-Ranges' => 'bytes',
-        'Content-Range' => $status === 206 ? "bytes {$start}-{$end}/{$size}" : null,
         'Cache-Control' => 'public, max-age=31536000, immutable',
         'X-Content-Type-Options' => 'nosniff',
     ]);
