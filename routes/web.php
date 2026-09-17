@@ -30,32 +30,95 @@ Route::get('/admissions', [PublicController::class, 'admissions'])->name('admiss
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 
-// Public local-media endpoint. This keeps the existing /storage/... URLs working
-// even when the hosting platform does not create Laravel's storage symlink.
-// If the public disk is switched to S3-compatible storage later, redirect to
-// the disk's generated public URL instead of assuming a local filesystem path.
-Route::get('/storage/{path}', function (string $path) {
+// Public media endpoint. It deliberately keeps /storage/{path} compatible with
+// existing database records while serving local files with proper MIME and
+// HTTP Range support so browsers can render images and seek/stream MP4 video.
+Route::get('/storage/{path}', function (\Illuminate\Http\Request $request, string $path) {
     $disk = Storage::disk('public');
 
     if (!$disk->exists($path)) {
         abort(404);
     }
 
-    if (config('filesystems.disks.public.driver') !== 'local') {
+    $driver = strtolower((string) config('filesystems.disks.public.driver', 'local'));
+
+    if ($driver !== 'local') {
         return redirect()->away($disk->url($path));
     }
 
     try {
         $absolutePath = $disk->path($path);
+        $size = filesize($absolutePath);
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
     } catch (\Throwable $e) {
         abort(404);
     }
 
-    if (!is_file($absolutePath) || !is_readable($absolutePath)) {
+    if (!is_file($absolutePath) || !is_readable($absolutePath) || $size === false) {
         abort(404);
     }
 
-    return response()->file($absolutePath, [
+    $size = (int) $size;
+    $start = 0;
+    $end = $size - 1;
+    $status = 200;
+
+    $range = $request->header('Range');
+    if ($range && preg_match('/bytes=(\d*)-(\d*)/i', $range, $matches)) {
+        $rangeStart = $matches[1] !== '' ? (int) $matches[1] : null;
+        $rangeEnd = $matches[2] !== '' ? (int) $matches[2] : null;
+
+        if ($rangeStart === null && $rangeEnd !== null) {
+            $rangeStart = max(0, $size - $rangeEnd);
+            $rangeEnd = $size - 1;
+        } else {
+            $rangeStart = $rangeStart ?? 0;
+            $rangeEnd = $rangeEnd ?? ($size - 1);
+        }
+
+        if ($rangeStart < 0 || $rangeStart >= $size || $rangeEnd < $rangeStart) {
+            return response('', 416, [
+                'Content-Range' => 'bytes */' . $size,
+                'Accept-Ranges' => 'bytes',
+            ]);
+        }
+
+        $end = min($rangeEnd, $size - 1);
+        $start = $rangeStart;
+        $status = 206;
+    }
+
+    $length = $end - $start + 1;
+
+    return response()->stream(function () use ($absolutePath, $start, $length) {
+        $handle = fopen($absolutePath, 'rb');
+        if ($handle === false) {
+            return;
+        }
+
+        try {
+            fseek($handle, $start);
+            $remaining = $length;
+            while ($remaining > 0 && !feof($handle)) {
+                $chunk = fread($handle, min(1024 * 1024, $remaining));
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+                echo $chunk;
+                $remaining -= strlen($chunk);
+                if (function_exists('ob_flush')) {
+                    @ob_flush();
+                }
+                flush();
+            }
+        } finally {
+            fclose($handle);
+        }
+    }, $status, [
+        'Content-Type' => $mime,
+        'Content-Length' => (string) $length,
+        'Accept-Ranges' => 'bytes',
+        'Content-Range' => $status === 206 ? "bytes {$start}-{$end}/{$size}" : null,
         'Cache-Control' => 'public, max-age=31536000, immutable',
         'X-Content-Type-Options' => 'nosniff',
     ]);
