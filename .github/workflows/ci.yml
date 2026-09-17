@@ -17,7 +17,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          php-version: '8.2'
           extensions: mbstring, dom, fileinfo, gd, pdo_sqlite
           coverage: none
           tools: composer:v2
@@ -37,11 +37,12 @@ jobs:
           sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
           sed -i 's/^DB_DATABASE=.*/DB_DATABASE=database\/database.sqlite/' .env
           sed -i 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+          sed -i 's/^SESSION_SECURE_COOKIE=.*/SESSION_SECURE_COOKIE=false/' .env
           php artisan config:clear
 
       - name: Syntax check
         run: |
-          find app config routes database -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app config routes database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: Run migrations
         run: php artisan migrate --force
@@ -49,8 +50,12 @@ jobs:
       - name: Run test suite
         run: php artisan test
 
-      - name: Check route registration
-        run: php artisan route:list --except-vendor >/tmp/routes.txt && test -s /tmp/routes.txt
+      - name: Verify route registration and production route caching
+        run: |
+          php artisan route:list >/tmp/routes.txt
+          test -s /tmp/routes.txt
+          php artisan route:cache
+          php artisan route:clear
 
       - name: Audit dependencies
         run: composer audit --locked
