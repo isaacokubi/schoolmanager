@@ -22,6 +22,8 @@ class SchoolMediaController extends Controller
 
     public function store(Request $request)
     {
+        $videoMaxKb = max(1024, (int) env('VIDEO_UPLOAD_MAX_KB', 4300));
+
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
@@ -30,15 +32,23 @@ class SchoolMediaController extends Controller
                 'required',
                 'file',
                 'max:51200',
-                function ($attribute, $value, $fail) use ($request) {
+                function ($attribute, $value, $fail) use ($request, $videoMaxKb) {
                     $type = $request->input('type');
+                    $mime = (string) $value->getMimeType();
 
-                    if ($type === 'image' && !str_starts_with((string) $value->getMimeType(), 'image/')) {
+                    if ($type === 'image' && !str_starts_with($mime, 'image/')) {
                         $fail('Please upload a valid image file.');
                     }
 
-                    if ($type === 'video' && !str_starts_with((string) $value->getMimeType(), 'video/')) {
+                    if ($type === 'video' && !str_starts_with($mime, 'video/')) {
                         $fail('Please upload a valid video file.');
+                    }
+
+                    if ($type === 'video' && ((int) $value->getSize() > ($videoMaxKb * 1024))) {
+                        $fail(sprintf(
+                            'Video files must be %s MB or smaller for this Vercel deployment.',
+                            number_format($videoMaxKb / 1000, 1)
+                        ));
                     }
                 },
             ],
