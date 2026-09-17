@@ -42,19 +42,26 @@ RUN composer dump-autoload \
     --optimize \
     --classmap-authoritative
 
-# Laravel runtime directories.
+# Laravel runtime directories and the conventional public-media link.
+# The link is useful when the public disk is local and media is packaged in
+# the image (for example, seeded/demo media). Runtime uploads must still use
+# persistent object storage when the app runs on Vercel.
 RUN mkdir -p \
+    storage/app/public \
     storage/framework/cache \
     storage/framework/sessions \
     storage/framework/views \
     storage/logs \
-    bootstrap/cache
+    bootstrap/cache \
+    && rm -rf public/storage \
+    && ln -s ../storage/app/public public/storage
 
 # Allow FrankenPHP/Caddy to read the application and Laravel
-# to write runtime cache/log directories.
+# to write runtime cache/log directories and local media.
 RUN chown -R www-data:www-data \
     storage \
-    bootstrap/cache
+    bootstrap/cache \
+    public/storage
 
 # Vercel supplies PORT. FrankenPHP must listen on it.
 CMD ["sh", "-c", "frankenphp php-server --root=public --listen=:$PORT"]
