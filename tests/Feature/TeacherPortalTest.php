@@ -49,7 +49,7 @@ class TeacherPortalTest extends TestCase
         return [$user, $teacherId, $subjectId];
     }
 
-    public function test_teacher_dashboard_renders_with_teacher_tools(): void
+    public function test_teacher_dashboard_renders_with_teacher_tools_and_real_remarks(): void
     {
         [$user, $teacherId, $subjectId] = $this->teacherUser();
         $studentId = DB::table('students')->insertGetId([
@@ -82,11 +82,14 @@ class TeacherPortalTest extends TestCase
 
         $this->actingAs($user)->get(route('portal.dashboard'))
             ->assertOk()
+            ->assertSee('Teacher workspace')
             ->assertSee('My learners')
             ->assertSee('Attendance')
             ->assertSee('Enter assessments')
             ->assertSee('Felix Kamau')
-            ->assertSee('ME2');
+            ->assertSee('ME2')
+            ->assertSee('Meeting expectation.')
+            ->assertSee('Report card');
     }
 
     public function test_teacher_can_save_attendance_for_assigned_roster(): void
