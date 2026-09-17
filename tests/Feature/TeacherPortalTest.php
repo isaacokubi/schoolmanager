@@ -46,15 +46,26 @@ class TeacherPortalTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        return [$user, $teacherId, $subjectId];
+        $classId = DB::table('school_classes')->insertGetId([
+            'name' => 'Grade 1',
+            'stream' => 'A',
+            'academic_year' => 2026,
+            'teacher_id' => $teacherId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return [$user, $teacherId, $subjectId, $classId];
     }
 
     public function test_teacher_dashboard_renders_with_teacher_tools_and_real_remarks(): void
     {
-        [$user, $teacherId, $subjectId] = $this->teacherUser();
+        [$user, $teacherId, $subjectId, $classId] = $this->teacherUser();
         $studentId = DB::table('students')->insertGetId([
             'admission_number' => 'ADM-001',
             'name' => 'Felix Kamau',
+            'class_id' => $classId,
+            'class_name' => 'Grade 1',
             'fee_balance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -92,49 +103,58 @@ class TeacherPortalTest extends TestCase
             ->assertSee('Report card');
     }
 
-    public function test_teacher_can_save_attendance_for_assigned_roster(): void
+    public function test_teacher_can_save_attendance_only_for_assigned_class_pupils(): void
     {
-        [$user, $teacherId, $subjectId] = $this->teacherUser();
-        $studentId = DB::table('students')->insertGetId([
+        [$user, $teacherId, $subjectId, $classId] = $this->teacherUser();
+        $assignedStudentId = DB::table('students')->insertGetId([
             'admission_number' => 'ADM-002',
             'name' => 'Kevin Otieno',
+            'class_id' => $classId,
+            'class_name' => 'Grade 1',
             'fee_balance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $examId = DB::table('exams')->insertGetId([
-            'name' => 'Term 3 End-Term Examination',
-            'term' => 'Term 3',
+        $otherClassId = DB::table('school_classes')->insertGetId([
+            'name' => 'Grade 2',
+            'stream' => 'A',
             'academic_year' => 2026,
+            'teacher_id' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('results')->insert([
-            'exam_id' => $examId,
-            'student_id' => $studentId,
-            'subject_id' => $subjectId,
-            'marks' => 90,
-            'grade' => 'EE1',
-            'assessment_status' => 'present',
-            'achievement_level' => 'EE1',
-            'achievement_points' => 8,
-            'remarks' => 'Excellent progress.',
+        $unassignedStudentId = DB::table('students')->insertGetId([
+            'admission_number' => 'ADM-003',
+            'name' => 'Other Class Pupil',
+            'class_id' => $otherClassId,
+            'class_name' => 'Grade 2',
+            'fee_balance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         $date = '2026-09-17';
+        $this->actingAs($user)->get(route('portal.teacher-attendance', ['date' => $date]))
+            ->assertOk()
+            ->assertSee('Kevin Otieno')
+            ->assertDontSee('Other Class Pupil');
+
         $this->actingAs($user)->post(route('portal.teacher-attendance.store'), [
             'attendance_date' => $date,
-            'attendance' => [$studentId => 'late'],
-            'notes' => [$studentId => 'Arrived after assembly.'],
+            'attendance' => [$assignedStudentId => 'late'],
+            'notes' => [$assignedStudentId => 'Arrived after assembly.'],
         ])->assertRedirect(route('portal.teacher-attendance', ['date' => $date]));
 
         $this->assertDatabaseHas('attendance', [
-            'student_id' => $studentId,
+            'student_id' => $assignedStudentId,
             'attendance_date' => $date,
             'status' => 'late',
             'notes' => 'Arrived after assembly.',
         ]);
+
+        $this->actingAs($user)->post(route('portal.teacher-attendance.store'), [
+            'attendance_date' => $date,
+            'attendance' => [$unassignedStudentId => 'present'],
+        ])->assertForbidden();
     }
 }
