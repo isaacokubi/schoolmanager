@@ -16,12 +16,12 @@ if ! command -v file >/dev/null 2>&1; then
 fi
 
 # Match the seeded school_media database paths so local and Vercel render the
-# same demo records without requiring binary media to be committed to Git.
+# same demo records without committing binary media to Git.
 declare -A SOURCES=(
   ["demo-20260917201809-3b9f556a57.jpg"]="https://samplefile.com/samples/download/image/jpeg/jpeg_1000x600_sample_file_36KB.jpeg/"
   ["demo-20260917201810-f6989e8c29.jpg"]="https://samplefile.com/samples/download/image/jpeg/jpeg_2000x1200_sample_file_72KB.jpeg/"
   ["demo-20260917201812-02fc9a8cbc.jpg"]="https://samplefile.com/samples/download/image/jpeg/jpeg_500x300_sample_file_15KB.jpeg/"
-  ["demo-school-video-3-4mb.mp4"]="https://samplefile.com/samples/download/video/mp4/mp4_60s_sample_file_3.4MB.mp4/"
+  ["demo-20260917201836-4b089bf7e9.mp4"]="https://samplefile.com/samples/download/video/mp4/mp4_60s_sample_file_3.4MB.mp4/"
 )
 
 for name in "${!SOURCES[@]}"; do
@@ -47,7 +47,6 @@ for name in "${!SOURCES[@]}"; do
       exit 1
     }
   fi
-
 done
 
 echo "Demo school media ready: $TARGET_DIR"
