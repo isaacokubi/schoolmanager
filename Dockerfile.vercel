@@ -43,9 +43,6 @@ RUN composer dump-autoload \
     --classmap-authoritative
 
 # Laravel runtime directories and the conventional public-media link.
-# The link is useful when the public disk is local and media is packaged in
-# the image (for example, seeded/demo media). Runtime uploads must still use
-# persistent object storage when the app runs on Vercel.
 RUN mkdir -p \
     storage/app/public/school-media \
     storage/framework/cache \
@@ -56,17 +53,28 @@ RUN mkdir -p \
     && rm -rf public/storage \
     && ln -s ../storage/app/public public/storage
 
-# Package one small, browser-compatible demo MP4 into the deployment image.
-# This fixture is 3.4 MB, safely below the application's 4.3 MB video limit
-# and leaves headroom below Vercel's 4.5 MB request-body limit for uploads.
-# The upstream publishes stable download URLs and SHA256 manifests.
+# Package deterministic public demo media into the deployment image. These
+# files use the same paths as the existing seeded school_media records, so
+# the homepage works even though runtime local storage is ephemeral on Vercel.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl file \
+    && curl -L --fail --silent --show-error --retry 3 \
+        -o storage/app/public/school-media/demo-20260917201809-3b9f556a57.jpg \
+        https://samplefile.com/samples/download/image/jpeg/jpeg_1000x600_sample_file_36KB.jpeg/ \
+    && curl -L --fail --silent --show-error --retry 3 \
+        -o storage/app/public/school-media/demo-20260917201810-f6989e8c29.jpg \
+        https://samplefile.com/samples/download/image/jpeg/jpeg_2000x1200_sample_file_72KB.jpeg/ \
+    && curl -L --fail --silent --show-error --retry 3 \
+        -o storage/app/public/school-media/demo-20260917201812-02fc9a8cbc.jpg \
+        https://samplefile.com/samples/download/image/jpeg/jpeg_500x300_sample_file_15KB.jpeg/ \
     && curl -L --fail --silent --show-error --retry 3 \
         -o storage/app/public/school-media/demo-school-video-3-4mb.mp4 \
         https://samplefile.com/samples/download/video/mp4/mp4_60s_sample_file_3.4MB.mp4/ \
-    && test "$(stat -c%s storage/app/public/school-media/demo-school-video-3-4mb.mp4)" -lt 4300000 \
+    && file storage/app/public/school-media/demo-20260917201809-3b9f556a57.jpg | grep -Eiq 'JPEG|image' \
+    && file storage/app/public/school-media/demo-20260917201810-f6989e8c29.jpg | grep -Eiq 'JPEG|image' \
+    && file storage/app/public/school-media/demo-20260917201812-02fc9a8cbc.jpg | grep -Eiq 'JPEG|image' \
     && file storage/app/public/school-media/demo-school-video-3-4mb.mp4 | grep -Eiq 'ISO Media|MPEG-4|MP4' \
+    && test "$(stat -c%s storage/app/public/school-media/demo-school-video-3-4mb.mp4)" -lt 4300000 \
     && rm -rf /var/lib/apt/lists/*
 
 # Allow FrankenPHP/Caddy to read the application and Laravel
