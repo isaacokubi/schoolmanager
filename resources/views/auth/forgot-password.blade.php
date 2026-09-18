@@ -33,7 +33,7 @@
                 placeholder="you@example.com"
             >
 
-            <button type="submit">Email me a reset link <span aria-hidden="true">→</span></button>
+            <button type="submit" data-loading-submit data-loading-text="Sending reset link…" aria-live="polite"><span class="submit-label">Email me a reset link</span><span class="submit-arrow" aria-hidden="true">→</span><span class="submit-spinner" aria-hidden="true"></span></button>
         </form>
 
         <a class="back-link" href="{{ route('login') }}">← Back to sign in</a>
@@ -59,4 +59,19 @@
 .back-link:hover{text-decoration:underline}
 @media(max-width:560px){.auth-page{padding:45px 14px}.auth-card{padding:25px 19px;border-radius:17px}.auth-card h1{font-size:28px}}
 </style>
+<style>
+.auth-form button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px}.auth-form button.is-loading{opacity:.78;cursor:wait}.submit-spinner{display:none;width:17px;height:17px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sm-spin .7s linear infinite}.is-loading .submit-spinner{display:block}.is-loading .submit-arrow{display:none}@keyframes sm-spin{to{transform:rotate(360deg)}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ const form=document.querySelector('.auth-form');const button=form&&form.querySelector('[data-loading-submit]');
+ if(!form||!button)return;
+ form.addEventListener('submit',function(e){
+  if(form.dataset.submitting==='1'){e.preventDefault();return;}
+  if(!form.checkValidity())return;
+  form.dataset.submitting='1';button.disabled=true;button.classList.add('is-loading');
+  const label=button.querySelector('.submit-label');if(label)label.textContent=button.dataset.loadingText||'Please wait…';
+ });
+});
+</script>
 @endsection
