@@ -23,6 +23,7 @@ use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\TeacherAssessmentController;
 use App\Http\Controllers\TeacherPortalController;
+use App\Http\Controllers\AngelHomeFeatureController;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
@@ -190,6 +191,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
+    Route::get('/features', [AngelHomeFeatureController::class, 'admin'])->name('admin.features');
+    Route::post('/features', [AngelHomeFeatureController::class, 'store'])->name('admin.features.store');
+    Route::delete('/features/{id}', [AngelHomeFeatureController::class, 'archive'])->name('admin.features.archive');
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/search', AdminSearchController::class)->name('admin.search');
@@ -231,6 +235,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 });
 
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
+    Route::get('/features', [AngelHomeFeatureController::class, 'portal'])->name('portal.features');
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
     Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
