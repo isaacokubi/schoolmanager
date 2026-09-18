@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
 {
@@ -38,7 +40,12 @@ class SettingsController extends Controller
         $data = $request->validate([
             'school_name' => 'required|string|max:150',
             'school_phone' => 'nullable|string|max:40',
-            'school_email' => 'nullable|email|max:150',
+            'school_email' => [
+                'nullable',
+                'email',
+                'max:150',
+                Rule::unique('users', 'email')->ignore(Auth::id()),
+            ],
             'school_address' => 'nullable|string|max:500',
             'academic_year' => 'nullable|integer|min:2000|max:2100',
             'academic_term' => 'nullable|string|max:50',
@@ -56,6 +63,16 @@ class SettingsController extends Controller
 
         foreach (['school_name','school_phone','school_email','school_address','academic_year','academic_term','currency','timezone','mission','vision','values'] as $key) {
             $this->saveSetting($key, (string) ($data[$key] ?? ''));
+        }
+
+        // The email configured here is the authenticated administrator's canonical
+        // login/recovery identity. Keeping the users.email value synchronized means
+        // Laravel's password broker can find the account when the same address is
+        // entered on the public Forgot Password page.
+        if (!empty($data['school_email']) && Auth::check()) {
+            Auth::user()->forceFill([
+                'email' => strtolower(trim($data['school_email'])),
+            ])->save();
         }
         $this->saveSetting('head_of_institution_user_id', (string) ($data['head_of_institution_user_id'] ?? ''));
 
