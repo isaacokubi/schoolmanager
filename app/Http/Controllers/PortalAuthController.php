@@ -29,6 +29,10 @@ class PortalAuthController extends Controller
             'password' => 'required|string|min:8|max:255|confirmed',
         ]);
 
+        // Every future account uses the same canonical email identity that
+        // login and password reset use.
+        $data['email'] = strtolower(trim($data['email']));
+
         if (in_array($data['portal_type'], ['pupil', 'parent', 'sponsor'], true) && empty($data['admission_number'])) {
             return back()->withErrors(['admission_number' => 'Please provide the pupil admission number linked to this account.'])->withInput();
         }
