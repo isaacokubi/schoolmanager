@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SchoolMediaController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PortalAuthController;
 use App\Http\Controllers\PortalController;
@@ -193,6 +194,10 @@ Route::get('/storage/{path}', function (Request $request, string $path) {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+    Route::get('/forgot-password', [PasswordResetController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
     Route::get('/register', [PortalAuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [PortalAuthController::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
 });
