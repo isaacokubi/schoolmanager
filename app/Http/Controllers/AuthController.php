@@ -19,6 +19,11 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|max:255',
         ]);
 
+        // The current email on the user account is the login identity.
+        // Normalize it so changing capitalization/spacing never creates a
+        // different login identity.
+        $credentials['email'] = strtolower(trim($credentials['email']));
+
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors(['email' => 'The email or password is incorrect.'])->withInput($request->only('email'));
         }
