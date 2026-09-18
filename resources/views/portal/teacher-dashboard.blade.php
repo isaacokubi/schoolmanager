@@ -17,6 +17,7 @@
             <span><strong>{{ config('app.name') }}</strong><small>Teacher Portal</small></span>
         </a>
         <nav class="header-nav" aria-label="Teacher navigation">
+            <a href="{{ route('account.email') }}">Account email</a>
             <a href="{{ route('portal.dashboard') }}" class="active">Dashboard</a>
             <a href="{{ route('portal.teacher-learners') }}">My learners</a>
             <a href="{{ route('portal.teacher-attendance') }}">Attendance</a>
