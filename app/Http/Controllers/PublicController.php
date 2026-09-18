@@ -73,7 +73,7 @@ class PublicController extends Controller
         ]);
     }
 
-    public function contact()
+    public function support() { return app(\App\Http\Controllers\AngelHomeParityController::class)->support(); }\n\n    public function contact()
     {
         return view('pages.contact', [
             'settings' => $this->settings(),
