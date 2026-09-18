@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\SchoolMediaController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PortalAuthController;
 use App\Http\Controllers\PortalController;
@@ -190,6 +191,11 @@ Route::get('/storage/{path}', function (Request $request, string $path) {
         'Content-Range' => "bytes {$start}-{$end}/{$size}",
     ]));
 })->where('path', '.*')->name('media.file');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/account/email', [AccountController::class, 'edit'])->name('account.email');
+    Route::put('/account/email', [AccountController::class, 'updateEmail'])->middleware('throttle:5,1')->name('account.email.update');
+});
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
