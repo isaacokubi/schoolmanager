@@ -208,6 +208,16 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/search', AdminSearchController::class)->name('admin.search');
     Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
+    Route::get('/cms', fn () => redirect()->route('admin.features', ['feature'=>'school_events']))->name('admin.cms');
+    Route::get('/cms/gallery', [SchoolMediaController::class, 'index'])->name('admin.cms.gallery');
+    Route::get('/cms/settings', [SettingsController::class, 'index'])->name('admin.cms.settings');
+    Route::get('/smis', fn () => redirect()->route('admin.features', ['feature'=>'academic_years']))->name('admin.smis');
+    Route::get('/smis/operations', [OperationsController::class, 'index'])->name('admin.smis.operations');
+    Route::get('/smis/operations-centre', [OperationsController::class, 'index'])->name('admin.smis.operations-centre');
+    Route::get('/smis/results', [ReportsController::class, 'index'])->name('admin.smis.results');
+    Route::get('/smis/finance', [PaymentController::class, 'index'])->name('admin.smis.finance');
+    Route::get('/smis/timetable', fn () => redirect()->route('admin.features', ['feature'=>'timetable']))->name('admin.smis.timetable');
+    Route::get('/communications', fn () => redirect()->route('admin.features', ['feature'=>'communications']))->name('admin.communications');
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
@@ -246,6 +256,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
     Route::get('/features', [AngelHomeFeatureController::class, 'portal'])->name('portal.features');
+    Route::get('/timetable', fn () => redirect()->route('portal.features'))->name('portal.timetable');
     Route::post('/features/{id}/{action}', [AngelHomeParityController::class, 'featureAction'])->whereIn('action',['complete','read','borrow','return'])->name('portal.features.action');
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
