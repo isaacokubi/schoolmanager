@@ -52,6 +52,7 @@
 
     <div class="sidebar-section">SCHOOL PLATFORM</div>
     <a class="{{ $active==='feature-hub'?'active':'' }}" href="{{ route('admin.features') }}"><span>✦</span> School Management Hub</a>
+    <a class="{{ $active==='donations'?'active':'' }}" href="{{ route('admin.donations') }}"><span>♥</span> Support Pledges</a>
 
     <div class="sidebar-section">SCHOOL OPERATIONS</div>
     <a class="{{ $active==='parents'?'active':'' }}" href="{{ route('admin.operations',['section'=>'parents']) }}"><span>♙</span> Parents / Guardians</a>
