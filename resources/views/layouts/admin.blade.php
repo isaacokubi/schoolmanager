@@ -15,7 +15,8 @@
     if ($userName === '') $userName = $roleLabel;
     $sameAsRole = strcasecmp($userName, $roleLabel) === 0;
     if (!$active) {
-        if ($currentRoute === 'admin.dashboard') $active = 'dashboard';
+        if ($currentRoute === 'admin.features') $active = 'feature-hub';
+        elseif ($currentRoute === 'admin.dashboard') $active = 'dashboard';
         elseif (strpos($currentRoute, 'admin.students.') === 0) $active = 'students';
         elseif (strpos($currentRoute, 'admin.admissions.') === 0) $active = 'admissions';
         elseif (strpos($currentRoute, 'admin.payments.') === 0) $active = 'payments';
