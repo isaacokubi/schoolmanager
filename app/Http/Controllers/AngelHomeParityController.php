@@ -51,11 +51,13 @@ class AngelHomeParityController extends Controller
     {
         abort_unless(in_array($type, ['teachers','pupils','sponsors'], true), 404);
         $settings = $this->settings();
-        $data = match ($type) {
-            'teachers' => DB::table('teachers')->whereNull('archived_at')->orderBy('name')->get(),
-            'pupils' => DB::table('students')->whereNull('archived_at')->orderBy('name')->limit(100)->get(),
-            default => DB::table('parents')->orderBy('name')->limit(100)->get(),
-        };
+        if ($type === 'teachers') {
+            $data = DB::table('teachers')->whereNull('archived_at')->orderBy('name')->get();
+        } elseif ($type === 'pupils') {
+            $data = DB::table('students')->whereNull('archived_at')->orderBy('name')->limit(100)->get();
+        } else {
+            $data = DB::table('parents')->orderBy('name')->limit(100)->get();
+        }
         return view('pages.community', compact('settings','type','data'));
     }
 
