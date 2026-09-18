@@ -40,7 +40,7 @@
                     <span class="secure-label">Protected sign-in</span>
                 </div>
 
-                <button class="login-submit" type="submit"><span>Sign in</span><span aria-hidden="true">→</span></button>
+                <button class="login-submit" type="submit" data-loading-submit data-loading-text="Signing in…" aria-live="polite"><span class="submit-label">Sign in</span><span class="submit-arrow" aria-hidden="true">→</span><span class="submit-spinner" aria-hidden="true"></span></button>
             </form>
 
             <div class="login-register">
@@ -74,4 +74,20 @@ document.addEventListener('DOMContentLoaded',function(){
     });
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ const form=document.querySelector('.login-form');
+ const button=form&&form.querySelector('[data-loading-submit]');
+ if(!form||!button)return;
+ form.addEventListener('submit',function(e){
+  if(form.dataset.submitting==='1'){e.preventDefault();return;}
+  if(!form.checkValidity())return;
+  form.dataset.submitting='1'; button.disabled=true; button.classList.add('is-loading');
+  const label=button.querySelector('.submit-label'); if(label)label.textContent=button.dataset.loadingText||'Please wait…';
+ });
+});
+</script>
+<style>
+.login-submit{position:relative;min-height:48px}.login-submit.is-loading{cursor:wait;opacity:.82;transform:none!important}.login-submit:disabled{cursor:not-allowed}.submit-spinner{display:none;width:17px;height:17px;border:2px solid rgba(255,255,255,.38);border-top-color:#fff;border-radius:50%;animation:sm-spin .7s linear infinite}.is-loading .submit-spinner{display:block}.is-loading .submit-arrow{display:none}@keyframes sm-spin{to{transform:rotate(360deg)}}
+</style>
 @endsection
