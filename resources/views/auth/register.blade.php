@@ -69,7 +69,7 @@
                     </div>
                 </div>
                 <div style="margin-top:24px">
-                    <button class="btn" type="submit">Create portal account</button>
+                    <button class="btn" type="submit" data-loading-submit data-loading-text="Creating account…" aria-live="polite"><span class="submit-label">Create portal account</span><span class="submit-spinner" aria-hidden="true"></span></button>
                 </div>
             </form>
 
@@ -86,5 +86,19 @@ function togglePortalFields(){
     document.getElementById('relationship-field').style.display = ['parent','sponsor'].includes(type) ? 'flex' : 'none';
 }
 togglePortalFields();
+</script>
+<style>.btn[data-loading-submit]{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px}.btn.is-loading{opacity:.75;cursor:wait}.submit-spinner{display:none;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sm-spin .7s linear infinite}.is-loading .submit-spinner{display:inline-block}@keyframes sm-spin{to{transform:rotate(360deg)}}</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ const form=document.querySelector('form[action="{{ route("register.submit") }}"]');
+ const button=form&&form.querySelector('[data-loading-submit]');
+ if(!form||!button)return;
+ form.addEventListener('submit',function(e){
+  if(form.dataset.submitting==='1'){e.preventDefault();return;}
+  if(!form.checkValidity())return;
+  form.dataset.submitting='1';button.disabled=true;button.classList.add('is-loading');
+  const label=button.querySelector('.submit-label');if(label)label.textContent=button.dataset.loadingText||'Please wait…';
+ });
+});
 </script>
 @endsection
