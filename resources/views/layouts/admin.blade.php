@@ -49,6 +49,9 @@
     <a class="{{ $active==='students'?'active':'' }}" href="{{ route('admin.students.index') }}"><span>◉</span> Learners</a>
     <a class="{{ $active==='admissions'?'active':'' }}" href="{{ route('admin.admissions.index') }}"><span>＋</span> Admissions</a>
 
+    <div class="sidebar-section">SCHOOL PLATFORM</div>
+    <a class="{{ $active==='feature-hub'?'active':'' }}" href="{{ route('admin.features') }}"><span>✦</span> School Management Hub</a>
+
     <div class="sidebar-section">SCHOOL OPERATIONS</div>
     <a class="{{ $active==='parents'?'active':'' }}" href="{{ route('admin.operations',['section'=>'parents']) }}"><span>♙</span> Parents / Guardians</a>
     <a class="{{ $active==='classes'?'active':'' }}" href="{{ route('admin.operations',['section'=>'classes']) }}"><span>▦</span> Classes & Streams</a>
