@@ -257,7 +257,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
     Route::get('/features', [AngelHomeFeatureController::class, 'portal'])->name('portal.features');
     Route::get('/timetable', fn () => redirect()->route('portal.features'))->name('portal.timetable');
-    Route::post('/features/{id}/{action}', [AngelHomeParityController::class, 'featureAction'])->whereIn('action',['complete','read','borrow','return'])->name('portal.features.action');
+    Route::post('/features/{id}/{action}', [AngelHomeParityController::class, 'featureAction'])->where('action', 'complete|read|borrow|return')->name('portal.features.action');
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
     Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
