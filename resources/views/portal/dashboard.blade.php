@@ -17,6 +17,7 @@
             <span class="brand-copy"><strong>{{ config('app.name') }}</strong><small>{{ $portalLabel }}</small></span>
         </a>
         <nav class="portal-actions" aria-label="Portal actions">
+            <a class="btn secondary" href="{{ route('account.email') }}">Account email</a>
             @if($isTeacher)
                 <a class="btn secondary" href="{{ route('portal.teacher-learners') }}">My learners</a>
                 <a class="btn secondary" href="{{ route('portal.teacher-attendance') }}">Class register</a>
