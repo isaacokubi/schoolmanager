@@ -21,9 +21,11 @@ class PasswordResetController extends Controller
             'email' => 'required|email|max:150',
         ]);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        $email = strtolower(trim($request->input('email')));
+
+        $status = Password::sendResetLink([
+            'email' => $email,
+        ]);
 
         if ($status === Password::RESET_LINK_SENT) {
             return back()->with('status', __($status));
@@ -31,14 +33,14 @@ class PasswordResetController extends Controller
 
         return back()
             ->withErrors(['email' => __($status)])
-            ->withInput($request->only('email'));
+            ->withInput(['email' => $email]);
     }
 
     public function showResetForm(Request $request, $token)
     {
         return view('auth.reset-password', [
             'token' => $token,
-            'email' => $request->query('email', ''),
+            'email' => strtolower(trim($request->query('email', ''))),
         ]);
     }
 
@@ -50,8 +52,18 @@ class PasswordResetController extends Controller
             'password' => 'required|string|min:8|max:255|confirmed',
         ]);
 
+        $email = strtolower(trim($request->input('email')));
+
+        // This resets the password on the existing users row identified by
+        // the account's current email. There is no separate "reset password"
+        // credential: the new password becomes the password used by login.
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            [
+                'email' => $email,
+                'password' => $request->input('password'),
+                'password_confirmation' => $request->input('password_confirmation'),
+                'token' => $request->input('token'),
+            ],
             function ($user, $password) {
                 $user->forceFill([
                     'password' => Hash::make($password),
@@ -70,6 +82,6 @@ class PasswordResetController extends Controller
 
         return back()
             ->withErrors(['email' => __($status)])
-            ->withInput($request->only('email'));
+            ->withInput(['email' => $email]);
     }
 }
