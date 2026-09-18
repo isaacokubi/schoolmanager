@@ -193,6 +193,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::get('/features', [AngelHomeFeatureController::class, 'admin'])->name('admin.features');
     Route::post('/features', [AngelHomeFeatureController::class, 'store'])->name('admin.features.store');
+    Route::put('/features/{id}', [AngelHomeFeatureController::class, 'update'])->name('admin.features.update');
     Route::delete('/features/{id}', [AngelHomeFeatureController::class, 'archive'])->name('admin.features.archive');
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
