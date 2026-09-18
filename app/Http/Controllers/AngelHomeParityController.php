@@ -32,6 +32,21 @@ class AngelHomeParityController extends Controller
         return back()->with('success', 'Thank you. Your support pledge has been received by the school.');
     }
 
+    public function donationsAdmin(Request $request)
+    {
+        $query = DB::table('school_donations')->orderByDesc('id');
+        if ($request->filled('status')) $query->where('status',$request->status);
+        $donations = $query->paginate(25)->withQueryString();
+        return view('admin.donations', compact('donations'));
+    }
+
+    public function updateDonation(Request $request, int $id)
+    {
+        $data = $request->validate(['status'=>'required|in:pledged,contacted,received,cancelled']);
+        DB::table('school_donations')->where('id',$id)->update($data+['processed_by'=>$request->user()->id,'updated_at'=>now()]);
+        return back()->with('success','Donation status updated.');
+    }
+
     public function community(string $type)
     {
         abort_unless(in_array($type, ['teachers','pupils','sponsors'], true), 404);
