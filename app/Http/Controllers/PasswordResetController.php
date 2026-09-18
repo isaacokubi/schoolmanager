@@ -23,7 +23,7 @@ class PasswordResetController extends Controller
 
         $email = strtolower(trim($request->input('email')));
 
-        $status = Password::sendResetLink([
+        $status = Password::broker('users')->sendResetLink([
             'email' => $email,
         ]);
 
@@ -57,7 +57,7 @@ class PasswordResetController extends Controller
         // This resets the password on the existing users row identified by
         // the account's current email. There is no separate "reset password"
         // credential: the new password becomes the password used by login.
-        $status = Password::reset(
+        $status = Password::broker('users')->reset(
             [
                 'email' => $email,
                 'password' => $request->input('password'),
