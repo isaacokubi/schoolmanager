@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
@@ -24,14 +23,9 @@ class PasswordResetController extends Controller
 
         $email = strtolower(trim($request->input('email')));
 
-        // Use the same configured school/recovery address for the outgoing
-        // password-reset email. Laravel's password broker still resolves the
-        // actual user by users.email.
-        $schoolEmail = DB::table('settings')->where('key', 'school_email')->value('value');
-        if ($schoolEmail && strtolower(trim($schoolEmail)) === $email) {
-            config(['mail.from.address' => $email]);
-        }
-
+        // The sender is controlled by MAIL_FROM_ADDRESS/Brevo. It must never
+        // be changed to the submitted recipient email, because doing so can
+        // create a sender mismatch and break transactional delivery.
         $status = Password::broker('users')->sendResetLink([
             'email' => $email,
         ]);
