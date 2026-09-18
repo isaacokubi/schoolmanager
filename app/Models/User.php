@@ -25,4 +25,14 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * Keep the login/reset identity canonical for every account.
+     * Passwords remain account-specific and are stored only in users.password.
+     */
+    public function setEmailAttribute($value)
+    {
+        $email = trim((string) $value);
+        $this->attributes['email'] = $email === '' ? null : strtolower($email);
+    }
 }
