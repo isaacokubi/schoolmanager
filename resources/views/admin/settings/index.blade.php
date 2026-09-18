@@ -9,7 +9,7 @@
 @csrf @method('PUT')
 <div class="field"><label>School name</label><input name="school_name" value="{{ old('school_name',$settings['school_name']) }}" required></div>
 <div class="field"><label>Phone</label><input name="school_phone" value="{{ old('school_phone',$settings['school_phone']) }}"></div>
-<div class="field"><label>Email</label><input type="email" name="school_email" value="{{ old('school_email',$settings['school_email']) }}"></div>
+<div class="field"><label>School &amp; password recovery email</label><input type="email" name="school_email" value="{{ old('school_email',$settings['school_email']) }}"><small>This address is used as the school contact email and becomes the authenticated administrator account email used by Forgot Password. It must be verified in Brevo if it is the sender address.</small></div>
 <div class="field"><label>Currency</label><input name="currency" maxlength="3" value="{{ old('currency',$settings['currency']) }}" required></div>
 <div class="field full"><label>Address</label><textarea name="school_address">{{ old('school_address',$settings['school_address']) }}</textarea></div>
 <div class="field"><label>Academic year</label><input type="number" name="academic_year" min="2000" max="2100" value="{{ old('academic_year',$settings['academic_year']) }}"></div>
