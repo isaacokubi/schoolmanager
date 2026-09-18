@@ -24,6 +24,7 @@ use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\TeacherAssessmentController;
 use App\Http\Controllers\TeacherPortalController;
 use App\Http\Controllers\AngelHomeFeatureController;
+use App\Http\Controllers\AngelHomeParityController;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
@@ -31,6 +32,12 @@ Route::get('/academics', [PublicController::class, 'academics'])->name('academic
 Route::get('/admissions', [PublicController::class, 'admissions'])->name('admissions');
 Route::post('/admissions', [AdmissionController::class, 'store'])->middleware('throttle:10,1')->name('admissions.store');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
+Route::get('/support', [AngelHomeParityController::class, 'support'])->name('support');
+Route::get('/donations', [AngelHomeParityController::class, 'donations'])->name('donations');
+Route::post('/donations', [AngelHomeParityController::class, 'storeDonation'])->middleware('throttle:5,1')->name('donations.store');
+Route::get('/teachers', [AngelHomeParityController::class, 'community'])->defaults('type','teachers')->name('teachers');
+Route::get('/pupils', [AngelHomeParityController::class, 'community'])->defaults('type','pupils')->name('pupils');
+Route::get('/sponsors', [AngelHomeParityController::class, 'community'])->defaults('type','sponsors')->name('sponsors');
 
 // Public media endpoint. Keep /storage/{path} compatible with existing records.
 // Images are returned explicitly as binary inline responses. Videos retain
@@ -195,6 +202,8 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     Route::post('/features', [AngelHomeFeatureController::class, 'store'])->name('admin.features.store');
     Route::put('/features/{id}', [AngelHomeFeatureController::class, 'update'])->name('admin.features.update');
     Route::delete('/features/{id}', [AngelHomeFeatureController::class, 'archive'])->name('admin.features.archive');
+    Route::get('/donations', [AngelHomeParityController::class, 'donationsAdmin'])->name('admin.donations');
+    Route::patch('/donations/{id}/status', [AngelHomeParityController::class, 'updateDonation'])->name('admin.donations.status');
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/search', AdminSearchController::class)->name('admin.search');
@@ -237,6 +246,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 
 Route::middleware(['auth', 'portal.role:pupil,parent,sponsor,teacher'])->prefix('portal')->group(function () {
     Route::get('/features', [AngelHomeFeatureController::class, 'portal'])->name('portal.features');
+    Route::post('/features/{id}/{action}', [AngelHomeParityController::class, 'featureAction'])->whereIn('action',['complete','read','borrow','return'])->name('portal.features.action');
     Route::get('/', [PortalController::class, 'dashboard'])->name('portal.dashboard');
     Route::post('/logout', [PortalController::class, 'logout'])->name('portal.logout');
     Route::get('/payments', [PortalPaymentController::class, 'index'])->name('portal.payments');
