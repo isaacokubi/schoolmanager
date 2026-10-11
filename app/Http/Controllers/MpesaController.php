@@ -61,19 +61,36 @@ class MpesaController extends Controller
             ]);
             report($e);
 
-            // Keep implementation details and credentials out of the page, but
-            // give the administrator an actionable message for common setup faults.
+            // Show safe, actionable setup/network diagnostics without exposing
+            // credentials, access tokens, or full provider response bodies.
             $exceptionMessage = $e->getMessage();
-            $userMessage = 'The M-Pesa request could not be started. Check the application log for details and try again.';
+            $userMessage = 'The M-Pesa request could not be started. Open storage/logs/laravel.log for the exact error, then retry.';
 
             if (strpos($exceptionMessage, 'GuzzleHttp\\HandlerStack') !== false
                 || strpos($exceptionMessage, 'GuzzleHttp\\Client') !== false) {
                 $userMessage = 'The M-Pesa HTTP dependency is missing. Run "composer install" in the project directory, then retry.';
             } elseif (strpos($exceptionMessage, 'consumer credentials are not configured') !== false
                 || strpos($exceptionMessage, 'shortcode/passkey are not configured') !== false) {
-                $userMessage = 'M-Pesa is not fully configured. Check MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE and MPESA_PASSKEY in your local .env file.';
-            } elseif (strpos($exceptionMessage, 'callback URL') !== false) {
-                $userMessage = 'The M-Pesa callback URL is invalid. Configure MPESA_CALLBACK_URL with a valid public callback URL and try again.';
+                $userMessage = 'M-Pesa credentials are missing. Set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE and MPESA_PASSKEY in .env, then clear the config cache.';
+            } elseif (stripos($exceptionMessage, 'callback URL') !== false) {
+                $userMessage = 'The M-Pesa callback URL must be a valid, publicly reachable URL. For local development, expose this app through a secure tunnel and set MPESA_CALLBACK_URL in .env.';
+            } elseif (stripos($exceptionMessage, 'OAuth failed (HTTP 401)') !== false
+                || stripos($exceptionMessage, 'OAuth failed (HTTP 403)') !== false) {
+                $userMessage = 'Safaricom rejected the M-Pesa API credentials. Verify the consumer key/secret belong to the selected MPESA_ENV app (sandbox or production).';
+            } elseif (stripos($exceptionMessage, 'OAuth failed (HTTP 400)') !== false) {
+                $userMessage = 'Safaricom could not issue an M-Pesa access token. Verify the Daraja app credentials and MPESA_ENV setting.';
+            } elseif (stripos($exceptionMessage, 'STK request failed (HTTP 401)') !== false
+                || stripos($exceptionMessage, 'STK request failed (HTTP 403)') !== false) {
+                $userMessage = 'Safaricom rejected the STK request authorization. Check the Daraja credentials, shortcode, passkey and selected environment.';
+            } elseif (stripos($exceptionMessage, 'M-Pesa rejected the STK request:') !== false
+                || stripos($exceptionMessage, 'M-Pesa STK request failed (HTTP 400)') !== false) {
+                $userMessage = 'Safaricom rejected the STK request. Check the shortcode, passkey, transaction type, phone number and amount; see storage/logs/laravel.log for the provider error.';
+            } elseif (stripos($exceptionMessage, 'Unable to connect to the M-Pesa') !== false
+                || stripos($exceptionMessage, 'cURL error') !== false
+                || stripos($exceptionMessage, 'Connection timed out') !== false) {
+                $userMessage = 'Could not connect to Safaricom. Check your internet connection, PHP cURL/OpenSSL support and Daraja service availability, then retry.';
+            } elseif (stripos($exceptionMessage, 'callback URL') !== false) {
+                $userMessage = 'The M-Pesa callback URL must be a valid, publicly reachable URL. Configure MPESA_CALLBACK_URL and retry.';
             }
 
             return back()->withErrors(['mpesa' => $userMessage]);
