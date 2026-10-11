@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\PaymentController;
@@ -10,11 +11,11 @@ use App\Http\Controllers\Admin\PaymentController;
 |--------------------------------------------------------------------------
 | Small project route map
 |--------------------------------------------------------------------------
-| The application demonstrates only two school features:
+| The application demonstrates two school features:
 | 1. Student records.
 | 2. School-fee collection using Safaricom M-Pesa STK Push.
 |
-| Login is kept only to protect the administrator pages.
+| Login and email-based password recovery protect access to those features.
 */
 
 Route::get('/', function () {
@@ -27,6 +28,20 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')
         ->name('login.submit');
+
+    // Allow an existing user to request a password reset link by email.
+    Route::get('/forgot-password', [PasswordResetController::class, 'showLinkRequestForm'])
+        ->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+
+    // The token comes from the email; the controller validates it when saved.
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
+        ->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:5,1')
+        ->name('password.update');
 });
 
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
