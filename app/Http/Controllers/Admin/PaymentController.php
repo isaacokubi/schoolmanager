@@ -11,6 +11,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
+        // Join student details so the payment list can show a learner's name and admission number.
         $query = DB::table('payments')->leftJoin('students','students.id','=','payments.student_id')
             ->select('payments.*','students.name as student_name','students.admission_number')
             ->orderByDesc('payments.id');
@@ -25,6 +26,7 @@ class PaymentController extends Controller
                     ->orWhere('payments.account_reference','like',"%{$search}%");
             });
         }
+        // Preserve search/filter values when moving between pages of results.
         $payments=$query->paginate(10)->withQueryString();
         return view('admin.payments.index',compact('payments'));
     }
@@ -37,6 +39,7 @@ class PaymentController extends Controller
 
     public function store(Request $request)
     {
+        // Validate administrator-entered records separately from automated STK requests.
         $data=$request->validate([
             'student_id'=>['nullable','exists:students,id'],
             'parent_phone'=>['nullable','regex:/^\+?2547\d{8}$/'],
@@ -46,6 +49,7 @@ class PaymentController extends Controller
             'mpesa_receipt'=>['nullable','string','max:100','unique:payments,mpesa_receipt'],
             'status'=>['required','in:pending,completed,failed'],
         ]);
+        // Record who entered the payment and whether this manual record is treated as verified.
         $data['channel']='manual';
         $data['verification_status']=$data['status']==='completed'?'verified':'pending';
         $data['user_id']=auth()->id();
@@ -53,6 +57,8 @@ class PaymentController extends Controller
         $data['payer_name']=auth()->user()->name ?? 'Administrator';
         $data['paid_at']=($data['status']==='completed')?now():null;
 
+        // Save the payment, adjust the balance, and add its audit entry atomically.
+        // If one step fails, the database rolls back all changes in this transaction.
         DB::transaction(function() use ($data){
             if (!empty($data['student_id']) && $data['status']==='completed') {
                 $student = DB::table('students')->where('id',$data['student_id'])->lockForUpdate()->first();
@@ -61,6 +67,7 @@ class PaymentController extends Controller
                 }
             }
 
+            // Save first to obtain the payment ID used by the audit trail.
             $paymentId = DB::table('payments')->insertGetId($data+['created_at'=>now(),'updated_at'=>now()]);
             if (!empty($data['student_id']) && $data['status']==='completed') {
                 DB::table('students')->where('id',$data['student_id'])->decrement('fee_balance',(int)$data['amount']);

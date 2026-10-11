@@ -1,3 +1,4 @@
+{{-- Reuse the admin layout so this page shares navigation and page styling. --}}
 @extends('layouts.admin')
 @section('title', 'Change Registered Email | School Manager')
 @section('page_title', 'Account settings')
@@ -9,9 +10,11 @@
     </div>
 </div>
 
+{{-- Show the controller's confirmation after a successful update. --}}
 @if(session('success'))
     <div class="alert success" role="status">{{ session('success') }}</div>
 @endif
+{{-- Show server-side validation errors so the administrator can correct the form. --}}
 @if($errors->any())
     <div class="alert error" role="alert">
         <strong>Please check the information below.</strong>
@@ -34,6 +37,7 @@
         </div>
     </div>
 
+    {{-- CSRF protects this form; method spoofing sends the update as PUT to Laravel. --}}
     <form method="POST" action="{{ route('admin.account.email.update') }}" autocomplete="off">
         @csrf
         @method('PUT')

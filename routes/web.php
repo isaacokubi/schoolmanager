@@ -23,8 +23,10 @@ Route::get('/', function () {
     return redirect()->route(auth()->check() ? 'admin.students.index' : 'login');
 });
 
+// Sign-in and password-recovery pages are for visitors who are not authenticated.
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    // Limit repeated sign-in attempts to slow down password guessing.
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')
         ->name('login.submit');
@@ -44,6 +46,8 @@ Route::middleware('guest')->group(function () {
         ->name('password.update');
 });
 
+// All routes in this group require authentication plus the administrator-role check.
+// The prefix keeps the protected school-management URLs together under /admin.
 Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     // Keep the old dashboard URL as a simple redirect, not a third feature.
     Route::get('/', function () {
@@ -55,6 +59,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     // Account settings: update the login and password-recovery email securely.
     Route::get('/account/email', [AuthController::class, 'showChangeEmail'])
         ->name('admin.account.email');
+    // PUT updates the existing email setting; throttling limits repeated attempts.
     Route::put('/account/email', [AuthController::class, 'changeEmail'])
         ->middleware('throttle:5,1')
         ->name('admin.account.email.update');
@@ -70,6 +75,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
     // Feature 2: review payment history and send an M-Pesa STK prompt.
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
     Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
+    // Start an STK prompt; only a verified callback should confirm that money was paid.
     Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])
         ->middleware('throttle:5,1')
         ->name('admin.payments.mpesa');

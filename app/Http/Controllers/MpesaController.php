@@ -12,12 +12,15 @@ class MpesaController extends Controller
 {
     public function stkPush(Request $request, MpesaService $mpesa)
     {
+        // Validate the learner, Kenyan mobile number, and whole-KES payment amount.
+        // MpesaService is injected by Laravel and handles Daraja API communication.
         $data = $request->validate([
             'student_id' => ['required', 'exists:students,id'],
             'parent_phone' => ['required', 'regex:/^(?:0?7|2547|\+2547)\d{8}$/'],
             'amount' => ['required', 'integer', 'min:1', 'max:1500000'],
         ]);
 
+        // Read the learner's current balance before accepting a payment request.
         $student = DB::table('students')->where('id', $data['student_id'])->first();
         if (!$student || (int) $data['amount'] > max(0, (int) floor((float) $student->fee_balance))) {
             return back()->withErrors(['amount' => 'The payment amount cannot exceed the learner\'s outstanding whole-KES fee balance.']);
@@ -27,6 +30,8 @@ class MpesaController extends Controller
         if (preg_match('/^07\d{8}$/', $phone)) $phone = '254' . substr($phone, 1);
         elseif (preg_match('/^7\d{8}$/', $phone)) $phone = '254' . $phone;
 
+        // Give the request a traceable account reference with a random suffix.
+        // The database record starts as pending: starting an STK prompt is not proof of payment.
         $reference = 'STU' . $data['student_id'] . '-' . now()->format('ymdHis') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
         $paymentId = DB::table('payments')->insertGetId([
             'student_id' => $data['student_id'],
@@ -45,6 +50,7 @@ class MpesaController extends Controller
         ]);
 
         try {
+            // Ask Safaricom to send the STK prompt and save its request IDs for reconciliation.
             $response = $mpesa->stkPush($phone, (float) $data['amount'], $reference);
             DB::table('payments')->where('id', $paymentId)->update([
                 'checkout_request_id' => $response['CheckoutRequestID'] ?? null,
@@ -53,6 +59,7 @@ class MpesaController extends Controller
             ]);
             return back()->with('success', 'M-Pesa payment request accepted by Safaricom. Complete it on the phone if prompted; payment will be confirmed automatically.');
         } catch (Throwable $e) {
+            // An initiation error is recorded as failed, never as a completed/paid transaction.
             DB::table('payments')->where('id', $paymentId)->update([
                 'status' => 'failed',
                 'verification_status' => 'rejected',
@@ -108,6 +115,7 @@ class MpesaController extends Controller
      */
     public function query(Request $request, MpesaService $mpesa, int $paymentId)
     {
+        // Find the existing payment; this endpoint checks status rather than creating a payment.
         $payment = DB::table('payments')->where('id', $paymentId)->first();
 
         if (!$payment) {
@@ -123,6 +131,7 @@ class MpesaController extends Controller
         }
 
         try {
+            // Query Daraja with the CheckoutRequestID saved during STK initiation.
             $result = $mpesa->stkQuery($payment->checkout_request_id);
             $resultCode = $result['ResultCode'] ?? null;
             $resultDesc = (string) ($result['ResultDesc'] ?? 'No result description returned.');

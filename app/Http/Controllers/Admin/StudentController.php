@@ -17,6 +17,8 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
+        // Begin with active students and attach optional parent/class display details.
+        // LEFT JOIN keeps a student visible even when a related record is not linked.
         $query = DB::table('students')
             ->leftJoin('parents', function ($join) {
                 $join->on('parents.id', '=', 'students.parent_id')
@@ -36,6 +38,7 @@ class StudentController extends Controller
             )
             ->orderByDesc('students.id');
 
+        // Add search conditions only when the user supplies a search term.
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
             $digits = preg_replace('/\D+/', '', $search);
@@ -62,6 +65,7 @@ class StudentController extends Controller
             $query->where('students.fee_balance', '>', 0);
         }
 
+        // Paginate results and preserve the filters in links to the next/previous page.
         $students = $query->paginate(10)->withQueryString();
         $classes = DB::table('school_classes')
             ->whereNull('archived_at')
@@ -84,9 +88,11 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        // Validate input and normalize related class/phone fields before saving.
         $data = $this->validated($request);
         $this->syncLegacyClassName($data);
         $data['parent_phone'] = $this->normalizeKenyanPhone($data['parent_phone'] ?? null);
+        // Do not let the student form edit balances; payment transactions own that value.
         unset($data['fee_balance']);
 
         DB::table('students')->insert($data + [
@@ -125,6 +131,7 @@ class StudentController extends Controller
         return redirect()->route('admin.students.index')->with('success', 'Student updated successfully. Fee balances can only change through recorded fee transactions.');
     }
 
+    // Archive instead of deleting, so financial and academic history remains available.
     public function destroy($student)
     {
         $studentRecord = DB::table('students')->whereNull('archived_at')->find($student);
@@ -138,6 +145,7 @@ class StudentController extends Controller
         return back()->with('success', 'Student record archived. Financial, attendance and academic history has been preserved.');
     }
 
+    // Share validation between create/update; the optional ID excludes this record from uniqueness checks.
     private function validated(Request $request, $student = null)
     {
         return $request->validate([
@@ -162,6 +170,7 @@ class StudentController extends Controller
         ]);
     }
 
+    // Keep the legacy class_name text field consistent with the selected class record.
     private function syncLegacyClassName(array &$data): void
     {
         if (!empty($data['class_id'])) {
@@ -172,6 +181,7 @@ class StudentController extends Controller
         }
     }
 
+    // Standardize common Kenyan phone formats when they match a supported pattern.
     private function normalizeKenyanPhone(?string $phone): ?string
     {
         if (!$phone) {

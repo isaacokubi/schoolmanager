@@ -17,10 +17,12 @@ class PasswordResetController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
+        // Reject malformed addresses before asking Laravel to send a reset link.
         $request->validate([
             'email' => 'required|email|max:150',
         ]);
 
+        // Match the lowercase/trimmed format used elsewhere in account authentication.
         $email = strtolower(trim($request->input('email')));
 
         // The sender is controlled by MAIL_FROM_ADDRESS/Brevo. It must never
@@ -49,6 +51,7 @@ class PasswordResetController extends Controller
 
     public function reset(Request $request)
     {
+        // Validate the emailed token and require the new password fields to match.
         $request->validate([
             'token' => 'required|string',
             'email' => 'required|email|max:150',
@@ -68,6 +71,7 @@ class PasswordResetController extends Controller
                 'token' => $request->input('token'),
             ],
             function ($user, $password) {
+                // Hash the password before storing it and rotate the remembered-session token.
                 $user->forceFill([
                     'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
