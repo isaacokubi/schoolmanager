@@ -9,6 +9,7 @@
             <div><h1 style="font-size:24px;margin:0">School Manager</h1><p class="muted" style="margin:3px 0 0">Student records and M-Pesa fees</p></div>
         </div>
         <h2 style="font-size:18px">Administrator sign in</h2>
+        @if(session('status'))<div class="alert success" role="status">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="alert error" role="alert">{{ $errors->first() }}</div>@endif
         <form method="post" action="{{ route('login.submit') }}">
             @csrf
@@ -17,7 +18,8 @@
             <label style="display:flex;align-items:center;gap:8px;font-weight:500"><input type="checkbox" name="remember" value="1" style="width:auto;margin:0"> Remember me</label>
             <button class="btn" type="submit" style="width:100%;margin-top:10px">Sign in</button>
         </form>
-        <p class="muted" style="margin-top:18px">Use an existing administrator account. Public registration and password recovery are not part of this simplified project.</p>
+        <p style="margin-top:16px"><a href="{{ route('password.request') }}" style="color:#145dcc;font-weight:700;text-decoration:none">Forgot your password?</a></p>
+        <p class="muted" style="margin-top:12px">If you cannot sign in, request a secure reset link using your registered email address. Public registration is disabled.</p>
     </section>
 </main>
 @endsection
