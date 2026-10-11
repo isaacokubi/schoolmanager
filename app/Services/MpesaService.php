@@ -118,6 +118,18 @@ class MpesaService
         if (!filter_var($callbackUrl, FILTER_VALIDATE_URL)) {
             throw new RuntimeException('M-Pesa callback URL is invalid. Set MPESA_CALLBACK_URL to a valid public URL.');
         }
+
+        // Safaricom must reach the callback over the internet. A syntactically
+        // valid localhost URL cannot receive payment results and often causes
+        // confusing failures during local STK testing.
+        $callbackHost = strtolower((string) parse_url($callbackUrl, PHP_URL_HOST));
+        if ($callbackHost === '' || $callbackHost === 'localhost'
+            || $callbackHost === '::1' || $callbackHost === '[::1]'
+            || preg_match('/^(127\\.|0\\.)/', $callbackHost)
+            || substr($callbackHost, -6) === '.local') {
+            throw new RuntimeException('M-Pesa callback URL points to this computer. Set MPESA_CALLBACK_URL to a publicly reachable tunnel URL ending in /api/mpesa/callback.');
+        }
+
         if (env('MPESA_ENV', 'sandbox') === 'production' && stripos($callbackUrl, 'https://') !== 0) {
             throw new RuntimeException('Production M-Pesa requires an HTTPS callback URL.');
         }
