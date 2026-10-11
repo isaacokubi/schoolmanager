@@ -52,6 +52,13 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Account settings: update the login and password-recovery email securely.
+    Route::get('/account/email', [AuthController::class, 'showChangeEmail'])
+        ->name('admin.account.email');
+    Route::put('/account/email', [AuthController::class, 'changeEmail'])
+        ->middleware('throttle:5,1')
+        ->name('admin.account.email.update');
+
     // Feature 1: add, list, edit and archive student records.
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
