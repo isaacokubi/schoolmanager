@@ -3,8 +3,10 @@
 @section('body')
 {{-- Keep this page focused on secure administrator access; public registration remains disabled. --}}
 <style>
+    /* Main desktop layout: brand/information panel beside the sign-in card. */
     .login-page{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr);background:#f5f8fc}
     .login-brand-panel{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(32px,5vw,72px);background:linear-gradient(145deg,#071b36 0%,#0b3970 58%,#145dcc 100%);color:#fff}
+    /* Decorative circles are CSS-only and do not require external image files. */
     .login-brand-panel:before,.login-brand-panel:after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.12);border-radius:50%;pointer-events:none}
     .login-brand-panel:before{width:520px;height:520px;right:-240px;top:-170px;box-shadow:0 0 0 42px rgba(255,255,255,.025),0 0 0 88px rgba(255,255,255,.02)}
     .login-brand-panel:after{width:310px;height:310px;left:-170px;bottom:-140px;box-shadow:0 0 0 35px rgba(255,255,255,.025)}
@@ -21,6 +23,7 @@
     .login-feature{display:flex;align-items:center;gap:12px;color:#e6f0fc;font-size:14px;font-weight:600}
     .login-feature-icon{width:30px;height:30px;flex:0 0 30px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.1);color:#fff}
     .login-brand-footer{color:#a9c5e8;font-size:12px;position:relative}
+    /* Center the card and constrain its width for readable form fields. */
     .login-content{display:grid;place-items:center;padding:36px clamp(22px,5vw,76px);min-width:0}
     .login-card{width:min(100%,440px);background:#fff;border:1px solid #e3eaf3;border-radius:24px;padding:clamp(25px,3.5vw,42px);box-shadow:0 24px 70px rgba(20,45,80,.09)}
     .login-mobile-brand{display:none;align-items:center;gap:11px;margin-bottom:32px}
@@ -36,6 +39,7 @@
     .login-input-wrap{position:relative}
     .login-input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#7d8da2;display:flex;pointer-events:none}
     .login-field input[type=email],.login-field input[type=password]{display:block;width:100%;min-height:51px;border:1px solid #d9e2ee;border-radius:12px;background:#fbfcfe;padding:12px 14px 12px 43px;color:#132238;outline:0;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+    /* Keep keyboard focus visible for accessibility. */
     .login-field input:focus{border-color:#4c8de9;background:#fff;box-shadow:0 0 0 4px rgba(15,91,215,.1)}
     .login-field input::placeholder{color:#9aa7b8}
     .login-options{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -52,11 +56,14 @@
     .login-alert{padding:12px 14px;border-radius:11px;margin:0 0 18px;font-size:13px;line-height:1.6}
     .login-alert.success{background:#eaf8ef;border:1px solid #ccebd6;color:#176b3a}
     .login-alert.error{background:#fff0f0;border:1px solid #ffd7d7;color:#a51d2d}
+    /* Tablet breakpoint: rebalance columns and reduce spacing. */
     @media(max-width:900px){.login-page{grid-template-columns:minmax(0,.85fr) minmax(380px,1.15fr)}.login-brand-panel{padding:34px}.login-brand-copy h1{font-size:clamp(34px,5vw,48px)}.login-content{padding:28px}}
+    /* Mobile breakpoint: replace the large panel with a compact brand header. */
     @media(max-width:700px){.login-page{display:block;min-height:100vh;padding:22px 16px;background:radial-gradient(circle at 10% 0%,rgba(49,130,246,.1),transparent 30%),#f5f8fc}.login-brand-panel{display:none}.login-content{display:block;padding:0}.login-card{margin:0 auto;padding:27px 23px;border-radius:21px}.login-mobile-brand{display:flex}.login-lock{margin-bottom:18px}.login-heading{font-size:27px}.login-subheading{margin-bottom:23px}}
     @media(max-width:380px){.login-page{padding:14px 10px}.login-card{padding:23px 18px}.login-options{align-items:flex-start;flex-direction:column}.login-heading{font-size:25px}}
     @media(prefers-reduced-motion:reduce){.login-field input,.login-submit{transition:none}}
 </style>
+{{-- The page combines school branding with the sign-in form; registration is intentionally absent. --}}
 <main class="login-page">
     <aside class="login-brand-panel" aria-label="School Manager information">
         <a class="login-brand" href="{{ url('/') }}" aria-label="School Manager home">
@@ -76,6 +83,7 @@
         <div class="login-brand-footer">A simpler way to stay on top of school administration.</div>
     </aside>
 
+    {{-- Link this region to its heading so assistive technology can identify the form area. --}}
     <section class="login-content" aria-labelledby="login-heading">
         <div class="login-card">
             <div class="login-mobile-brand" aria-label="School Manager">
