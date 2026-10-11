@@ -19,14 +19,82 @@ class PaymentReceiptService
     public function sendForPayment($paymentId)
     {
         $paymentId = (int) $paymentId;
+        $lockKey = 'schoolmanager:payment-receipt:' . $paymentId;
 
-        $lock = Cache::lock(
-            'schoolmanager:payment-receipt:' . $paymentId,
-            120
-        );
+        /*
+         * Prefer the configured cache lock for queue workers. Some test and
+         * small-hosting environments have a misconfigured cache lock store;
+         * use the payment row lock as a safe fallback instead of failing every
+         * receipt before its PDF/email work can start.
+         */
+        try {
+            $lock = Cache::lock($lockKey, 120);
+            $acquired = $lock->get();
+        } catch (Throwable $e) {
+            report($e);
+
+            return $this->sendWithDatabaseLock($paymentId);
+        }
+
+        if (!$acquired) {
+            try {
+                return $lock->block(10, function () use ($paymentId) {
+                    return $this->sendLocked($paymentId);
+                });
+            } catch (Throwable $e) {
+                report($e);
+
+                return [
+                    'sent' => false,
+                    'retryable' => true,
+                    'reason' => 'Receipt delivery is temporarily locked. Please retry.',
+                ];
+            } finally {
+                try {
+                    $lock->release();
+                } catch (Throwable $e) {
+                    // Lock cleanup must not replace the delivery result.
+                    report($e);
+                }
+            }
+        }
 
         try {
-            return $lock->block(10, function () use ($paymentId) {
+            return $this->sendLocked($paymentId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return [
+                'sent' => false,
+                'retryable' => true,
+                'reason' => 'Receipt generation or delivery failed.',
+            ];
+        } finally {
+            try {
+                $lock->release();
+            } catch (Throwable $e) {
+                // Lock cleanup must not replace the delivery result.
+                report($e);
+            }
+        }
+    }
+
+    /**
+     * Fallback for environments where the configured cache store cannot lock.
+     *
+     * Locking the payment row serializes receipt attempts on databases that
+     * support row-level locks; the audit check in sendLocked remains the
+     * idempotency guard for sequential retries and SQLite-based tests.
+     */
+    private function sendWithDatabaseLock($paymentId)
+    {
+        try {
+            return DB::transaction(function () use ($paymentId) {
+                DB::table('payments')
+                    ->where('id', $paymentId)
+                    ->lockForUpdate()
+                    ->first();
+
                 return $this->sendLocked($paymentId);
             });
         } catch (Throwable $e) {
@@ -35,19 +103,8 @@ class PaymentReceiptService
             return [
                 'sent' => false,
                 'retryable' => true,
-                'reason' => 'Receipt delivery is temporarily locked. Please retry.',
+                'reason' => 'Receipt delivery is temporarily unavailable. Please retry.',
             ];
-        } finally {
-            try {
-                $lock->release();
-            } catch (Throwable $e) {
-                /*
-                 * The lock may already have expired or been released.
-                 * Never turn a successful receipt into a failed job because
-                 * lock cleanup failed.
-                 */
-                report($e);
-            }
         }
     }
 
