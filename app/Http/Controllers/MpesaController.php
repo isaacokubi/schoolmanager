@@ -60,7 +60,23 @@ class MpesaController extends Controller
                 'updated_at' => now(),
             ]);
             report($e);
-            return back()->withErrors(['mpesa' => 'The M-Pesa request could not be started.']);
+
+            // Keep implementation details and credentials out of the page, but
+            // give the administrator an actionable message for common setup faults.
+            $exceptionMessage = $e->getMessage();
+            $userMessage = 'The M-Pesa request could not be started. Check the application log for details and try again.';
+
+            if (strpos($exceptionMessage, 'GuzzleHttp\\HandlerStack') !== false
+                || strpos($exceptionMessage, 'GuzzleHttp\\Client') !== false) {
+                $userMessage = 'The M-Pesa HTTP dependency is missing. Run "composer install" in the project directory, then retry.';
+            } elseif (strpos($exceptionMessage, 'consumer credentials are not configured') !== false
+                || strpos($exceptionMessage, 'shortcode/passkey are not configured') !== false) {
+                $userMessage = 'M-Pesa is not fully configured. Check MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE and MPESA_PASSKEY in your local .env file.';
+            } elseif (strpos($exceptionMessage, 'callback URL') !== false) {
+                $userMessage = 'The M-Pesa callback URL is invalid. Configure MPESA_CALLBACK_URL with a valid public callback URL and try again.';
+            }
+
+            return back()->withErrors(['mpesa' => $userMessage]);
         }
     }
 

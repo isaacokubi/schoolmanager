@@ -15,7 +15,7 @@
 @if($errors->any())<div class="alert error" role="alert">{{ $errors->first() }}</div>@endif
 
 <div class="card" style="max-width:680px">
-    <form method="post" action="{{ route('admin.payments.mpesa') }}">
+    <form id="mpesa-stk-form" method="post" action="{{ route('admin.payments.mpesa') }}">
         @csrf
         <label>Student
             <select name="student_id" required>
@@ -33,8 +33,61 @@
         <label>Amount (KES)
             <input type="number" name="amount" required min="1" max="1500000" step="1" value="{{ old('amount') }}">
         </label>
-        <button class="btn" type="submit">Send M-Pesa prompt</button>
+        <button id="mpesa-stk-submit" class="btn" type="submit" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:210px">
+            <span id="mpesa-stk-submit-label">Send M-Pesa prompt</span>
+            <span id="mpesa-stk-submit-loading" hidden>
+                <span class="mpesa-stk-spinner" aria-hidden="true"></span>
+                Sending prompt…
+            </span>
+        </button>
+        <p id="mpesa-stk-live-status" class="muted" role="status" aria-live="polite" hidden style="margin-top:12px">
+            Connecting to Safaricom. Please keep this page open and do not submit again.
+        </p>
     </form>
     <p class="muted" style="margin-top:14px">The payment stays pending until Safaricom sends a callback containing a valid receipt and matching amount. Never mark a payment as paid just because the prompt was sent.</p>
 </div>
+
+<style>
+    .mpesa-stk-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        vertical-align: -2px;
+        animation: mpesa-stk-spin .7s linear infinite;
+    }
+    @keyframes mpesa-stk-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+        .mpesa-stk-spinner { animation-duration: 1.8s; }
+    }
+</style>
+<script>
+(function () {
+    var form = document.getElementById('mpesa-stk-form');
+    var button = document.getElementById('mpesa-stk-submit');
+    var label = document.getElementById('mpesa-stk-submit-label');
+    var loading = document.getElementById('mpesa-stk-submit-loading');
+    var status = document.getElementById('mpesa-stk-live-status');
+    var submitting = false;
+
+    if (!form || !button || !label || !loading || !status) return;
+
+    form.addEventListener('submit', function (event) {
+        if (submitting) {
+            event.preventDefault();
+            return;
+        }
+
+        // Browser validation runs before this event, so invalid forms stay interactive.
+        submitting = true;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        label.hidden = true;
+        loading.hidden = false;
+        status.hidden = false;
+    });
+})();
+</script>
 @endsection
