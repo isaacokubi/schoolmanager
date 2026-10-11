@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Barryvdh\DomPDF\Facade as Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -13,8 +13,9 @@ class PaymentReceiptService
     /**
      * Generate and email a verified payment receipt.
      *
-     * A database-backed cache lock prevents concurrent queue workers
-     * from delivering the same receipt more than once.
+     * A cache lock normally serializes queue workers. If the configured cache
+     * backend cannot provide locks, a database row lock is used as a fallback;
+     * the receipt audit remains the idempotency guard.
      */
     public function sendForPayment($paymentId)
     {

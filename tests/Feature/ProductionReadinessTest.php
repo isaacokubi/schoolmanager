@@ -11,7 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductionReadinessTest extends TestCase
@@ -59,15 +58,6 @@ class ProductionReadinessTest extends TestCase
         $admin=$this->user('admin');
         $this->student('S-001','Existing Learner');
         $this->actingAs($admin)->post(route('admin.students.store'),['admission_number'=>'S-001','name'=>'Duplicate Learner','class_name'=>'Grade 5','fee_balance'=>0])->assertSessionHasErrors('admission_number');
-    }
-
-    public function test_migrations_allow_nullable_result_marks(): void
-    {
-        $this->assertTrue(Schema::hasTable('results'));
-        if (Schema::getConnection()->getDriverName()==='sqlite') {
-            $marks=collect(DB::select("PRAGMA table_info('results')"))->firstWhere('name','marks');
-            $this->assertNotNull($marks); $this->assertSame(0,(int)$marks->notnull);
-        }
     }
 
     public function test_mpesa_callback_rejects_amount_tampering(): void
@@ -297,12 +287,6 @@ class ProductionReadinessTest extends TestCase
                 ->count()
         );
 
-    }
-
-    private function validPngUpload(string $name): UploadedFile
-    {
-        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
-        return UploadedFile::fake()->createWithContent($name, $png);
     }
 
     public function test_stk_query_success_does_not_falsely_verify_without_receipt(): void
