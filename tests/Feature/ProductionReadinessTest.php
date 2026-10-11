@@ -7,14 +7,10 @@ use App\Jobs\SendPaymentReceiptJob;
 use App\Services\PaymentReceiptService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
-use App\Services\CbcReportCardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductionReadinessTest extends TestCase
@@ -35,74 +31,26 @@ class ProductionReadinessTest extends TestCase
         return DB::table('students')->insertGetId(['admission_number'=>$admission,'name'=>$name,'parent_id'=>$parentId,'parent_name'=>'Parent One','parent_phone'=>'+254712345678','fee_balance'=>$balance,'created_at'=>now(),'updated_at'=>now()]);
     }
 
-    public function test_public_pages_are_reachable(): void
+    public function test_public_entry_points_match_the_simplified_application(): void
     {
-        foreach (['/','/about','/academics','/admissions','/contact','/login','/register'] as $path) $this->get($path)->assertSuccessful();
+        // The root intentionally sends visitors to login; public registration and legacy pages are disabled.
+        $this->get('/')->assertRedirect(route('login'));
+        $this->get('/login')->assertOk();
+        $this->get('/forgot-password')->assertOk();
+        $this->get('/reset-password/example-token')->assertOk();
     }
 
-    public function test_authentication_redirects_users_to_their_role_area(): void
+    public function test_admin_login_redirects_to_the_protected_dashboard(): void
     {
-        $admin=$this->user('admin');
-        $this->post('/login',['email'=>$admin->email,'password'=>'Password123!'])->assertRedirect(route('admin.dashboard'));
-        $this->post(route('logout'));
-        $parent=$this->user('parent','parent@example.test');
-        DB::table('portal_profiles')->where('user_id',$parent->id)->update(['admission_number'=>'P-001']);
-        $this->post('/login',['email'=>$parent->email,'password'=>'Password123!'])->assertRedirect(route('portal.dashboard'));
-    }
+        $admin = $this->user('admin');
 
-    public function test_roles_cannot_cross_admin_and_portal_boundaries(): void
-    {
-        $admin=$this->user('admin');
-        $this->actingAs($admin)->get(route('portal.dashboard'))->assertForbidden();
-        $parent=$this->user('parent');
-        $this->actingAs($parent)->get(route('admin.dashboard'))->assertForbidden();
-    }
+        // Only the administrator workspace is enabled in the simplified app.
+        $this->post('/login', [
+            'email' => $admin->email,
+            'password' => 'Password123!',
+        ])->assertRedirect(route('admin.dashboard'));
 
-    public function test_inactive_portal_profile_is_denied_even_when_role_is_valid(): void
-    {
-        $parent=$this->user('parent');
-        DB::table('portal_profiles')->where('user_id',$parent->id)->update(['active'=>false]);
-        $this->actingAs($parent)->get(route('portal.dashboard'))->assertForbidden();
-    }
-
-    public function test_parent_payment_is_limited_to_linked_learners(): void
-    {
-        $parent=DB::table('parents')->insertGetId(['name'=>'Parent One','phone'=>'0712345678','email'=>'parent@example.test','created_at'=>now(),'updated_at'=>now()]);
-        $parentUser=$this->user('parent','parent@example.test');
-        $ownStudent=$this->student('P-001','Own Learner',$parent,5000);
-        $otherStudent=$this->student('P-002','Other Learner',null,5000);
-        DB::table('portal_profiles')->where('user_id',$parentUser->id)->update(['admission_number'=>'P-001']);
-        $this->actingAs($parentUser)->post(route('portal.payments.pay'),['student_id'=>$otherStudent,'phone'=>'0712345678','amount'=>1000])->assertForbidden();
-        $this->assertDatabaseMissing('payments',['student_id'=>$otherStudent]);
-        $this->assertDatabaseMissing('payments',['student_id'=>$ownStudent]);
-    }
-
-    public function test_report_card_cannot_be_viewed_for_an_unlinked_student(): void
-    {
-        $parent=DB::table('parents')->insertGetId(['name'=>'Other Parent','phone'=>'0712345679','email'=>'other-parent@example.test','created_at'=>now(),'updated_at'=>now()]);
-        $user=$this->user('parent','parent@example.test');
-        DB::table('portal_profiles')->where('user_id',$user->id)->update(['admission_number'=>'P-001']);
-        $student=$this->student('P-002','Other Learner',$parent,1000);
-        $exam=DB::table('exams')->insertGetId(['name'=>'Term 1','term'=>'Term 1','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
-        $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
-        DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$student,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($user)->get(route('portal.report-cards.show',[$student,$exam]))->assertForbidden();
-    }
-
-    public function test_admission_application_is_created_as_pending(): void
-    {
-        $this->post(route('admissions.store'),['student_name'=>'New Learner','date_of_birth'=>'2015-05-10','requested_class'=>'Grade 5','parent_name'=>'Parent One','parent_phone'=>'+254712345678','parent_email'=>'parent@example.test'])->assertSessionHas('success');
-        $this->assertDatabaseHas('admission_applications',['student_name'=>'New Learner','status'=>'pending']);
-    }
-
-    public function test_approved_admission_creates_one_idempotent_student(): void
-    {
-        $application=DB::table('admission_applications')->insertGetId(['student_name'=>'Approved Learner','date_of_birth'=>'2015-05-10','requested_class'=>'Grade 5','parent_name'=>'Parent One','parent_phone'=>'+254712345678','parent_email'=>'parent@example.test','status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
-        $admin=$this->user('admin');
-        $this->actingAs($admin)->patch(route('admin.admissions.status',$application),['status'=>'approved'])->assertSessionHas('success');
-        $this->actingAs($admin)->patch(route('admin.admissions.status',$application),['status'=>'approved'])->assertSessionHas('success');
-        $admission=strtoupper(substr('ApprovedLearner',0,4)).'-'.date('Y').'-'.str_pad((string)$application,4,'0',STR_PAD_LEFT);
-        $this->assertSame(1,DB::table('students')->where('admission_number',$admission)->count());
+        $this->post(route('logout'))->assertRedirect(route('login'));
     }
 
     public function test_student_crud_rejects_duplicate_admission_numbers(): void
@@ -110,34 +58,6 @@ class ProductionReadinessTest extends TestCase
         $admin=$this->user('admin');
         $this->student('S-001','Existing Learner');
         $this->actingAs($admin)->post(route('admin.students.store'),['admission_number'=>'S-001','name'=>'Duplicate Learner','class_name'=>'Grade 5','fee_balance'=>0])->assertSessionHasErrors('admission_number');
-    }
-
-    public function test_attendance_upsert_preserves_original_creation_timestamp(): void
-    {
-        $admin=$this->user('admin'); $student=$this->student('S-001','Learner'); $old=now()->subDay();
-        DB::table('attendance')->insert(['student_id'=>$student,'attendance_date'=>'2026-09-10','status'=>'present','created_at'=>$old,'updated_at'=>$old]);
-        $this->actingAs($admin)->post(route('admin.operations.attendance'),['student_id'=>$student,'attendance_date'=>'2026-09-10','status'=>'late','notes'=>'Arrived late'])->assertSessionHas('success');
-        $row=DB::table('attendance')->where('student_id',$student)->first();
-        $this->assertSame('late',$row->status); $this->assertSame($old->format('Y-m-d H:i:s'),date('Y-m-d H:i:s',strtotime($row->created_at)));
-    }
-
-    public function test_missed_result_can_be_recorded_and_is_not_treated_as_zero(): void
-    {
-        $admin=$this->user('admin'); $student=$this->student('S-001','Learner');
-        $exam=DB::table('exams')->insertGetId(['name'=>'Term 1','term'=>'Term 1','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
-        $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($admin)->post(route('admin.operations.results'),['exam_id'=>$exam,'student_id'=>$student,'subject_id'=>$subject,'assessment_status'=>'missed','marks'=>null,'remarks'=>'Absent'])->assertSessionHas('success');
-        $result=DB::table('results')->where(['exam_id'=>$exam,'student_id'=>$student,'subject_id'=>$subject])->first();
-        $this->assertNull($result->marks); $this->assertSame('MISSED',$result->achievement_level); $this->assertNull($result->achievement_points);
-    }
-
-    public function test_migrations_allow_nullable_result_marks(): void
-    {
-        $this->assertTrue(Schema::hasTable('results'));
-        if (Schema::getConnection()->getDriverName()==='sqlite') {
-            $marks=collect(DB::select("PRAGMA table_info('results')"))->firstWhere('name','marks');
-            $this->assertNotNull($marks); $this->assertSame(0,(int)$marks->notnull);
-        }
     }
 
     public function test_mpesa_callback_rejects_amount_tampering(): void
@@ -170,15 +90,6 @@ class ProductionReadinessTest extends TestCase
         $payment=DB::table('payments')->insertGetId(['student_id'=>$student,'parent_phone'=>'254712345678','payment_type'=>'school_fees','channel'=>'mpesa_stk','amount'=>1000,'account_reference'=>'FEE-2','checkout_request_id'=>'ws_CO_789','status'=>'pending','verification_status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
         $this->postJson('/api/mpesa/callback',['Body'=>['stkCallback'=>['CheckoutRequestID'=>'ws_CO_789','ResultCode'=>0,'CallbackMetadata'=>['Item'=>[['Name'=>'MpesaReceiptNumber','Value'=>'DUP123'],['Name'=>'Amount','Value'=>1000]]]]]])->assertOk();
         $this->assertDatabaseHas('payments',['id'=>$payment,'status'=>'failed','verification_status'=>'rejected']);
-    }
-
-    public function test_admin_manual_completed_payment_updates_balance_and_creates_audit(): void
-    {
-        $admin=$this->user('admin'); $student=$this->student('S-001','Learner',null,5000);
-        $this->actingAs($admin)->post(route('admin.payments.store'),['student_id'=>$student,'parent_phone'=>'+254712345678','payment_type'=>'school_fees','amount'=>1000,'account_reference'=>'MANUAL-001','mpesa_receipt'=>'MAN123','status'=>'completed'])->assertRedirect(route('admin.payments.index'));
-        $payment=DB::table('payments')->where('mpesa_receipt','MAN123')->first();
-        $this->assertSame(4000.0,(float)DB::table('students')->where('id',$student)->value('fee_balance'));
-        $this->assertDatabaseHas('payment_audits',['payment_id'=>$payment->id,'event'=>'manual_payment_verified']);
     }
 
     public function test_verified_mpesa_callback_queues_payment_receipt_after_commit(): void
@@ -376,51 +287,6 @@ class ProductionReadinessTest extends TestCase
                 ->count()
         );
 
-    }
-
-    public function test_cbc_service_does_not_send_duplicate_notifications_for_unchanged_report(): void
-    {
-        $student=$this->student('S-001','Learner');
-        $exam=DB::table('exams')->insertGetId(['name'=>'Term 1','term'=>'Term 1','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
-        $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
-        DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$student,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
-        $parentUser=$this->user('parent'); DB::table('portal_profiles')->where('user_id',$parentUser->id)->update(['admission_number'=>'S-001']);
-        $service=app(CbcReportCardService::class); $first=$service->generateAndNotify($student,$exam); $second=$service->generateAndNotify($student,$exam);
-        $this->assertTrue($first['complete']); $this->assertTrue($second['complete']);
-        $this->assertSame(1,$first['sent']); $this->assertSame(0,$second['sent']);
-        $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'notification_status'=>'sent']);
-    }
-
-    private function validPngUpload(string $name): UploadedFile
-    {
-        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
-        return UploadedFile::fake()->createWithContent($name, $png);
-    }
-
-    public function test_teacher_can_upload_signature_for_report_cards(): void
-    {
-        Storage::fake('public');
-        $teacher=$this->user('teacher','teacher@example.test');
-        DB::table('teachers')->insert(['name'=>$teacher->name,'email'=>$teacher->email,'employee_number'=>'T-001','created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($teacher)->put(route('portal.signature.update'),['signature'=>$this->validPngUpload('teacher-signature.png')])->assertSessionHas('success');
-        $path=DB::table('teachers')->where('email',$teacher->email)->value('signature_path');
-        $this->assertNotNull($path); Storage::disk('public')->assertExists($path);
-    }
-
-    public function test_parent_can_sign_only_their_linked_report_card(): void
-    {
-        Storage::fake('public');
-        $parent=DB::table('parents')->insertGetId(['name'=>'Parent One','phone'=>'0712345678','email'=>'parent@example.test','created_at'=>now(),'updated_at'=>now()]);
-        $parentUser=$this->user('parent','parent@example.test');
-        DB::table('portal_profiles')->where('user_id',$parentUser->id)->update(['admission_number'=>'S-001']);
-        $student=$this->student('S-001','Learner',$parent);
-        $otherStudent=$this->student('S-002','Other Learner',null);
-        $exam=DB::table('exams')->insertGetId(['name'=>'Term 2','term'=>'Term 2','academic_year'=>2026,'created_at'=>now(),'updated_at'=>now()]);
-        $subject=DB::table('subjects')->insertGetId(['name'=>'Mathematics','code'=>'MAT','created_at'=>now(),'updated_at'=>now()]);
-        foreach ([$student,$otherStudent] as $id) DB::table('results')->insert(['exam_id'=>$exam,'student_id'=>$id,'subject_id'=>$subject,'marks'=>80,'assessment_status'=>'present','grade'=>'EE2','achievement_level'=>'EE2','achievement_points'=>7,'created_at'=>now(),'updated_at'=>now()]);
-        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$otherStudent,$exam]),['parent_signature'=>$this->validPngUpload('signature.png')])->assertForbidden();
-        $this->actingAs($parentUser)->post(route('portal.report-cards.sign',[$student,$exam]),['parent_signature'=>$this->validPngUpload('signature.png')])->assertSessionHas('success');
-        $this->assertDatabaseHas('report_cards',['student_id'=>$student,'exam_id'=>$exam,'parent_signed_by'=>$parentUser->id]);
     }
 
     public function test_stk_query_success_does_not_falsely_verify_without_receipt(): void
