@@ -1,62 +1,61 @@
-# School Manager
+# School Manager — simplified student and M-Pesa project
 
-Laravel 8 school management platform for Kenyan schools, including admissions, learner records, attendance, CBC results/report cards, portal access and M-Pesa school-fee payments.
+This is a small Laravel 8 project intended to be easy to demonstrate and explain. The application exposes only **two core features**:
 
-## Local setup
+1. **Student records** — create, view, search, edit and archive student records.
+2. **M-Pesa school-fee payments** — request an STK Push, receive Safaricom's callback, verify the receipt and amount, and update the student's fee balance.
 
-Requirements already used by this project:
+Login and logout are included only to protect the administrator pages.
 
-- PHP 7.4+
+## How the project works
+
+- `routes/web.php` lists the small set of pages used by the project.
+- `StudentController` validates and stores student records.
+- `PaymentController` displays payment history and loads the list of students for the payment form.
+- `MpesaController` starts the STK Push and processes Safaricom's callback. A payment is not confirmed until the callback contains the receipt and amount.
+- Blade templates in `resources/views/admin/students` and `resources/views/admin/payments` render the pages.
+- Laravel's database layer stores students and payment records.
+
+The code includes short comments at the main learning points. The existing database migrations and Laravel framework files are retained so the project can still run with its current database schema. Older controllers and templates are no longer exposed through the simplified web routes; keeping those files avoids an unsafe bulk deletion of code or data definitions.
+
+## Requirements
+
+- PHP 7.4 or newer
 - Composer
 - MySQL or SQLite
+- A Safaricom Daraja developer account for M-Pesa testing
+
+## Run locally
 
 ```bash
 composer install
 cp .env.example .env
 php artisan key:generate
+# Configure the database settings in .env before migrating.
 php artisan migrate
-php artisan route:list
-php artisan test
+php artisan serve
 ```
 
-Do not run `php artisan migrate:fresh` against a production database. Use `php artisan migrate --force` for an existing production database after reviewing the migration plan.
+Open `http://127.0.0.1:8000`. Sign in with an administrator account already present in your database. Do not commit the real `.env` file or payment credentials.
 
-## Production configuration
+## M-Pesa configuration
 
-Set these environment values in the deployment platform rather than committing secrets:
+Configure the values in the deployment environment or local `.env` file:
 
-- `APP_ENV=production`
-- `APP_DEBUG=false`
-- `APP_URL=https://your-domain.example`
-- `DB_CONNECTION=mysql`
-- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
-- `SESSION_DRIVER=database`
-- `CACHE_STORE=database`
-- `QUEUE_CONNECTION=database`
-- SMTP mail settings
-- `MPESA_ENV=production`
-- `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`
-- `MPESA_CALLBACK_URL=https://your-domain.example/api/mpesa/callback`
+- `MPESA_ENV=sandbox` for sandbox testing
+- `MPESA_CONSUMER_KEY`
+- `MPESA_CONSUMER_SECRET`
+- `MPESA_SHORTCODE`
+- `MPESA_PASSKEY`
+- `MPESA_CALLBACK_URL=https://your-public-host.example/api/mpesa/callback`
 
-M-Pesa callbacks must use the public HTTPS application URL. Never place consumer keys, passkeys, database passwords or application keys in source control.
+The callback URL must be publicly reachable over HTTPS. Use sandbox credentials until end-to-end testing is complete. The STK request being accepted does not prove the payment succeeded; the callback must verify the transaction metadata first.
 
-## Production verification
-
-Run after pulling the production branch locally:
+## Quick checks
 
 ```bash
-composer install --no-interaction --prefer-dist
-composer dump-autoload
-php artisan optimize:clear
-php artisan migrate --force
 php artisan route:list
 php artisan test
 ```
 
-The feature suite covers authentication boundaries, active portal profiles, parent/student access isolation, admissions, student validation, attendance upserts, CBC missed assessments, M-Pesa callback integrity/idempotency, duplicate receipts, admin payment auditing and report notification idempotency.
-
-## Vercel
-
-The repository contains `Dockerfile.vercel` for Vercel container deployment. The application is stateless at the container level; persistent data belongs in MySQL and database-backed session/cache/queue storage.
-
-Before enabling production traffic, configure all production environment variables in Vercel and verify the M-Pesa callback URL from the deployed domain.
+Use a test database for development. Never run `php artisan migrate:fresh` against a database that contains real school records.

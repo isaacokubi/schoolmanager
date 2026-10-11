@@ -7,6 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+/**
+ * Handles Feature 1: student records.
+ *
+ * The controller validates form input before saving it. Fee balances are
+ * deliberately not editable here; only a confirmed fee payment changes them.
+ */
 class StudentController extends Controller
 {
     public function index(Request $request)
