@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -43,6 +45,55 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return back()->withErrors(['email' => 'This account does not have an active portal role.'])->withInput($request->only('email'));
+    }
+
+    /**
+     * Show the signed-in administrator's email settings.
+     */
+    public function showChangeEmail()
+    {
+        return view('admin.account.email');
+    }
+
+    /**
+     * Change the email used for future sign-ins and password reset messages.
+     * The current password is required to prevent an unattended session from
+     * silently redirecting account recovery to another address.
+     */
+    public function changeEmail(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:150',
+                'confirmed',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+            'current_password' => ['required', 'string', 'current_password:web'],
+        ], [
+            'email.confirmed' => 'The new email address confirmation does not match.',
+            'email.unique' => 'That email address is already registered to another account.',
+            'current_password.current_password' => 'Your current password is incorrect.',
+        ]);
+
+        $newEmail = strtolower(trim($data['email']));
+
+        if (strtolower(trim((string) $user->email)) === $newEmail) {
+            return back()->withErrors([
+                'email' => 'That is already the email address registered to your account.',
+            ])->withInput($request->only('email', 'email_confirmation'));
+        }
+
+        $user->email = $newEmail;
+        $user->save();
+
+        return redirect()
+            ->route('admin.account.email')
+            ->with('success', 'Your registered email address has been updated. Use the new address the next time you sign in or request a password reset.');
     }
 
     public function logout(Request $request)
