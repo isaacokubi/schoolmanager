@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    // Render the sign-in page; credential checking happens in login().
     public function showLogin()
     {
         return view('auth.login');
@@ -16,6 +17,7 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        // Validate submitted credentials before attempting authentication.
         $credentials = $request->validate([
             'email' => 'required|email|max:150',
             'password' => 'required|string|min:8|max:255',
@@ -26,10 +28,12 @@ class AuthController extends Controller
         // different login identity.
         $credentials['email'] = strtolower(trim($credentials['email']));
 
+        // Laravel checks the email/password pair; remember controls persistent sign-in.
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors(['email' => 'The email or password is incorrect.'])->withInput($request->only('email'));
         }
 
+        // Rotate the session ID after login to reduce session-fixation risk.
         $request->session()->regenerate();
         $user = $request->user();
 
@@ -62,8 +66,10 @@ class AuthController extends Controller
      */
     public function changeEmail(Request $request)
     {
+        // Only update the currently authenticated account.
         $user = $request->user();
 
+        // Require a unique email, matching confirmation, and the current password.
         $data = $request->validate([
             'email' => [
                 'required',
@@ -80,6 +86,7 @@ class AuthController extends Controller
             'current_password.current_password' => 'Your current password is incorrect.',
         ]);
 
+        // Normalize capitalization and whitespace before comparing or saving.
         $newEmail = strtolower(trim($data['email']));
 
         if (strtolower(trim((string) $user->email)) === $newEmail) {
@@ -88,6 +95,7 @@ class AuthController extends Controller
             ])->withInput($request->only('email', 'email_confirmation'));
         }
 
+        // Save the new address on the existing user record for future sign-ins and resets.
         $user->email = $newEmail;
         $user->save();
 
@@ -96,6 +104,7 @@ class AuthController extends Controller
             ->with('success', 'Your registered email address has been updated. Use the new address the next time you sign in or request a password reset.');
     }
 
+    // Sign out and invalidate session state before returning to the login page.
     public function logout(Request $request)
     {
         Auth::logout();
