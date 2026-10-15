@@ -6,8 +6,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to create or update the database schema required by this feature.
+     */
     public function up(): void
     {
+        // Alter an existing table without dropping its existing records.
         Schema::table('results', function (Blueprint $table) {
             $table->string('assessment_status', 20)->default('present')->after('marks');
             $table->string('achievement_level', 5)->nullable()->after('grade');
@@ -18,6 +22,7 @@ return new class extends Migration {
         DB::statement("UPDATE results SET achievement_level = CASE WHEN marks >= 90 THEN 'EE1' WHEN marks >= 75 THEN 'EE2' WHEN marks >= 58 THEN 'ME1' WHEN marks >= 41 THEN 'ME2' WHEN marks >= 31 THEN 'AE1' WHEN marks >= 21 THEN 'AE2' WHEN marks >= 11 THEN 'BE1' ELSE 'BE2' END, achievement_points = CASE WHEN marks >= 90 THEN 8 WHEN marks >= 75 THEN 7 WHEN marks >= 58 THEN 6 WHEN marks >= 41 THEN 5 WHEN marks >= 31 THEN 4 WHEN marks >= 21 THEN 3 WHEN marks >= 11 THEN 2 ELSE 1 END");
         DB::table('results')->whereNotNull('marks')->update(['grade' => DB::raw('achievement_level')]);
 
+        // Create a new table; the callback below defines its fields and constraints.
         Schema::create('report_cards', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
@@ -33,9 +38,14 @@ return new class extends Migration {
         });
     }
 
+    /**
+     * Reverse the schema changes introduced by this migration.
+     */
     public function down(): void
     {
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('report_cards');
+        // Alter an existing table without dropping its existing records.
         Schema::table('results', function (Blueprint $table) {
             $table->dropIndex(['exam_id', 'student_id', 'assessment_status']);
             $table->dropColumn(['assessment_status', 'achievement_level', 'achievement_points']);
