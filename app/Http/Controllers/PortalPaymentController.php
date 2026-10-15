@@ -6,11 +6,21 @@ use App\Services\MpesaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+/**
+ * Controller for the portal payment workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * services, and returns views or HTTP responses. The method comments explain
+ * the purpose of each action and its role in the workflow.
+ */
 
 class PortalPaymentController extends Controller
 {
     private const HISTORY_PAGE_SIZE = 20;
 
+    /**
+     * Load the records and summary information required by the listing page, then render the view.
+     */
     public function index(Request $request)
     {
         $students = $this->accessibleStudents($request->user());
@@ -20,9 +30,13 @@ class PortalPaymentController extends Controller
             : DB::table('payments')->whereIn('student_id', $studentIds)->orderByDesc('id')->paginate(self::HISTORY_PAGE_SIZE, ['*'], 'payments_page');
         $payments->withQueryString();
 
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('portal.payments', compact('students', 'payments'));
     }
 
+    /**
+     * Helper method for PortalPaymentController.php; it performs the pay step and returns or updates data used by its caller.
+     */
     public function pay(Request $request, MpesaService $mpesa)
     {
         $user=$request->user();
@@ -88,6 +102,9 @@ class PortalPaymentController extends Controller
         }
     }
 
+    /**
+     * Helper method for PortalPaymentController.php; it performs the accessibleStudents step and returns or updates data used by its caller.
+     */
     private function accessibleStudents($user)
     {
         $profile=DB::table('portal_profiles')->where('user_id',$user->id)->first();
