@@ -7,9 +7,19 @@ use App\Jobs\SendPaymentReceiptJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+/**
+ * Controller for the mpesa workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * services, and returns views or HTTP responses. The method comments explain
+ * the purpose of each action and its role in the workflow.
+ */
 
 class MpesaController extends Controller
 {
+    /**
+     * Prepare and submit an M-Pesa STK Push request using configured Daraja credentials and payment details.
+     */
     public function stkPush(Request $request, MpesaService $mpesa)
     {
         // Validate the learner, Kenyan mobile number, and whole-KES payment amount.
@@ -211,6 +221,9 @@ class MpesaController extends Controller
         }
     }
 
+    /**
+     * Receive a provider callback, validate its contents, and update the related transaction according to the application's callback rules.
+     */
     public function callback(Request $request)
     {
         // Safaricom expects a fast 200 response. Keep the raw callback in the
