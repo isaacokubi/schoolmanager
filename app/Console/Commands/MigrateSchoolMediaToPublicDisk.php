@@ -6,6 +6,12 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+/**
+ * Defines the migrate school media to public disk component of the school-management application.
+ *
+ * This file contains application logic, framework configuration, or schema
+ * changes. The method comments describe each operation's purpose and lifecycle.
+ */
 
 class MigrateSchoolMediaToPublicDisk extends Command
 {
@@ -13,6 +19,9 @@ class MigrateSchoolMediaToPublicDisk extends Command
 
     protected $description = 'Copy existing school media from storage/app/public to the configured public disk and verify database records.';
 
+    /**
+     * Execute the job or request processing logic and coordinate the operations described in this method.
+     */
     public function handle()
     {
         $source = Storage::disk('local');
