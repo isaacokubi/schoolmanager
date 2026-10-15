@@ -1,7 +1,16 @@
+{{--
+    PRESENTATION NOTE: forgot password template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
+{{-- Extend the shared layout to reuse the site's common page structure. --}}
 @extends('layouts.public')
 
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title', 'Forgot Password | School Manager')
 
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('content')
 <section class="auth-page">
     <div class="auth-card">
@@ -10,15 +19,19 @@
         <h1>Forgot your password?</h1>
         <p class="auth-intro">Enter the email address registered with your school account and we will send you a secure password reset link.</p>
 
+        {{-- Show the following content only when the condition is true. --}}
         @if(session('status'))
             <div class="auth-alert success" role="status">{{ session('status') }}</div>
         @endif
 
+        {{-- Show the following content only when the condition is true. --}}
         @if($errors->any())
             <div class="auth-alert error" role="alert">{{ $errors->first() }}</div>
         @endif
 
+        {{-- This form submits user input to the route and method declared in its attributes. --}}
         <form method="POST" action="{{ route('password.email') }}" class="auth-form">
+            {{-- Add Laravel's CSRF protection token to this form. --}}
             @csrf
             <label for="email">Email address</label>
             <input
