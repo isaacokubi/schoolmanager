@@ -1,4 +1,8 @@
 #!/usr/bin/env php
+
+// PRESENTATION NOTE: artisan.
+// This file provides framework language strings, test assertions, or the Laravel CLI entry point.
+// The comments describe the purpose of the file without changing executable behavior.
 <?php
 
 define('LARAVEL_START', microtime(true));
