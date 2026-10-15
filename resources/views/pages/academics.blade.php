@@ -1,5 +1,13 @@
+{{--
+    PRESENTATION NOTE: academics layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 @extends('layouts.public')
+{{-- Define a named content section for the parent layout to render. --}}
 @section('title','Academics | '.$settings['school_name'])
+{{-- Define a named content section for the parent layout to render. --}}
 @section('content')
 <section class="page-hero"><div class="container"><p class="eyebrow">Academic programme</p><h1>Learning at {{ $settings['school_name'] }}</h1><p>{{ $settings['academic_year'] ? 'Academic year '.$settings['academic_year'].' · '.$settings['academic_term'] : 'Explore our current classes and learning areas.' }}</p></div></section>
 <section class="section"><div class="container"><div class="section-head"><div><p class="eyebrow">Class structure</p><h2>Classes & streams</h2><p>Current class information is sourced directly from the school management system.</p></div></div><div class="grid">@forelse($classes as $class)<article class="card"><span class="badge">{{ $class->academic_year ?: 'Current' }}</span><h3 style="margin-top:14px">{{ $class->name }}</h3><p class="muted">{{ $class->stream ?: 'General stream' }}</p></article>@empty<div class="empty"><h3>No classes published yet</h3><p>The school administration has not added classes to the public academic programme.</p></div>@endforelse</div></div></section>
