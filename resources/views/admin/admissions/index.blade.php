@@ -1,6 +1,17 @@
+{{--
+    PRESENTATION NOTE: index view.
+    This Blade template renders the user interface. Blade expressions display data
+    prepared by controllers, while directives control layout, loops, conditions, and forms.
+    These comments are not sent to the browser as visible page content.
+--}}
+
+{{-- Reuse the shared layout so this page inherits the site's common structure and styling. --}}
 @extends('layouts.admin')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('title','Admissions | School Manager')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('page_title','Admissions')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('admin_content')
 @php
     $status = request('status');
@@ -14,7 +25,9 @@
     <a class="btn secondary" href="{{ route('admin.dashboard') }}">← Dashboard</a>
 </div>
 
+{{-- Render the following content only when this condition is true. --}}
 @if(session('success'))<div class="alert success admissions-alert" role="status">{{ session('success') }}</div>@endif
+{{-- Render the following content only when this condition is true. --}}
 @if($errors->any())<div class="alert error admissions-alert" role="alert">{{ $errors->first() }}</div>@endif
 
 <div class="admissions-summary" aria-label="Admissions summary">
@@ -26,6 +39,7 @@
 
 <div class="card admissions-filter-card">
     <div class="section-head admissions-filter-head"><div><span class="filter-kicker">Application search</span><h2>Find applications</h2><p>Search by learner or parent/guardian and filter by admission decision.</p></div>@if($search || $status)<span class="filter-active">Filters active</span>@endif</div>
+    {{-- Begin a form that sends the user's input to the route and HTTP method specified in its attributes. --}}
     <form method="get" class="admissions-filter-form" role="search" aria-label="Search admission applications">
         <div class="filter-field"><label for="admissions-search">Search applications</label><input id="admissions-search" name="search" value="{{ $search }}" placeholder="Learner or parent/guardian name" autocomplete="off"></div>
         <div class="filter-field"><label for="admissions-status">Admission status</label><select id="admissions-status" name="status"><option value="">All statuses</option>@foreach($statusLabels as $value => $label)<option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
@@ -39,6 +53,7 @@
         <table class="table admissions-table" aria-label="Admission applications">
             <thead><tr><th>Learner</th><th>Parent / Guardian</th><th>Requested class</th><th>Status</th><th class="decision-column">Admission decision</th></tr></thead>
             <tbody>
+                {{-- Loop through the supplied collection and provide an empty-state branch if it contains no rows. --}}
                 @forelse($applications as $application)
                     @php $applicationStatus = strtolower((string) $application->status); $statusLabel = $statusLabels[$applicationStatus] ?? ucfirst($applicationStatus ?: 'Pending'); $statusClass = $statusClasses[$applicationStatus] ?? 'warning'; @endphp
                     <tr>
@@ -54,6 +69,7 @@
             </tbody>
         </table>
     </div>
+    {{-- Render the following content only when this condition is true. --}}
     @if($applications->hasPages())<div class="admissions-pagination">{{ $applications->appends(request()->only(['search','status']))->links() }}</div>@endif
 </div>
 
