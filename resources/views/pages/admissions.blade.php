@@ -1,5 +1,13 @@
+{{--
+    PRESENTATION NOTE: admissions layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 @extends('layouts.public')
+{{-- Define a named content section for the parent layout to render. --}}
 @section('title','Admissions | '.$settings['school_name'])
+{{-- Define a named content section for the parent layout to render. --}}
 @section('content')
 <section class="page-hero"><div class="container"><p class="eyebrow">Admissions</p><h1>Begin your child's journey with {{ $settings['school_name'] }}</h1><p>Complete the secure application below. The admissions team will review the information and follow up with you.</p></div></section>
 <section class="section"><div class="container"><div class="split"><div class="card"><p class="eyebrow">Online application</p><h2>Applicant details</h2>@if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif @if($errors->any())<div class="errors"><strong>Please review the form.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
