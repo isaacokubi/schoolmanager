@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: app configuration/bootstrap file.
+// This file configures a Laravel service or prepares the framework before handling requests.
+// Keep environment-specific credentials and endpoints in environment variables.
+
 $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
