@@ -1,8 +1,19 @@
+{{--
+    PRESENTATION NOTE: professional template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
+{{-- Extend the shared layout to keep navigation and page structure consistent. --}}
 @extends('layouts.admin')
 
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('title', 'School Operations | ' . config('app.name'))
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('page_title', 'School Operations')
 
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('admin_content')
 @php
     $labels = ['parents'=>'Parents & Guardians','classes'=>'Classes & Streams','teachers'=>'Teachers','subjects'=>'Learning Areas','attendance'=>'Attendance','exams'=>'Assessments','results'=>'CBC Results','announcements'=>'Announcements','events'=>'School Calendar'];
@@ -27,28 +38,39 @@
 
 <div class="school-ops">
 <header class="ops-hero"><div><span class="eyebrow">School operations</span><h1>{{ $labels[$section] ?? 'School Records' }}</h1><p>{{ $descriptions[$section] ?? 'Manage academic and administrative records from one secure workspace.' }}</p></div><div class="hero-actions"><a href="{{ route('admin.dashboard') }}" class="btn-light">← Dashboard</a><a href="#records" class="btn-primary">View records ↓</a></div></header>
+{{-- Render this section only when the condition is satisfied. --}}
 @if(session('success'))<div class="notice success" role="status"><b>✓ Completed</b><span>{{ session('success') }}</span></div>@endif
+{{-- Render this section only when the condition is satisfied. --}}
 @if($errors->any())<div class="notice error" role="alert"><b>! Action could not be completed</b><span>{{ $errors->first() }}</span></div>@endif
 <nav class="ops-nav" aria-label="School operations sections">@foreach($labels as $key=>$label)<a href="{{ route('admin.operations',['section'=>$key]) }}" class="{{ $section===$key?'active':'' }}"><span class="nav-icon">{{ $icons[$key] }}</span>{{ $label }}</a>@endforeach</nav>
 <section class="section-heading"><div><span class="eyebrow muted">{{ $labels[$section] ?? 'Records' }}</span><h2>{{ $labels[$section] ?? 'School Records' }}</h2><p>{{ $descriptions[$section] ?? '' }}</p></div><div class="stat-card"><span>Active records</span><strong>{{ number_format($total) }}</strong><small>{{ $shown ? 'Showing '.$from.'–'.$to : 'No matching records' }}</small></div></section>
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if(isset($configs[$section])) @php($cfg=$configs[$section])
 <section class="panel create-panel"><div class="panel-head"><div><span class="eyebrow muted">Create record</span><h3>{{ $cfg['title'] }}</h3><p>Complete the required fields, then save the record.</p></div><span class="required-note"><b>*</b> Required</span></div>
 <form method="POST" action="{{ route('admin.operations.store') }}" class="ops-form">@csrf<input type="hidden" name="section" value="{{ $section }}"><div class="form-grid">
+{{-- Repeat the following markup for each item in the collection. --}}
 @foreach($cfg['fields'] as $field)<label class="field {{ $field[2]==='textarea'?'wide':'' }}"><span>{{ $field[1] }} @if($field[3])<b>*</b>@endif</span>@if($field[2]==='textarea')<textarea name="{{ $field[0] }}" placeholder="{{ $field[4] }}" {{ $field[3]?'required':'' }}>{{ old($field[0]) }}</textarea>@else<input type="{{ $field[2] }}" name="{{ $field[0] }}" value="{{ old($field[0]) }}" placeholder="{{ $field[4] }}" {{ $field[3]?'required':'' }}>@endif</label>@endforeach
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='parents')<label class="field wide"><span>Link primary guardian to learner <em>Optional</em></span><select name="student_id"><option value="">Do not link a learner now</option>@foreach($students as $student)<option value="{{ $student->id }}" {{ old('student_id')==$student->id?'selected':'' }}>{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select><small class="hint">The selected learner becomes linked to this guardian.</small></label>@endif
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='classes')<label class="field"><span>Class teacher <em>Optional</em></span><select name="class_teacher_id"><option value="">Unassigned</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}{{ $teacher->employee_number?' · '.$teacher->employee_number:'' }}</option>@endforeach</select></label>@endif
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='subjects')<label class="field"><span>Assigned teacher <em>Optional</em></span><select name="teacher_id"><option value="">Unassigned</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>@endif
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='announcements')<label class="check wide"><input type="checkbox" name="published" value="1" {{ old('published',true)?'checked':'' }}><span><b>Publish immediately</b><small>Clear this option to save an unpublished draft.</small></span></label>@endif
 </div><div class="form-footer"><small>Authorized school operations staff can create records. All data is validated before saving.</small><button class="btn-primary" type="submit">Save {{ $labels[$section] ?? 'record' }}</button></div></form></section>@endif
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='attendance')<section class="panel action-panel"><div class="panel-head"><div><span class="eyebrow muted">Daily records</span><h3>Record attendance</h3><p>One learner can have one attendance record per date.</p></div><span class="badge">Present · Absent · Late · Excused</span></div><form method="POST" action="{{ route('admin.operations.attendance') }}" class="ops-form">@csrf<div class="form-grid"><label class="field wide"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label><label class="field"><span>Date <b>*</b></span><input type="date" name="attendance_date" value="{{ old('attendance_date',date('Y-m-d')) }}" required></label><label class="field"><span>Status <b>*</b></span><select name="status" required><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option><option value="excused">Excused</option></select></label><label class="field wide"><span>Notes</span><textarea name="notes" placeholder="Optional attendance note"></textarea></label></div><div class="form-footer"><small>Saving the same learner and date updates the existing attendance record.</small><button class="btn-primary" type="submit">Save attendance</button></div></form></section>@endif
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='results')<section class="panel cbc action-panel"><div class="panel-head"><div><span class="eyebrow muted">Competency-Based Assessment</span><h3>Record CBC assessment</h3><p>Enter a score for completed work or record a missed assessment.</p></div><div class="legend"><b>EE</b> Exceeding <b>ME</b> Meeting <b>AE</b> Approaching <b>BE</b> Below</div></div><form method="POST" action="{{ route('admin.operations.results') }}" id="cbc-form" class="ops-form">@csrf<div class="form-grid"><label class="field"><span>Assessment <b>*</b></span><select name="exam_id" required><option value="">Select assessment</option>@foreach($exams as $exam)<option value="{{ $exam->id }}">{{ $exam->name }} — {{ $exam->term }} {{ $exam->academic_year }}</option>@endforeach</select></label><label class="field"><span>Learner <b>*</b></span><select name="student_id" required><option value="">Select learner</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label><label class="field"><span>Learning area <b>*</b></span><select name="subject_id" required><option value="">Select learning area</option>@foreach($subjects as $subject)<option value="{{ $subject->id }}">{{ $subject->name }}</option>@endforeach</select></label><label class="field"><span>Assessment status <b>*</b></span><select name="assessment_status" id="assessment-status" required><option value="present">Assessment completed</option><option value="missed">Missed assessment</option></select></label><label class="field" id="marks-field"><span>Score (0–100) <b>*</b></span><input type="number" name="marks" id="marks" min="0" max="100" step="0.01" placeholder="Enter score"></label><label class="field wide"><span>Teacher / assessor remarks</span><textarea name="remarks" placeholder="Optional learning feedback"></textarea></label></div><div class="scale">@foreach([['EE1','90–100'],['EE2','75–89'],['ME1','58–74'],['ME2','41–57'],['AE1','31–40'],['AE2','21–30'],['BE1','11–20'],['BE2','0–10']] as $band)<div><b>{{ $band[0] }}</b><span>{{ $band[1] }}</span></div>@endforeach</div><div class="form-footer"><small>Achievement level and points are calculated by the system.</small><button class="btn-primary" type="submit">Save CBC assessment</button></div></form></section>@endif
 
 <section class="panel records" id="records"><div class="panel-head records-head"><div><span class="eyebrow muted">Active records</span><h3>{{ $labels[$section] ?? ucfirst($section) }}</h3><p>Review, edit or delete active records. Delete removes the record from active lists and safely archives it so school history is retained.</p></div><span class="count">{{ number_format($total) }} active</span></div>
 <div class="search-area"><form method="GET" class="search-form" role="search"><input type="hidden" name="section" value="{{ $section }}"><div class="search-input"><span aria-hidden="true">⌕</span><input name="search" value="{{ request('search') }}" autocomplete="off" aria-label="Search {{ strtolower($labels[$section] ?? 'records') }}" placeholder="Search {{ strtolower($labels[$section] ?? 'records') }}…"></div><button class="btn-primary" type="submit">Search</button>@if(request('search'))<a class="btn-muted" href="{{ route('admin.operations',['section'=>$section]) }}">Clear</a>@endif</form><div class="search-meta"><span>{{ $searchTips[$section] ?? 'Search active records.' }}</span>@if(request('search'))<strong>Filtering: “{{ request('search') }}”</strong>@endif</div></div>
 <div class="table-wrap"><table><thead><tr><th>Record</th><th>Details</th><th>Status / Context</th><th class="actions-col">Actions</th></tr></thead><tbody>
+{{-- Iterate through the collection and render the empty state when it has no items. --}}
 @forelse($records as $row)<tr><td><div class="record-id">#{{ $row->id }}</div><span class="record-date">{{ $row->created_at ? \Illuminate\Support\Carbon::parse($row->created_at)->format('d M Y') : '—' }}</span></td><td>@switch($section)
 @case('parents')<strong>{{ $row->name }}</strong><small>{{ $row->phone }}{{ $row->email?' · '.$row->email:'' }}</small>@break
 @case('classes')<strong>{{ $row->name }}{{ $row->stream?' · '.$row->stream:'' }}</strong><small>{{ $row->academic_year ?: 'Academic year not set' }}{{ $row->teacher_name?' · '.$row->teacher_name:'' }}</small>@break
@@ -60,6 +82,7 @@
 @case('announcements')<strong>{{ $row->title }}</strong><small>{{ \Illuminate\Support\Str::limit(strip_tags($row->body),110) }}</small>@break
 @case('events')<strong>{{ $row->title }}</strong><small>{{ $row->event_date }}{{ $row->location?' · '.$row->location:'' }}</small>@break
 @endswitch</td><td>
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='parents')<span class="status info">{{ (int)$row->learner_count }} {{ (int)$row->learner_count===1?'learner':'learners' }} linked</span>
 @elseif($section==='teachers')<span class="status info">{{ (int)$row->subject_count }} {{ (int)$row->subject_count===1?'learning area':'learning areas' }}</span>
 @elseif($section==='classes')<span class="status {{ $row->teacher_name?'ok':'warning' }}">{{ $row->teacher_name?'Teacher assigned':'Teacher unassigned' }}</span>
@@ -69,7 +92,9 @@
 @elseif($section==='announcements')<span class="status {{ $row->published?'ok':'warning' }}">{{ $row->published?'Published':'Draft' }}</span>
 @elseif($section==='events')<span class="status {{ \Illuminate\Support\Carbon::parse($row->event_date)->isPast()?'warning':'info' }}">{{ \Illuminate\Support\Carbon::parse($row->event_date)->isPast()?'Past event':'Upcoming' }}</span>
 @else<span class="status info">Active</span>@endif</td><td class="actions">
+{{-- Render this section only when the condition is satisfied. --}}
 @if(in_array($section,['parents','classes','teachers','subjects','exams','announcements','events'],true))<details class="edit-details"><summary class="edit-btn">Edit</summary><div class="edit-popover"><form method="POST" action="{{ route('admin.operations.update',$row->id) }}" class="edit-form">@csrf @method('PUT')<input type="hidden" name="section" value="{{ $section }}">
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='parents')<label>Full name<input name="name" value="{{ $row->name }}" required></label><label>Phone<input name="phone" value="{{ $row->phone }}" required></label><label>Email<input type="email" name="email" value="{{ $row->email }}"></label><label>Relationship<input name="relationship" value="{{ $row->relationship }}"></label><label>Learner<select name="student_id"><option value="">No linked learner</option>@foreach($students as $student)<option value="{{ $student->id }}" {{ $student->parent_id==$row->id?'selected':'' }}>{{ $student->name }} — {{ $student->admission_number }}</option>@endforeach</select></label>
 @elseif($section==='classes')<label>Class name<input name="name" value="{{ $row->name }}" required></label><label>Stream<input name="stream" value="{{ $row->stream }}"></label><label>Academic year<input type="number" name="academic_year" value="{{ $row->academic_year }}"></label><label>Class teacher<select name="class_teacher_id"><option value="">Unassigned</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}" {{ $row->class_teacher_id==$teacher->id?'selected':'' }}>{{ $teacher->name }}</option>@endforeach</select></label>
 @elseif($section==='teachers')<label>Full name<input name="name" value="{{ $row->name }}" required></label><label>Email<input type="email" name="email" value="{{ $row->email }}"></label><label>Phone<input name="phone" value="{{ $row->phone }}"></label><label>Employee number<input name="employee_number" value="{{ $row->employee_number }}"></label>
@@ -78,6 +103,7 @@
 @elseif($section==='announcements')<label>Announcement title<input name="title" value="{{ $row->title }}" required></label><label>Message<textarea name="body" required>{{ $row->body }}</textarea></label><label class="edit-check"><input type="checkbox" name="published" value="1" {{ $row->published?'checked':'' }}> Publish immediately</label>
 @elseif($section==='events')<label>Event title<input name="title" value="{{ $row->title }}" required></label><label>Event date<input type="date" name="event_date" value="{{ $row->event_date }}" required></label><label>Location<input name="location" value="{{ $row->location }}"></label><label>Description<textarea name="description">{{ $row->description }}</textarea></label>@endif
 <button class="btn-primary" type="submit">Save changes</button></form></div></details>@endif
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='results' && !empty($row->student_id) && !empty($row->exam_id))<a class="action-link" href="{{ route('admin.report-cards.show',['student'=>$row->student_id,'exam'=>$row->exam_id]) }}">Report card</a>@endif
 <form method="POST" action="{{ route('admin.operations.destroy',$row->id) }}" class="archive-form" onsubmit="return confirm('Delete this record from active school records? For data protection, the record will be safely archived rather than permanently erased. Academic, attendance and financial history will be retained.');">@csrf @method('DELETE')<input type="hidden" name="section" value="{{ $section }}"><button type="submit" class="delete-btn" title="Remove from active records">Delete</button></form>
 </td></tr>
@@ -85,6 +111,7 @@
 </tbody></table></div>@if(method_exists($records,'links'))<div class="pagination-wrap">{{ $records->links() }}</div>@endif</section>
 </div>
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section==='results')<script>(function(){const s=document.getElementById('assessment-status'),m=document.getElementById('marks'),f=document.getElementById('marks-field');if(!s||!m)return;function sync(){const x=s.value==='missed';m.required=!x;m.disabled=x;if(f)f.classList.toggle('disabled',x);if(x)m.value='';}s.addEventListener('change',sync);sync();}());</script>@endif
 
 <style>
