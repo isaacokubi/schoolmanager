@@ -5,9 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\CbcReportCardService;
 use Illuminate\Support\Facades\DB;
+/**
+ * Controller for the dashboard workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class DashboardController extends Controller
 {
+    /**
+     * Prepare the data needed by the page, apply any supported filters, and return the rendered listing or dashboard.
+     * Any request filters are read from the Request object and applied before data is returned.
+     */
     public function index(CbcReportCardService $cbc)
     {
         $stats=['students'=>DB::table('students')->count(),'applications'=>DB::table('admission_applications')->count(),'payments'=>DB::table('payments')->count(),'parents'=>$this->countTable('parents'),'teachers'=>$this->countTable('teachers'),'classes'=>$this->countTable('school_classes'),'attendance_today'=>$this->countWhere('attendance','attendance_date',now()->toDateString()),'published_announcements'=>$this->countWhere('announcements','published',1)];
@@ -21,11 +32,22 @@ class DashboardController extends Controller
         $upcomingEvents=$this->safeQuery('events',function($q){return $q->whereDate('event_date','>=',now()->toDateString())->orderBy('event_date')->limit(5)->get();});
         $role=strtolower((string)(auth()->user()->role ?? 'admin'));
         if(in_array($role,['manager','operations_manager','operations-manager'],true)){
+            // Render the Blade template and pass it the data prepared by this controller.
             return view('admin.manager-dashboard',compact('stats','upcomingEvents','cbcRecentResults'));
         }
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.dashboard',compact('stats','recentApplications','recentPayments','upcomingEvents','cbcRecentResults'));
     }
+    /**
+     * Count rows in the requested table while handling database errors according to this helper's fallback behavior.
+     */
     private function countTable($table){try{return DB::table($table)->count();}catch(\Throwable $e){return 0;}}
+    /**
+     * Count rows matching a specific column/value condition while handling database errors.
+     */
     private function countWhere($table,$column,$value){try{return DB::table($table)->where($column,$value)->count();}catch(\Throwable $e){return 0;}}
+    /**
+     * Run the supplied query callback and return a safe fallback if the query fails.
+     */
     private function safeQuery($table,$callback){try{return $callback(DB::table($table));}catch(\Throwable $e){return collect();}}
 }
