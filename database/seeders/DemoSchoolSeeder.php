@@ -6,13 +6,21 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+/**
+ * Defines the demo school seeder routine.
+ * This file contains database migration or development-seeding logic used by the application.
+ */
 
 class DemoSchoolSeeder extends Seeder
 {
+    /**
+     * Execute the seeder's data-preparation task and create the records needed by the configured demo or initial environment.
+     */
     public function run()
     {
         $now = Carbon::now();
 
+        // Start a query against the named table; subsequent calls specify the filter or operation.
         DB::table('users')->updateOrInsert(['email' => 'admin@schoolmanager.test'], [
             'name' => 'School Administrator',
             'password' => Hash::make('Admin@12345'),
@@ -20,6 +28,7 @@ class DemoSchoolSeeder extends Seeder
             'updated_at' => $now,
             'created_at' => $now,
         ]);
+        // Start a query against the named table; subsequent calls specify the filter or operation.
         DB::table('users')->updateOrInsert(['email' => 'manager@schoolmanager.test'], [
             'name' => 'Operations Manager',
             'password' => Hash::make('Manager@12345'),
@@ -45,6 +54,7 @@ class DemoSchoolSeeder extends Seeder
             'values' => 'Integrity, respect, excellence, responsibility, teamwork and lifelong learning.',
         ];
         foreach ($settings as $key => $value) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('settings')->updateOrInsert(['key' => $key], [
                 'value' => $value,
                 'updated_at' => $now,
@@ -55,6 +65,7 @@ class DemoSchoolSeeder extends Seeder
         $classes = [];
         foreach (range(1, 8) as $grade) {
             $name = 'Grade ' . $grade;
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('school_classes')->updateOrInsert(
                 ['name' => $name, 'academic_year' => 2026],
                 ['stream' => 'A', 'updated_at' => $now, 'created_at' => $now]
@@ -76,6 +87,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         $parents = [];
         foreach ($parentRows as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('parents')->updateOrInsert(['phone' => $row['phone']], $row + ['updated_at' => $now, 'created_at' => $now]);
             $parents[$row['phone']] = DB::table('parents')->where('phone', $row['phone'])->value('id');
         }
@@ -91,6 +103,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         foreach ($studentRows as $index => $row) {
             $admission = sprintf('MA2026-%03d', $index + 1);
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('students')->updateOrInsert(['admission_number' => $admission], [
                 'parent_id' => $parents[$row[2]],
                 'class_id' => $classes[$row[1]],
@@ -112,6 +125,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         $teachers = [];
         foreach ($teacherRows as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('teachers')->updateOrInsert(['employee_number' => $row[3]], [
                 'name' => $row[0], 'email' => $row[1], 'phone' => $row[2], 'updated_at' => $now, 'created_at' => $now,
             ]);
@@ -124,6 +138,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         $subjects = [];
         foreach ($subjectRows as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('subjects')->updateOrInsert(['code' => $row[1]], [
                 'name' => $row[0], 'teacher_id' => $teachers[$row[2]], 'updated_at' => $now, 'created_at' => $now,
             ]);
@@ -139,6 +154,7 @@ class DemoSchoolSeeder extends Seeder
             ['Sharon Atieno', '2013-06-22', 'Mercy Atieno', '0733002006', 'mercy.atieno@example.test', 'Grade 7', 'pending'],
         ];
         foreach ($admissionRows as $i => $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('admission_applications')->updateOrInsert(
                 ['student_name' => $row[0], 'parent_phone' => $row[3]],
                 ['date_of_birth' => $row[1], 'parent_name' => $row[2], 'parent_email' => $row[4], 'requested_class' => $row[5], 'message' => 'Demo application for system testing.', 'status' => $row[6], 'created_at' => $now->copy()->subDays(5 - $i), 'updated_at' => $now]
@@ -155,6 +171,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         foreach ($paymentRows as $row) {
             $studentId = $students[$row[0]];
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('payments')->updateOrInsert(
                 ['account_reference' => $row[0], 'payment_type' => $row[2], 'amount' => $row[1]],
                 [
@@ -174,6 +191,7 @@ class DemoSchoolSeeder extends Seeder
             for ($day = 0; $day < 7; $day++) {
                 $date = $now->copy()->subDays($day + 1)->toDateString();
                 $status = $statuses[($studentIndex + $day) % count($statuses)];
+                // Start a query against the named table; subsequent calls specify the filter or operation.
                 DB::table('attendance')->updateOrInsert(
                     ['student_id' => $studentId, 'attendance_date' => $date],
                     ['status' => $status, 'notes' => $status === 'late' ? 'Arrived after morning assembly.' : ($status === 'excused' ? 'Approved absence.' : null), 'updated_at' => $now, 'created_at' => $now]
@@ -187,6 +205,7 @@ class DemoSchoolSeeder extends Seeder
         ];
         $exams = [];
         foreach ($examRows as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('exams')->updateOrInsert(['name' => $row[0], 'academic_year' => 2026], [
                 'term' => $row[1], 'start_date' => $row[2], 'end_date' => $row[3], 'updated_at' => $now, 'created_at' => $now,
             ]);
@@ -198,6 +217,7 @@ class DemoSchoolSeeder extends Seeder
                 foreach ($subjectIds as $subjectIndex => $subjectId) {
                     $marks = 55 + (($studentIndex * 7 + $subjectIndex * 5 + $examIndex * 8) % 43);
                     $grade = $marks >= 80 ? 'A' : ($marks >= 70 ? 'B' : ($marks >= 60 ? 'C' : ($marks >= 50 ? 'D' : 'E')));
+                    // Start a query against the named table; subsequent calls specify the filter or operation.
                     DB::table('results')->updateOrInsert(
                         ['exam_id' => $examId, 'student_id' => $studentId, 'subject_id' => $subjectId],
                         ['marks' => $marks, 'grade' => $grade, 'remarks' => $marks >= 80 ? 'Excellent performance.' : ($marks >= 60 ? 'Good progress.' : 'Needs additional support.'), 'updated_at' => $now, 'created_at' => $now]
@@ -213,6 +233,7 @@ class DemoSchoolSeeder extends Seeder
             ['Staff Development Workshop', 'A professional development workshop will be held for all teaching staff.', false, 1],
         ];
         foreach ($announcements as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('announcements')->updateOrInsert(['title' => $row[0]], [
                 'body' => $row[1], 'published' => $row[2], 'published_at' => $row[2] ? $now->copy()->subDays($row[3]) : null,
                 'updated_at' => $now, 'created_at' => $now->copy()->subDays($row[3]),
@@ -227,6 +248,7 @@ class DemoSchoolSeeder extends Seeder
             ['Prize Giving Day', $now->copy()->addDays(35)->toDateString(), 'Main Hall', 'Celebration of learner achievement.'],
         ];
         foreach ($events as $row) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('events')->updateOrInsert(['title' => $row[0], 'event_date' => $row[1]], [
                 'location' => $row[2], 'description' => $row[3], 'updated_at' => $now, 'created_at' => $now,
             ]);
