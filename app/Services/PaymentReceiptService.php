@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
+/**
+ * Defines the payment receipt service component of the school-management application.
+ * This file contains service logic or database schema changes used by the application.
+ */
 
 class PaymentReceiptService
 {
