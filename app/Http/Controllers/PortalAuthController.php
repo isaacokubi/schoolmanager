@@ -7,14 +7,28 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+/**
+ * Controller for the portal auth workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * services, and returns views or HTTP responses. The method comments explain
+ * the purpose of each action and its role in the workflow.
+ */
 
 class PortalAuthController extends Controller
 {
+    /**
+     * Prepare and display the page associated with this action.
+     */
     public function showRegister()
     {
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('auth.register');
     }
 
+    /**
+     * Helper method for PortalAuthController.php; it performs the register step and returns or updates data used by its caller.
+     */
     public function register(Request $request)
     {
         $portalType = $request->input('portal_type');
@@ -110,6 +124,7 @@ class PortalAuthController extends Controller
         Auth::loginUsingId($userId);
         $request->session()->regenerate();
 
+        // Redirect the browser to the next route and attach a one-time status message if supplied.
         return redirect()->route('portal.dashboard');
     }
 }
