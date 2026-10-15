@@ -5,8 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to update the schema for the feature named in this file.
+     */
     public function up(): void
     {
+        // Update the structure of an existing table while preserving its records.
         Schema::table('payments', function (Blueprint $table) {
             if (!Schema::hasColumn('payments', 'user_id')) {
                 $table->foreignId('user_id')->nullable()->after('student_id')->constrained('users')->nullOnDelete();
@@ -28,14 +32,19 @@ return new class extends Migration {
             }
         });
 
+        // Update the structure of an existing table while preserving its records.
         Schema::table('payments', function (Blueprint $table) {
             $table->index(['student_id', 'status', 'created_at']);
             $table->index(['checkout_request_id', 'status']);
         });
     }
 
+    /**
+     * Reverse the schema changes made by this migration.
+     */
     public function down(): void
     {
+        // Update the structure of an existing table while preserving its records.
         Schema::table('payments', function (Blueprint $table) {
             $table->dropIndex(['student_id', 'status', 'created_at']);
             $table->dropIndex(['checkout_request_id', 'status']);
