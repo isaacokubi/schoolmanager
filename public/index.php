@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: index configuration/bootstrap file.
+// This file configures a Laravel service or prepares the framework before handling requests.
+// Keep environment-specific credentials and endpoints in environment variables.
+
 define('LARAVEL_START', microtime(true));
 
 // The public website historically renders media as /storage/{path}.
