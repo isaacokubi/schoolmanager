@@ -1,5 +1,14 @@
+{{--
+    PRESENTATION NOTE: email template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
+{{-- Extend the shared layout to reuse the site's common page structure. --}}
 @extends('layouts.app')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title','Account Email | School Manager')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('body')
 <div style="min-height:100vh;padding:50px 20px;background:linear-gradient(135deg,#eef5ff,#f8fbff)">
 <div class="container" style="max-width:760px">
@@ -8,13 +17,17 @@
 <p class="eyebrow">Account security</p>
 <h1 style="margin:4px 0 8px">Login &amp; password recovery email</h1>
 <p class="muted">Use one verified email address for your account login and password recovery. This works consistently for administrators, managers, teachers, parents, sponsors and pupils.</p>
+{{-- Show the following content only when the condition is true. --}}
 @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
+{{-- Show the following content only when the condition is true. --}}
 @if($errors->any())<div class="errors"><ul style="margin:0;padding-left:20px">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <div class="notice" style="margin:18px 0">
 <strong>Current email</strong><br>
 <span>{{ $user->email ?: 'No email configured' }}</span>
 </div>
+{{-- This form submits user input to the route and method declared in its attributes. --}}
 <form method="POST" action="{{ route('account.email.update') }}" class="form-grid">
+{{-- Add Laravel's CSRF protection token to this form. --}}
 @csrf @method('PUT')
 <div class="field full">
 <label for="email">New email address</label>
