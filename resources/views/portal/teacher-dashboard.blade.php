@@ -1,5 +1,15 @@
+{{--
+    PRESENTATION NOTE: teacher dashboard template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
+{{-- Extend the shared layout to keep navigation and page structure consistent. --}}
 @extends('layouts.app')
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('title', 'Teacher Dashboard | '.config('app.name'))
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('body')
 @php
     $today = now()->format('l, d M Y');
@@ -28,9 +38,11 @@
     </header>
 
     <main class="teacher-main">
+        {{-- Render this section only when the condition is satisfied. --}}
         @if(session('success'))
             <div class="notice success"><strong>Saved successfully</strong><span>{{ session('success') }}</span></div>
         @endif
+        {{-- Render this section only when the condition is satisfied. --}}
         @if($errors->any())
             <div class="notice danger"><strong>Action needs attention</strong><span>{{ $errors->first() }}</span></div>
         @endif
@@ -52,6 +64,7 @@
             </div>
         </section>
 
+        {{-- Render this section only when the condition is satisfied. --}}
         @if(!$profile || !$profile->active)
             <div class="alert"><strong>Portal access requires an active profile.</strong><span>Please contact the school office if this account should have access.</span></div>
         @endif
@@ -70,6 +83,7 @@
                 <a class="action" href="{{ route('portal.teacher-attendance') }}"><span class="icon">◷</span><div><strong>Mark attendance</strong><small>Capture present, absent, late or excused status with notes.</small></div><span>→</span></a>
                 <a class="action" href="{{ route('portal.teacher-learners') }}"><span class="icon">◎</span><div><strong>My learner roster</strong><small>Search learners and review attendance and academic performance.</small></div><span>→</span></a>
                 <a class="action" href="{{ route('portal.signature.index') }}"><span class="icon">✎</span><div><strong>Manage signature</strong><small>Maintain the signature used for official school report cards.</small></div><span>→</span></a>
+                {{-- Render this section only when the condition is satisfied. --}}
                 @if($recentResults->isNotEmpty())
                     <a class="action" href="{{ route('portal.report-cards.show', [$recentResults->first()->student_id, $recentResults->first()->exam_id]) }}"><span class="icon">▣</span><div><strong>View report card</strong><small>Open the latest available learner report card.</small></div><span>→</span></a>
                 @else
@@ -91,6 +105,7 @@
             <article class="card">
                 <div class="card-heading"><div><span class="eyebrow">Current allocation</span><h2>Learning areas</h2><p>Only active areas assigned to your account are shown.</p></div><span class="pill">{{ $subjectCount }} assigned</span></div>
                 <div class="subject-list">
+                    {{-- Iterate through the collection and render the empty state when it has no items. --}}
                     @forelse($subjects as $subject)
                         <a href="{{ route('portal.teacher-assessments', ['subject_id' => $subject->id]) }}" class="subject"><span class="subject-dot"></span><span><strong>{{ $subject->name }}</strong><small>{{ $subject->code ?: 'CBC learning area' }}</small></span><b>Assess →</b></a>
                     @empty
@@ -123,6 +138,7 @@
             <article class="card">
                 <div class="card-heading"><div><span class="eyebrow">Performance overview</span><h2>Learning-area performance</h2><p>Average marks from active CBC records.</p></div></div>
                 <div class="performance-list">
+                    {{-- Iterate through the collection and render the empty state when it has no items. --}}
                     @forelse($teacherPerformance as $performance)
                         @php $avg = $performance->average_marks === null ? null : round((float)$performance->average_marks, 1); $bar = $avg === null ? 0 : min(100, max(0, $avg)); @endphp
                         <div class="performance"><div class="performance-top"><strong>{{ $performance->name }}</strong><span>{{ $avg === null ? 'No marks' : $avg.'/100' }}</span></div><div class="bar"><i style="width:{{ $bar }}%"></i></div><small>{{ number_format((int)$performance->learner_count) }} learners · {{ number_format((int)$performance->result_count) }} records</small></div>
@@ -133,6 +149,7 @@
             </article>
             <article class="card">
                 <div class="card-heading"><div><span class="eyebrow">Assessment periods</span><h2>Recent exams</h2><p>Exam activity represented in your learning areas.</p></div><a class="link" href="{{ route('portal.teacher-assessments') }}">Manage →</a></div>
+                {{-- Iterate through the collection and render the empty state when it has no items. --}}
                 @forelse($teacherExams as $exam)
                     <div class="list-row"><div><strong>{{ $exam->name }}</strong><small>{{ $exam->term }} · {{ $exam->academic_year }}</small></div><span>{{ number_format((int)$exam->result_count) }} records</span></div>
                 @empty
@@ -143,8 +160,10 @@
 
         <section class="card results-card">
             <div class="card-heading"><div><span class="eyebrow">CBC academic activity</span><h2>Recent achievement records</h2><p>Teacher-entered remarks are shown separately from the CBC achievement level. Missed assessments are not treated as zero.</p></div><a class="btn small" href="{{ route('portal.teacher-assessments') }}">View all assessments</a></div>
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($recentResults->isNotEmpty())
                 <div class="table-wrap"><table><thead><tr><th>Learner</th><th>Learning area</th><th>Assessment</th><th>Marks</th><th>Achievement</th><th>Points</th><th>Teacher remark</th><th>Report card</th></tr></thead><tbody>
+                {{-- Repeat the following markup for each item in the collection. --}}
                 @foreach($recentResults as $result)
                     <tr><td><strong>{{ $result->student_name }}</strong><small>{{ $result->admission_number }}</small></td><td><strong>{{ $result->subject_name }}</strong><small>{{ $result->subject_code ?: 'CBC learning area' }}</small></td><td><strong>{{ $result->exam_name }}</strong><small>{{ trim(($result->exam_term ?? '').' '.($result->academic_year ?? '')) }}</small></td><td>{{ $result->marks === null ? '—' : number_format((float)$result->marks, 1).'/100' }}</td><td><span class="achievement">{{ $result->cbc_code }}</span><small>{{ $result->cbc_label }}</small></td><td>{{ $result->cbc_points === null ? '—' : $result->cbc_points }}</td><td class="remark">{{ trim((string)($result->remarks ?? '')) ?: 'No remark recorded' }}</td><td><div class="table-actions"><a class="btn small" href="{{ route('portal.report-cards.show',[$result->student_id,$result->exam_id]) }}">Report card</a><a class="btn secondary small" href="{{ route('portal.report-cards.download',[$result->student_id,$result->exam_id]) }}">PDF</a></div></td></tr>
                 @endforeach
