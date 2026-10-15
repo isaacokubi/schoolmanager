@@ -1,6 +1,17 @@
+{{--
+    PRESENTATION NOTE: index template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
+{{-- Extend the shared layout to keep navigation and page structure consistent. --}}
 @extends('layouts.admin')
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('title','Reports | School Manager')
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('page_title','Reports')
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('admin_content')
 <div class="reports-shell">
     <div class="admin-page-head report-hero">
@@ -13,12 +24,14 @@
     </div>
 
     <nav class="report-tabs" aria-label="School reports">
+        {{-- Repeat the following markup for each item in the collection. --}}
         @foreach(['overview'=>'Executive Overview','students'=>'Students','fees'=>'Fees & Payments','attendance'=>'Attendance','results'=>'CBC Results','admissions'=>'Admissions'] as $key=>$label)
             <a class="{{ $report === $key ? 'active' : '' }}" href="{{ route('admin.reports',['report'=>$key]) }}">{{ $label }}</a>
         @endforeach
     </nav>
 
     <div class="stat-grid report-stats">
+        {{-- Repeat the following markup for each item in the collection. --}}
         @foreach([
             ['Students',$studentCount,'Current learner register','👥'],
             ['Parents',$parentCount,'Registered guardians','◉'],
@@ -29,6 +42,7 @@
         @endforeach
     </div>
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'overview')
         <section class="executive-grid">
             <article class="card executive-card finance-card">
@@ -44,6 +58,7 @@
             <article class="card executive-card attendance-card">
                 <div class="section-head"><div><span class="page-kicker">Learner participation</span><h2>Attendance snapshot</h2><p>Current attendance records grouped by status.</p></div><span class="insight-icon">✓</span></div>
                 <div class="status-grid">
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach(['present'=>'Present','absent'=>'Absent','late'=>'Late','excused'=>'Excused'] as $key=>$label)<div><span>{{ $label }}</span><strong>{{ number_format($attendanceSummary[$key] ?? 0) }}</strong></div>@endforeach
                 </div>
                 <a class="executive-link" href="{{ route('admin.reports',['report'=>'attendance']) }}">Open attendance report →</a>
@@ -51,6 +66,7 @@
             <article class="card executive-card admissions-card">
                 <div class="section-head"><div><span class="page-kicker">Enrolment pipeline</span><h2>Admissions snapshot</h2><p>Application activity by current workflow status.</p></div><span class="insight-icon">+</span></div>
                 <div class="status-grid admissions-status">
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach(['approved'=>'Approved','pending'=>'Pending','rejected'=>'Rejected'] as $key=>$label)<div><span>{{ $label }}</span><strong>{{ number_format($applicationSummary[$key] ?? 0) }}</strong></div>@endforeach
                 </div>
                 <a class="executive-link" href="{{ route('admin.reports',['report'=>'admissions']) }}">Open admissions report →</a>
@@ -60,6 +76,7 @@
         <section class="card report-section executive-achievement">
             <div class="section-head"><div><span class="page-kicker">Competency-Based Assessment</span><h2>Achievement distribution</h2><p>School-wide CBC achievement levels across recorded numeric results.</p></div><a class="executive-link" href="{{ route('admin.reports',['report'=>'results']) }}">View all results →</a></div>
             <div class="cbc-summary">
+                {{-- Repeat the following markup for each item in the collection. --}}
                 @foreach(['EE1'=>'Exceeding 1','EE2'=>'Exceeding 2','ME1'=>'Meeting 1','ME2'=>'Meeting 2','AE1'=>'Approaching 1','AE2'=>'Approaching 2','BE1'=>'Below 1','BE2'=>'Below 2'] as $code=>$label)
                     <div><b>{{ $code }}</b><strong>{{ $cbcLevelSummary[$code] ?? 0 }}</strong><small>{{ $label }}</small></div>
                 @endforeach
@@ -72,22 +89,27 @@
         </div>
     @endif
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'students')
         <section class="card report-section"><div class="section-head"><div><span class="page-kicker">Learner register</span><h2>Students</h2><p>Current learner register and fee balances.</p></div><span class="record-count">{{ number_format($students->total()) }} records</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Admission</th><th>Name</th><th>Class</th><th>Parent / guardian</th><th>Balance</th></tr></thead><tbody>@forelse($students as $student)<tr><td>{{ $student->admission_number }}</td><td><strong>{{ $student->name }}</strong></td><td>{{ $student->class_label ? $student->class_label . ($student->stream ? ' - '.$student->stream : '') : ($student->class_name ?: '—') }}</td><td>{{ $student->parent_label ?: '—' }}</td><td>KES {{ number_format((float)($student->fee_balance ?? 0),2) }}</td></tr>@empty<tr><td colspan="5"><div class="empty-state">No students found.</div></td></tr>@endforelse</tbody></table></div>@include('admin.reports.partials.pagination',['paginator'=>$students,'label'=>'students'])</section>
     @endif
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'fees')
         <section class="card report-section"><div class="section-head"><div><span class="page-kicker">Financial reporting</span><h2>Fees & Payments</h2><p>Payment activity and M-Pesa references, with all records paginated.</p></div><span class="record-count">{{ number_format($payments->total()) }} payments</span></div><div class="report-finance-strip"><span>Successful/completed <strong>KES {{ number_format($paymentTotal,2) }}</strong></span><span>Outstanding <strong>KES {{ number_format($outstanding,2) }}</strong></span></div><div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Student</th><th>Amount</th><th>Status</th><th>M-Pesa receipt</th></tr></thead><tbody>@forelse($payments as $payment)<tr><td>{{ $payment->created_at }}</td><td>{{ $payment->student_name ?: $payment->student_id }}</td><td><strong>KES {{ number_format((float)($payment->{$paymentAmountColumn} ?? 0),2) }}</strong></td><td><span class="status-pill status-{{ strtolower($payment->status ?? 'unknown') }}">{{ ucfirst($payment->status ?? '—') }}</span></td><td>{{ $payment->mpesa_receipt ?? '—' }}</td></tr>@empty<tr><td colspan="5"><div class="empty-state">No payments found.</div></td></tr>@endforelse</tbody></table></div>@include('admin.reports.partials.pagination',['paginator'=>$payments,'label'=>'payments'])</section>
     @endif
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'attendance')
         <section class="card report-section"><div class="section-head"><div><span class="page-kicker">Learner participation</span><h2>Attendance</h2><p>Daily attendance records with status breakdown.</p></div><span class="record-count">{{ number_format($attendance->total()) }} records</span></div><div class="status-grid report-statuses">@foreach(['present'=>'Present','absent'=>'Absent','late'=>'Late','excused'=>'Excused'] as $key=>$label)<div><span>{{ $label }}</span><strong>{{ number_format($attendanceSummary[$key] ?? 0) }}</strong></div>@endforeach</div><div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Student</th><th>Status</th></tr></thead><tbody>@forelse($attendance as $row)<tr><td>{{ $row->attendance_date }}</td><td>{{ $row->student_name }}</td><td><span class="status-pill status-{{ strtolower($row->status) }}">{{ ucfirst($row->status) }}</span></td></tr>@empty<tr><td colspan="3"><div class="empty-state">No attendance records found.</div></td></tr>@endforelse</tbody></table></div>@include('admin.reports.partials.pagination',['paginator'=>$attendance,'label'=>'attendance records'])</section>
     @endif
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'results')
         <section class="card report-section cbc-report"><div class="section-head"><div><span class="page-kicker">Competency-Based Assessment</span><h2>CBC Academic Achievement Report</h2><p>Learning areas are reported using achievement levels, points and teacher/assessor evidence. A missed assessment remains distinct from a zero score.</p></div><span class="record-count">{{ number_format($results->total()) }} results</span></div><div class="result-highlight"><div><span>Average score</span><strong>{{ number_format($averageMarks,1) }}%</strong></div><div><span>Missed assessments</span><strong>{{ number_format($missedAssessmentCount) }}</strong></div></div><div class="cbc-summary">@foreach(['EE1'=>'Exceeding 1','EE2'=>'Exceeding 2','ME1'=>'Meeting 1','ME2'=>'Meeting 2','AE1'=>'Approaching 1','AE2'=>'Approaching 2','BE1'=>'Below 1','BE2'=>'Below 2'] as $code=>$label)<div><b>{{ $code }}</b><strong>{{ $cbcLevelSummary[$code]??0 }}</strong><small>{{ $label }}</small></div>@endforeach</div><div class="table-wrap"><table class="table"><thead><tr><th>Assessment</th><th>Learner</th><th>Learning area</th><th>Score</th><th>Achievement level</th><th>Points</th><th>Evidence / status</th></tr></thead><tbody>@forelse($results as $row)@php $missed=$row->assessment_status==='missed'; $code=$missed?'MISSED':($row->achievement_level?:'—'); $label=$missed?'Missed Assessment':$code; @endphp<tr><td>{{ $row->exam_name ?: 'Assessment unavailable' }}</td><td><strong>{{ $row->student_name ?: 'Learner unavailable' }}</strong><small>{{ $row->admission_number ?: 'No admission number' }}</small></td><td>{{ $row->subject_name ?: 'Learning area unavailable' }}</td><td><strong>{{ $row->marks===null?'—':number_format((float)$row->marks,1).'/100' }}</strong></td><td><span class="achievement achievement-{{ strtolower($code) }}">{{ $code }}</span><small>{{ $label }}</small></td><td>{{ $row->achievement_points===null?'—':$row->achievement_points }}</td><td>{{ $missed?'Missed assessment — follow-up required.':'Achievement level calculated from score.' }}</td></tr>@empty<tr><td colspan="7"><div class="empty-state">No CBC results found.</div></td></tr>@endforelse</tbody></table></div>@include('admin.reports.partials.pagination',['paginator'=>$results,'label'=>'CBC results'])</section>
     @endif
 
+    {{-- Render this section only when the condition is satisfied. --}}
     @if($report === 'admissions')
         <section class="card report-section"><div class="section-head"><div><span class="page-kicker">Enrolment pipeline</span><h2>Admissions</h2><p>Application workflow and requested classes.</p></div><span class="record-count">{{ number_format($applications->total()) }} applications</span></div><div class="status-grid report-statuses admissions-status">@foreach(['approved'=>'Approved','pending'=>'Pending','rejected'=>'Rejected'] as $key=>$label)<div><span>{{ $label }}</span><strong>{{ number_format($applicationSummary[$key] ?? 0) }}</strong></div>@endforeach</div><div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Student</th><th>Requested class</th><th>Status</th></tr></thead><tbody>@forelse($applications as $application)<tr><td>{{ $application->created_at }}</td><td><strong>{{ $application->student_name }}</strong></td><td>{{ $application->requested_class }}</td><td><span class="status-pill status-{{ strtolower($application->status) }}">{{ ucfirst($application->status) }}</span></td></tr>@empty<tr><td colspan="4"><div class="empty-state">No applications found.</div></td></tr>@endforelse</tbody></table></div>@include('admin.reports.partials.pagination',['paginator'=>$applications,'label'=>'admission applications'])</section>
     @endif
