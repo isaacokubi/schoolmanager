@@ -7,14 +7,28 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+/**
+ * Controller for the password reset workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * services, and returns views or HTTP responses. The method comments explain
+ * the purpose of each action and its role in the workflow.
+ */
 
 class PasswordResetController extends Controller
 {
+    /**
+     * Prepare and display the page associated with this action.
+     */
     public function showLinkRequestForm()
     {
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('auth.forgot-password');
     }
 
+    /**
+     * Perform the required notification or email step using the configured application service.
+     */
     public function sendResetLinkEmail(Request $request)
     {
         // Reject malformed addresses before asking Laravel to send a reset link.
@@ -41,14 +55,21 @@ class PasswordResetController extends Controller
             ->withInput(['email' => $email]);
     }
 
+    /**
+     * Prepare and display the page associated with this action.
+     */
     public function showResetForm(Request $request, $token)
     {
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('auth.reset-password', [
             'token' => $token,
             'email' => strtolower(trim($request->query('email', ''))),
         ]);
     }
 
+    /**
+     * Verify the reset request and update the password only when the reset token and validation rules are accepted.
+     */
     public function reset(Request $request)
     {
         // Validate the emailed token and require the new password fields to match.
@@ -82,6 +103,7 @@ class PasswordResetController extends Controller
         );
 
         if ($status === Password::PASSWORD_RESET) {
+            // Redirect the browser to the next route and attach a one-time status message if supplied.
             return redirect()
                 ->route('login')
                 ->with('status', __($status));
