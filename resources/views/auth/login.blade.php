@@ -1,5 +1,14 @@
+{{--
+    PRESENTATION NOTE: login template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
+{{-- Extend the shared layout to reuse the site's common page structure. --}}
 @extends('layouts.app')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title', 'Administrator Sign In | School Manager')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('body')
 {{-- Keep this page focused on secure administrator access; public registration remains disabled. --}}
 <style>
@@ -96,14 +105,18 @@
             <h2 class="login-heading" id="login-heading">Welcome back</h2>
             <p class="login-subheading">Sign in with your administrator account to continue.</p>
 
+            {{-- Show the following content only when the condition is true. --}}
             @if(session('status'))
                 <div class="login-alert success" role="status">{{ session('status') }}</div>
             @endif
+            {{-- Show the following content only when the condition is true. --}}
             @if($errors->any())
                 <div class="login-alert error" role="alert">{{ $errors->first() }}</div>
             @endif
 
+            {{-- This form submits user input to the route and method declared in its attributes. --}}
             <form class="login-form" method="post" action="{{ route('login.submit') }}">
+                {{-- Add Laravel's CSRF protection token to this form. --}}
                 @csrf
                 <div class="login-field">
                     <label for="login-email">Email address</label>
