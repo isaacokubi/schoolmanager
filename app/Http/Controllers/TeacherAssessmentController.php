@@ -5,9 +5,18 @@ namespace App\Http\Controllers;
 use App\Services\CbcReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Defines the teacher assessment controller component of the application.
+ *
+ * This class coordinates its assigned HTTP, middleware, or framework lifecycle
+ * responsibility. The comments below describe the purpose of each method.
+ */
 
 class TeacherAssessmentController extends Controller
 {
+    /**
+     * Prepare the data needed by the page and return the appropriate view.
+     */
     public function index(Request $request, CbcReportCardService $cbc)
     {
         $teacher = $this->teacher($request);
@@ -55,6 +64,9 @@ class TeacherAssessmentController extends Controller
         return view('portal.teacher-assessments', compact('teacher', 'subjects', 'students', 'exams', 'results'));
     }
 
+    /**
+     * Helper method store in TeacherAssessmentController.php; it performs the step required by this component.
+     */
     public function store(Request $request, CbcReportCardService $cbc)
     {
         $teacher = $this->teacher($request);
@@ -91,6 +103,9 @@ class TeacherAssessmentController extends Controller
         return redirect()->route('portal.teacher-assessments')->with('success', $data['assessment_status'] === 'missed' ? 'Missed assessment recorded. The system will not treat it as zero.' : 'CBC assessment saved. Achievement level and points were assigned automatically from the score.');
     }
 
+    /**
+     * Helper method teacher in TeacherAssessmentController.php; it performs the step required by this component.
+     */
     private function teacher(Request $request)
     {
         $profile = DB::table('portal_profiles')->where('user_id', $request->user()->id)->where('portal_type', 'teacher')->where('active', true)->first();
