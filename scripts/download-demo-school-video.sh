@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# Download/setup helper for the demo-school media asset used by the application.
+# Review the target path and URL before running this script in another environment.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
