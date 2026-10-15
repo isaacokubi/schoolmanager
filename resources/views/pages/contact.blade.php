@@ -1,7 +1,16 @@
+{{--
+    PRESENTATION NOTE: contact layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 @extends('layouts.public')
+{{-- Define a named content section for the parent layout to render. --}}
 @section('title','Contact | '.$settings['school_name'])
+{{-- Define a named content section for the parent layout to render. --}}
 @section('content')
 <section class="page-hero"><div class="container"><p class="eyebrow">Get in touch</p><h1>Contact {{ $settings['school_name'] }}</h1><p>We are here to help families, prospective learners and members of our school community.</p></div></section>
 <section class="section"><div class="container"><div class="split"><div><p class="eyebrow">School office</p><h2>We would be happy to hear from you.</h2><div class="grid" style="margin-top:22px"><article class="card"><div class="icon">P</div><h3>Phone</h3><p><a href="tel:{{ $settings['school_phone'] }}">{{ $settings['school_phone'] ?: 'Not configured' }}</a></p></article><article class="card"><div class="icon">@</div><h3>Email</h3><p><a href="mailto:{{ $settings['school_email'] }}">{{ $settings['school_email'] ?: 'Not configured' }}</a></p></article></div></div><aside class="card"><p class="eyebrow">Visit us</p><h3>School address</h3><p class="muted">{{ $settings['school_address'] ?: 'Address details will be published by the school administration.' }}</p><hr style="border:0;border-top:1px solid #e4eaf2;margin:22px 0"><p class="muted">For admissions enquiries, please use our secure online application form.</p><a class="btn" href="{{ route('admissions') }}">Apply for admission</a></aside></div></div></section>
+{{-- Render the following section only when the condition is satisfied. --}}
 @if($events->count())<section class="section alt"><div class="container"><div class="section-head"><div><p class="eyebrow">School calendar</p><h2>Upcoming events</h2><p>Important activities and dates from the school calendar.</p></div></div><div class="grid">@foreach($events as $event)<article class="card"><span class="badge">{{ \Carbon\Carbon::parse($event->event_date)->format('d M Y') }}</span><h3 style="margin-top:14px">{{ $event->title }}</h3>@if($event->location)<p><strong>Location:</strong> {{ $event->location }}</p>@endif<p class="muted">{{ $event->description }}</p></article>@endforeach</div></div></section>@endif
 @endsection
