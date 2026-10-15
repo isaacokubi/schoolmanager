@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- PRESENTATION NOTE: PHPUnit test configuration. This file defines the test suites, source directories, and environment values used when running automated tests. -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
          stopOnFailure="false">
     <testsuites>
-        <testsuite name="Unit">
+    <!-- Define which tests PHPUnit should discover and execute. -->
+    <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
