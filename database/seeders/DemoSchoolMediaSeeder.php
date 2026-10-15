@@ -6,6 +6,10 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+/**
+ * Defines the demo school media seeder routine.
+ * This file contains database migration or development-seeding logic used by the application.
+ */
 
 class DemoSchoolMediaSeeder extends Seeder
 {
@@ -90,6 +94,7 @@ class DemoSchoolMediaSeeder extends Seeder
 
             $sortOrder++;
 
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('school_media')->insert([
                 'title' => $item['title'],
                 'caption' => $item['caption'],
