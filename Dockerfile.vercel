@@ -1,3 +1,5 @@
+# Container build instructions for deploying the Laravel application on Vercel.
+# Each directive below selects a base image, copies project files, installs dependencies, or configures the runtime.
 FROM dunglas/frankenphp:php8.3-bookworm
 
 WORKDIR /app
