@@ -5,9 +5,16 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+/**
+ * Defines the portal demo users seeder routine.
+ * This file contains database migration or development-seeding logic used by the application.
+ */
 
 class PortalDemoUsersSeeder extends Seeder
 {
+    /**
+     * Execute the seeder's data-preparation task and create the records needed by the configured demo or initial environment.
+     */
     public function run(): void
     {
         $now = now();
@@ -27,8 +34,10 @@ class PortalDemoUsersSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
+                // Start a query against the named table; subsequent calls specify the filter or operation.
                 DB::table('users')->where('id', $userId)->update(['password' => $password, 'role' => 'pupil', 'updated_at' => $now]);
             }
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('portal_profiles')->updateOrInsert(
                 ['user_id' => $userId],
                 ['portal_type' => 'pupil', 'phone' => $student->parent_phone, 'relationship' => null, 'admission_number' => $student->admission_number, 'active' => true, 'created_at' => $now, 'updated_at' => $now]
@@ -53,8 +62,10 @@ class PortalDemoUsersSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
+                // Start a query against the named table; subsequent calls specify the filter or operation.
                 DB::table('users')->where('id', $userId)->update(['name' => $parent->name, 'password' => $password, 'role' => 'parent', 'updated_at' => $now]);
             }
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('portal_profiles')->updateOrInsert(
                 ['user_id' => $userId],
                 ['portal_type' => 'parent', 'phone' => $parent->phone, 'relationship' => $parent->relationship, 'admission_number' => $student->admission_number, 'active' => true, 'created_at' => $now, 'updated_at' => $now]
@@ -78,8 +89,10 @@ class PortalDemoUsersSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
+                // Start a query against the named table; subsequent calls specify the filter or operation.
                 DB::table('users')->where('id', $userId)->update(['name' => $sponsor['name'], 'password' => $password, 'role' => 'sponsor', 'updated_at' => $now]);
             }
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('portal_profiles')->updateOrInsert(
                 ['user_id' => $userId],
                 ['portal_type' => 'sponsor', 'phone' => $sponsor['phone'], 'relationship' => 'Sponsor', 'admission_number' => $sponsor['admission'], 'active' => true, 'created_at' => $now, 'updated_at' => $now]
@@ -102,8 +115,10 @@ class PortalDemoUsersSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
+                // Start a query against the named table; subsequent calls specify the filter or operation.
                 DB::table('users')->where('id', $userId)->update(['name' => $teacher->name, 'password' => $password, 'role' => 'teacher', 'updated_at' => $now]);
             }
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('portal_profiles')->updateOrInsert(
                 ['user_id' => $userId],
                 ['portal_type' => 'teacher', 'phone' => $teacher->phone, 'relationship' => null, 'admission_number' => null, 'active' => true, 'created_at' => $now, 'updated_at' => $now]
