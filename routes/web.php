@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: web.
+// This file defines application routes or automated tests. The comments explain
+// the purpose of the route/test setup; they do not change request handling or assertions.
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
@@ -18,6 +22,7 @@ use App\Http\Controllers\Admin\PaymentController;
 | Login and email-based password recovery protect access to those features.
 */
 
+// Register a GET endpoint for displaying or retrieving the resource.
 Route::get('/', function () {
     // Send visitors to login, and signed-in staff straight to student records.
     return redirect()->route(auth()->check() ? 'admin.students.index' : 'login');
@@ -25,6 +30,7 @@ Route::get('/', function () {
 
 // Sign-in and password-recovery pages are for visitors who are not authenticated.
 Route::middleware('guest')->group(function () {
+    // Register a GET endpoint for displaying or retrieving the resource.
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     // Limit repeated sign-in attempts to slow down password guessing.
     Route::post('/login', [AuthController::class, 'login'])
@@ -34,6 +40,7 @@ Route::middleware('guest')->group(function () {
     // Allow an existing user to request a password reset link by email.
     Route::get('/forgot-password', [PasswordResetController::class, 'showLinkRequestForm'])
         ->name('password.request');
+    // Register a POST endpoint for submitting data or starting an action.
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])
         ->middleware('throttle:5,1')
         ->name('password.email');
@@ -41,6 +48,7 @@ Route::middleware('guest')->group(function () {
     // The token comes from the email; the controller validates it when saved.
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
         ->name('password.reset');
+    // Register a POST endpoint for submitting data or starting an action.
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])
         ->middleware('throttle:5,1')
         ->name('password.update');
@@ -54,6 +62,7 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
         return redirect()->route('admin.students.index');
     })->name('admin.dashboard');
 
+    // Register a POST endpoint for submitting data or starting an action.
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Account settings: update the login and password-recovery email securely.
@@ -66,19 +75,26 @@ Route::middleware(['auth', 'admin.role'])->prefix('admin')->group(function () {
 
     // Feature 1: add, list, edit and archive student records.
     Route::get('/students', [StudentController::class, 'index'])->name('admin.students.index');
+    // Register a GET endpoint for displaying or retrieving the resource.
     Route::get('/students/create', [StudentController::class, 'create'])->name('admin.students.create');
+    // Register a POST endpoint for submitting data or starting an action.
     Route::post('/students', [StudentController::class, 'store'])->name('admin.students.store');
+    // Register a GET endpoint for displaying or retrieving the resource.
     Route::get('/students/{student}/edit', [StudentController::class, 'edit'])->name('admin.students.edit');
+    // Register an endpoint for updating an existing resource.
     Route::put('/students/{student}', [StudentController::class, 'update'])->name('admin.students.update');
+    // Register an endpoint for deleting or archiving a resource.
     Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('admin.students.destroy');
 
     // Feature 2: review payment history and send an M-Pesa STK prompt.
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
+    // Register a GET endpoint for displaying or retrieving the resource.
     Route::get('/payments/create', [PaymentController::class, 'create'])->name('admin.payments.create');
     // Start an STK prompt; only a verified callback should confirm that money was paid.
     Route::post('/payments/mpesa', [MpesaController::class, 'stkPush'])
         ->middleware('throttle:5,1')
         ->name('admin.payments.mpesa');
+    // Register a POST endpoint for submitting data or starting an action.
     Route::post('/payments/mpesa/query/{payment}', [MpesaController::class, 'query'])
         ->middleware('throttle:5,1')
         ->name('admin.payments.mpesa.query');
