@@ -1,6 +1,15 @@
+{{--
+    PRESENTATION NOTE: payments view.
+    This Blade template presents data prepared by the application and may contain
+    reusable layout sections, loops, conditional blocks, and form controls.
+--}}
+
+{{-- Reuse the parent layout and its shared navigation and styling. --}}
 @extends('layouts.app')
 
+{{-- Define content for a named section of the parent layout. --}}
 @section('title', 'M-Pesa Payments | '.config('app.name'))
+{{-- Define content for a named section of the parent layout. --}}
 @section('body')
 <div class="payment-shell">
     <header class="payment-header">
@@ -9,9 +18,11 @@
         <span class="portal-role">{{ ucfirst(auth()->user()->role) }} portal</span>
     </header>
 
+    {{-- Conditionally render this block when the expression evaluates to true. --}}
     @if(session('success'))
         <div class="payment-alert success">{{ session('success') }}</div>
     @endif
+    {{-- Conditionally render this block when the expression evaluates to true. --}}
     @if($errors->any())
         <div class="payment-alert error"><strong>Payment could not be started.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
     @endif
@@ -19,13 +30,17 @@
     <div class="payment-grid">
         <section class="payment-card payment-form-card">
             <div class="card-heading"><div><span class="payment-kicker">Pay now</span><h2>Pay with M-Pesa</h2></div><span class="mpesa-badge">M-PESA</span></div>
+            {{-- Conditionally render this block when the expression evaluates to true. --}}
             @if($students->isEmpty())
                 <div class="empty-state"><strong>No learner linked</strong><span>Your account does not currently have a learner record available for payment.</span></div>
             @else
+                {{-- Collect user input and submit it to the route configured on this form. --}}
                 <form method="POST" action="{{ route('portal.payments.pay') }}" class="payment-form" id="mpesa-payment-form">
+                    {{-- Add Laravel's CSRF token to protect this form submission. --}}
                     @csrf
                     <label>Learner
                         <select name="student_id" required>
+                            {{-- Render one copy of this block for every item in the collection. --}}
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }} · Balance KES {{ number_format((float)$student->fee_balance, 2) }}</option>
                             @endforeach
@@ -50,6 +65,7 @@
         <section class="payment-card">
             <div class="card-heading"><div><span class="payment-kicker">Account activity</span><h2>Payment history</h2></div><span class="history-count">{{ number_format($payments->total()) }} total</span></div>
             <div class="history-list">
+                {{-- Loop through the collection and render the empty state if there are no records. --}}
                 @forelse($payments as $payment)
                     <article class="history-row">
                         <div class="history-main"><strong>{{ $payment->account_reference ?: 'School fee payment' }}</strong><span>{{ $payment->mpesa_receipt ?: 'Awaiting M-Pesa receipt' }}</span></div>
@@ -60,22 +76,27 @@
                     <div class="empty-state"><strong>No payments yet</strong><span>Completed and pending M-Pesa transactions will appear here.</span></div>
                 @endforelse
             </div>
+            {{-- Conditionally render this block when the expression evaluates to true. --}}
             @if($payments->hasPages())
                 <nav class="payment-pagination" aria-label="Payment history pagination">
                     <div class="pagination-summary">Showing <strong>{{ $payments->firstItem() ?? 0 }}</strong>–<strong>{{ $payments->lastItem() ?? 0 }}</strong> of <strong>{{ number_format($payments->total()) }}</strong> payments</div>
                     <div class="pagination-controls">
+                        {{-- Conditionally render this block when the expression evaluates to true. --}}
                         @if($payments->onFirstPage())
                             <span class="page-link disabled" aria-disabled="true">Previous</span>
                         @else
                             <a class="page-link" href="{{ $payments->previousPageUrl() }}" rel="prev">Previous</a>
                         @endif
+                        {{-- Render one copy of this block for every item in the collection. --}}
                         @foreach($payments->getUrlRange(max(1, $payments->currentPage() - 2), min($payments->lastPage(), $payments->currentPage() + 2)) as $page => $url)
+                            {{-- Conditionally render this block when the expression evaluates to true. --}}
                             @if($page == $payments->currentPage())
                                 <span class="page-link current" aria-current="page">{{ $page }}</span>
                             @else
                                 <a class="page-link" href="{{ $url }}">{{ $page }}</a>
                             @endif
                         @endforeach
+                        {{-- Conditionally render this block when the expression evaluates to true. --}}
                         @if($payments->hasMorePages())
                             <a class="page-link" href="{{ $payments->nextPageUrl() }}" rel="next">Next</a>
                         @else
