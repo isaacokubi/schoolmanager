@@ -1,7 +1,10 @@
 {{-- Reuse the admin layout so this page shares navigation and page styling. --}}
 @extends('layouts.admin')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title', 'Change Registered Email | School Manager')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('page_title', 'Account settings')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('admin_content')
 <div class="admin-page-head">
     <div>
@@ -19,6 +22,7 @@
     <div class="alert error" role="alert">
         <strong>Please check the information below.</strong>
         <ul style="margin:8px 0 0;padding-left:20px">
+            {{-- Repeat this block for each item in the supplied collection. --}}
             @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
@@ -39,6 +43,7 @@
 
     {{-- CSRF protects this form; method spoofing sends the update as PUT to Laravel. --}}
     <form method="POST" action="{{ route('admin.account.email.update') }}" autocomplete="off">
+        {{-- Add Laravel's CSRF protection token to this form. --}}
         @csrf
         @method('PUT')
 
