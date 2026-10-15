@@ -6,9 +6,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+/**
+ * Defines the cbc report card service component of the school-management application.
+ * This file contains service logic or database schema changes used by the application.
+ */
 
 class CbcReportCardService
 {
+    /**
+     * Helper method level in CbcReportCardService.php; it performs the named step for this service.
+     */
     public function level(?float $marks): array
     {
         if ($marks === null) return ['code' => 'MISSED', 'label' => 'Missed Assessment', 'points' => null];
@@ -22,6 +29,9 @@ class CbcReportCardService
         return ['code' => 'BE2', 'label' => 'Below Expectation 2', 'points' => 1];
     }
 
+    /**
+     * Helper method remark in CbcReportCardService.php; it performs the named step for this service.
+     */
     public function remark(?float $marks, string $status): string
     {
         if ($status === 'missed') return 'Assessment missed. Follow-up assessment required.';
@@ -29,6 +39,9 @@ class CbcReportCardService
         return $this->level($marks)['label'];
     }
 
+    /**
+     * Helper method currentContentHash in CbcReportCardService.php; it performs the named step for this service.
+     */
     public function currentContentHash($results, int $studentId, int $examId): string
     {
         return hash('sha256', json_encode([
@@ -40,6 +53,9 @@ class CbcReportCardService
         ]));
     }
 
+    /**
+     * Helper method build in CbcReportCardService.php; it performs the named step for this service.
+     */
     public function build(int $studentId, int $examId): ?array
     {
         $student = DB::table('students')->leftJoin('school_classes', 'school_classes.id', '=', 'students.class_id')
@@ -162,6 +178,9 @@ class CbcReportCardService
         return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
+    /**
+     * Helper method generateAndNotify in CbcReportCardService.php; it performs the named step for this service.
+     */
     public function generateAndNotify(int $studentId, int $examId): array
     {
         $report = $this->build($studentId, $examId);
@@ -195,6 +214,9 @@ class CbcReportCardService
         return ['complete' => true, 'sent' => $sent, 'recipients' => $recipients, 'errors' => $errors];
     }
 
+    /**
+     * Helper method recipients in CbcReportCardService.php; it performs the named step for this service.
+     */
     private function recipients($student): array
     {
         $emails = [];
