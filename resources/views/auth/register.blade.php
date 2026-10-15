@@ -1,5 +1,14 @@
+{{--
+    PRESENTATION NOTE: register template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
+{{-- Extend the shared layout to reuse the site's common page structure. --}}
 @extends('layouts.public')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title','Create Portal Account | School Manager')
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('content')
 <section class="page-hero">
     <div class="container">
@@ -12,9 +21,11 @@
 <section class="section">
     <div class="container" style="max-width:820px">
         <div class="card">
+            {{-- Show the following content only when the condition is true. --}}
             @if($errors->any())
                 <div class="errors">
                     <ul style="margin:0;padding-left:20px">
+                        {{-- Repeat this block for each item in the supplied collection. --}}
                         @foreach($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
@@ -22,6 +33,7 @@
                 </div>
             @endif
 
+            {{-- This form submits user input to the route and method declared in its attributes. --}}
             <form method="post" action="{{ route('register.submit') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
