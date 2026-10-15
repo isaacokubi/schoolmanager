@@ -6,9 +6,20 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+/**
+ * Controller for the payment workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class PaymentController extends Controller
 {
+    /**
+     * Prepare the data needed by the page, apply any supported filters, and return the rendered listing or dashboard.
+     * Any request filters are read from the Request object and applied before data is returned.
+     */
     public function index(Request $request)
     {
         // Join student details so the payment list can show a learner's name and admission number.
@@ -28,15 +39,24 @@ class PaymentController extends Controller
         }
         // Preserve search/filter values when moving between pages of results.
         $payments=$query->paginate(10)->withQueryString();
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.payments.index',compact('payments'));
     }
 
+    /**
+     * Prepare and display the form used to create a new record; this normally displays a form without saving anything yet.
+     */
     public function create()
     {
         $students=DB::table('students')->orderBy('name')->get();
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.payments.form',compact('students'));
     }
 
+    /**
+     * Handle submitted form data: validate it, prepare any required values, save the record, and return a response to the user.
+     * Validate user-controlled input before writing changes to the database.
+     */
     public function store(Request $request)
     {
         // Validate administrator-entered records separately from automated STK requests.
@@ -80,6 +100,7 @@ class PaymentController extends Controller
                 'updated_at'=>now(),
             ]);
         });
+        // Redirect the browser to the next page and attach a one-time message when provided.
         return redirect()->route('admin.payments.index')->with('success','Payment recorded successfully.');
     }
 }
