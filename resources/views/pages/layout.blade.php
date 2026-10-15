@@ -1,1 +1,7 @@
+{{--
+    PRESENTATION NOTE: layout template.
+    This Blade view displays page content using data and state prepared by Laravel.
+    The directives below control reusable layout sections, loops, and conditional content.
+--}}
+
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@yield('title') - School Manager</title><style>body{font-family:system-ui,sans-serif;margin:0;color:#172033}main{max-width:1000px;margin:60px auto;padding:0 24px;line-height:1.7}a{color:#2457d6}</style></head><body><main><a href="{{ route('home') }}">← Home</a>@yield('content')</main></body></html>
