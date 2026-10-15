@@ -1,9 +1,21 @@
+{{--
+    PRESENTATION NOTE: features template.
+    This Blade view displays page content using data and state prepared by Laravel.
+    The directives below control reusable layout sections, loops, and conditional content.
+--}}
+
+{{-- Inherit the shared layout and its common structure. --}}
 @extends('layouts.admin')
+{{-- Define the page content that the parent layout will render. --}}
 @section('title','School Management Hub')
+{{-- Define the page content that the parent layout will render. --}}
 @section('page_title','School Management Hub')
+{{-- Define the page content that the parent layout will render. --}}
 @section('admin_content')
 <div class="admin-page-head"><div><p class="eyebrow">Angels Home feature layer</p><h1>School Management Hub</h1><p class="muted">Central administration for learning, communications, timetable, library, records and school operations.</p></div></div>
+{{-- Show this content only when the condition is true. --}}
 @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
+{{-- Show this content only when the condition is true. --}}
 @if($errors->any())<div class="alert error">{{ $errors->first() }}</div>@endif
 <div class="feature-tabs">@foreach($features as $key=>$label)<a class="{{ $feature===$key?'active':'' }}" href="{{ route('admin.features',['feature'=>$key]) }}">{{ $label }}</a>@endforeach</div>
 <div class="stat-grid"><div class="stat"><span>Total</span><strong>{{ $stats['total'] }}</strong></div><div class="stat"><span>Published</span><strong>{{ $stats['published'] }}</strong></div><div class="stat"><span>Active</span><strong>{{ $stats['active'] }}</strong></div><div class="stat"><span>Feature</span><strong style="font-size:20px">{{ $features[$feature] }}</strong></div></div>
@@ -23,6 +35,7 @@
 <section class="card"><h2>Existing {{ $features[$feature] }}</h2>
 <form method="GET" action="{{ route('admin.features') }}" class="search-row"><input type="hidden" name="feature" value="{{ $feature }}"><input name="search" value="{{ request('search') }}" placeholder="Search records"><button class="btn secondary">Search</button></form>
 <div class="table-wrap" style="margin-top:18px"><table class="table"><thead><tr><th>Title</th><th>Status</th><th>Audience</th><th>Published</th><th>Due</th><th>Actions</th></tr></thead><tbody>
+{{-- Iterate over the collection and render an alternative when it is empty. --}}
 @forelse($records as $record)<tr><td><strong>{{ $record->title }}</strong><div class="muted">#{{ $record->id }}</div></td><td><span class="badge">{{ $record->status }}</span></td><td>{{ $record->audience }}</td><td>{{ $record->published?'Yes':'No' }}</td><td>{{ $record->due_at ? \Carbon\Carbon::parse($record->due_at)->format('d M Y H:i') : '—' }}</td><td><form method="POST" action="{{ route('admin.features.archive',$record->id) }}" onsubmit="return confirm('Archive this record?')">@csrf @method('DELETE')<button class="btn ghost" type="submit">Archive</button></form></td></tr>@empty<tr><td colspan="6"><div class="empty">No records yet.</div></td></tr>@endforelse</tbody></table></div>{{ $records->links() }}</section>
 </div>
 <style>.feature-tabs{display:flex;gap:8px;overflow:auto;padding:4px 0 16px}.feature-tabs a{white-space:nowrap;text-decoration:none;padding:9px 12px;border-radius:999px;background:#eef4fb;color:#52637a;font-size:13px;font-weight:800}.feature-tabs a.active{background:#1769df;color:#fff}.feature-grid{display:grid;grid-template-columns:minmax(360px,.9fr) minmax(500px,1.5fr);gap:18px;margin-top:18px}.search-row{display:grid;grid-template-columns:1fr auto;gap:8px}.search-row input{padding:12px;border:1px solid #d4deea;border-radius:10px}@media(max-width:1050px){.feature-grid{grid-template-columns:1fr}}</style>
