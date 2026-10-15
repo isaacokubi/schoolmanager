@@ -1,3 +1,9 @@
+{{--
+    PRESENTATION NOTE: payment confirmation template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
 <!doctype html>
 <html><body style="font-family:Arial,sans-serif;background:#f4f7fb;padding:24px;color:#1f2937">
 <div style="max-width:620px;margin:auto;background:#fff;border-radius:14px;padding:28px;border:1px solid #e5e7eb">
