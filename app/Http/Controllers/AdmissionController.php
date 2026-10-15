@@ -4,9 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Controller for the admission workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class AdmissionController extends Controller
 {
+    /**
+     * Handle submitted form data: validate it, prepare any required values, save the record, and return a response to the user.
+     * Validate user-controlled input before writing changes to the database.
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
