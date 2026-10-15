@@ -4,9 +4,18 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Support\Facades\Auth;
+/**
+ * Defines the redirect if authenticated component of the application.
+ *
+ * This class coordinates its assigned HTTP, middleware, or framework lifecycle
+ * responsibility. The comments below describe the purpose of each method.
+ */
 
 class RedirectIfAuthenticated
 {
+    /**
+     * Process the incoming request or framework lifecycle event, applying this component's checks before passing control onward.
+     */
     public function handle($request, Closure $next, ...$guards)
     {
         $guards = empty($guards) ? [null] : $guards;
