@@ -1,7 +1,16 @@
+{{--
+    PRESENTATION NOTE: reset password template.
+    This Blade view defines the page or email content. Dynamic values are supplied
+    by the controller, and Blade directives control layout, conditions, and form behavior.
+--}}
+
+{{-- Extend the shared layout to reuse the site's common page structure. --}}
 @extends('layouts.public')
 
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('title', 'Reset Password | School Manager')
 
+{{-- Start a named section that the parent layout places in its matching content area. --}}
 @section('content')
 <section class="auth-page">
     <div class="auth-card">
@@ -10,11 +19,14 @@
         <h1>Choose a new password</h1>
         <p class="auth-intro">Create a new password of at least 8 characters. Your existing password will be replaced after the reset is completed.</p>
 
+        {{-- Show the following content only when the condition is true. --}}
         @if($errors->any())
             <div class="auth-alert error" role="alert">{{ $errors->first() }}</div>
         @endif
 
+        {{-- This form submits user input to the route and method declared in its attributes. --}}
         <form method="POST" action="{{ route('password.update') }}" class="auth-form">
+            {{-- Add Laravel's CSRF protection token to this form. --}}
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
 
