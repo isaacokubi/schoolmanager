@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: ProductionReadinessTest.
+// This file defines application routes or automated tests. The comments explain
+// the purpose of the route/test setup; they do not change request handling or assertions.
+
 namespace Tests\Feature;
 
 use App\Models\User;
@@ -17,6 +21,9 @@ class ProductionReadinessTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Helper method user for this route or test file; it supports the surrounding workflow.
+     */
     private function user(string $role, string $email = null): User
     {
         $user = User::create(['name'=>ucfirst($role).' User','email'=>$email ?: $role.'@example.test','password'=>Hash::make('Password123!'),'role'=>$role]);
@@ -26,11 +33,17 @@ class ProductionReadinessTest extends TestCase
         return $user;
     }
 
+    /**
+     * Helper method student for this route or test file; it supports the surrounding workflow.
+     */
     private function student(string $admission, string $name, int $parentId = null, float $balance = 10000): int
     {
         return DB::table('students')->insertGetId(['admission_number'=>$admission,'name'=>$name,'parent_id'=>$parentId,'parent_name'=>'Parent One','parent_phone'=>'+254712345678','fee_balance'=>$balance,'created_at'=>now(),'updated_at'=>now()]);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_public_entry_points_match_the_simplified_application(): void
     {
         // The root intentionally sends visitors to login; public registration and legacy pages are disabled.
@@ -40,6 +53,9 @@ class ProductionReadinessTest extends TestCase
         $this->get('/reset-password/example-token')->assertOk();
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_admin_login_redirects_to_the_protected_dashboard(): void
     {
         $admin = $this->user('admin');
@@ -53,6 +69,9 @@ class ProductionReadinessTest extends TestCase
         $this->post(route('logout'))->assertRedirect(route('login'));
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_student_crud_rejects_duplicate_admission_numbers(): void
     {
         $admin=$this->user('admin');
@@ -60,6 +79,9 @@ class ProductionReadinessTest extends TestCase
         $this->actingAs($admin)->post(route('admin.students.store'),['admission_number'=>'S-001','name'=>'Duplicate Learner','class_name'=>'Grade 5','fee_balance'=>0])->assertSessionHasErrors('admission_number');
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_mpesa_callback_rejects_amount_tampering(): void
     {
         $student=$this->student('S-001','Learner',null,5000);
@@ -69,6 +91,9 @@ class ProductionReadinessTest extends TestCase
         $this->assertSame(5000.0,(float)DB::table('students')->where('id',$student)->value('fee_balance'));
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_mpesa_callback_is_idempotent_and_updates_balance_once(): void
     {
         $student=$this->student('S-001','Learner',null,5000);
@@ -83,6 +108,9 @@ class ProductionReadinessTest extends TestCase
         $this->assertSame(1,DB::table('payment_audits')->where('payment_id',$payment)->where('event','payment_verified')->count());
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_duplicate_mpesa_receipt_is_rejected(): void
     {
         $student=$this->student('S-001','Learner',null,5000);
@@ -92,6 +120,9 @@ class ProductionReadinessTest extends TestCase
         $this->assertDatabaseHas('payments',['id'=>$payment,'status'=>'failed','verification_status'=>'rejected']);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_verified_mpesa_callback_queues_payment_receipt_after_commit(): void
     {
         Queue::fake();
@@ -149,6 +180,9 @@ class ProductionReadinessTest extends TestCase
         ]);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_payment_receipt_requires_parent_or_sponsor_recipient(): void
     {
         Mail::fake();
@@ -190,6 +224,9 @@ class ProductionReadinessTest extends TestCase
         $this->assertNotNull($admin);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_payment_receipt_sends_pdf_to_parent_and_bccs_admin(): void
     {
         Mail::fake();
@@ -241,6 +278,9 @@ class ProductionReadinessTest extends TestCase
         $this->assertNotNull($admin);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_payment_receipt_is_idempotent_when_job_runs_twice(): void
     {
         Mail::fake();
@@ -289,6 +329,9 @@ class ProductionReadinessTest extends TestCase
 
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_stk_query_success_does_not_falsely_verify_without_receipt(): void
     {
         $student = DB::table('students')->insertGetId([
@@ -344,6 +387,9 @@ class ProductionReadinessTest extends TestCase
         ]);
     }
 
+    /**
+     * Verify the application behavior described by this test method; assertions below define the expected result.
+     */
     public function test_stk_query_failure_rejects_pending_payment(): void
     {
         $student = DB::table('students')->insertGetId([
