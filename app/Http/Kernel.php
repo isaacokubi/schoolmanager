@@ -3,6 +3,12 @@
 namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+/**
+ * Defines the kernel component of the application.
+ *
+ * This class coordinates its assigned HTTP, middleware, or framework lifecycle
+ * responsibility. The comments below describe the purpose of each method.
+ */
 
 class Kernel extends HttpKernel
 {
