@@ -5,9 +5,19 @@ namespace App\Http\Controllers;
 use App\Services\CbcReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Controller for the portal workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * services, and returns views or HTTP responses. The method comments explain
+ * the purpose of each action and its role in the workflow.
+ */
 
 class PortalController extends Controller
 {
+    /**
+     * Load the summary data needed by the user's dashboard and return the dashboard view.
+     */
     public function dashboard(Request $request, CbcReportCardService $cbc)
     {
         $user = $request->user();
@@ -155,14 +165,19 @@ class PortalController extends Controller
         $upcomingEvents = DB::table('events')->whereDate('event_date', '>=', now()->toDateString())->orderBy('event_date')->limit(5)->get();
 
         $view = $profile && $profile->portal_type === 'teacher' ? 'portal.teacher-dashboard' : 'portal.dashboard';
+        // Render the Blade template and pass it the data prepared by this controller.
         return view($view, compact('user', 'profile', 'students', 'studentMetrics', 'teacher', 'subjects', 'attendanceSummary', 'recentResults', 'announcements', 'upcomingEvents', 'dashboardStats', 'teacherPerformance', 'teacherExams', 'teacherAttendanceRate', 'teacherAverageMarks', 'teacherMissedCount', 'teacherRosterCount'));
     }
 
+    /**
+     * Clear the current authentication state and return the user to the appropriate page.
+     */
     public function logout(Request $request)
     {
         auth()->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        // Redirect the browser to the next route and attach a one-time status message if supplied.
         return redirect()->route('login');
     }
 }
