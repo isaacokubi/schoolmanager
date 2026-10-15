@@ -6,9 +6,16 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+/**
+ * Defines the sample signature seeder routine.
+ * This file contains database migration or development-seeding logic used by the application.
+ */
 
 class SampleSignatureSeeder extends Seeder
 {
+    /**
+     * Execute the seeder's data-preparation task and create the records needed by the configured demo or initial environment.
+     */
     public function run()
     {
         $now = Carbon::now();
@@ -32,6 +39,7 @@ SVG
 
         $teacherId = DB::table('teachers')->where('employee_number', 'T001')->value('id');
         if ($teacherId) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('teachers')->where('id', $teacherId)->update([
                 'signature_path' => 'signatures/teachers/alice-wambui-sample.svg',
                 'updated_at' => $now,
@@ -40,10 +48,12 @@ SVG
 
         $headId = DB::table('users')->where('email', 'admin@schoolmanager.test')->value('id');
         if ($headId) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('users')->where('id', $headId)->update([
                 'signature_path' => 'signatures/institution/school-administrator-sample.svg',
                 'updated_at' => $now,
             ]);
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('settings')->updateOrInsert(['key' => 'head_of_institution_user_id'], [
                 'value' => (string) $headId,
                 'updated_at' => $now,
@@ -52,6 +62,7 @@ SVG
         }
 
         if ($teacherId) {
+            // Start a query against the named table; subsequent calls specify the filter or operation.
             DB::table('school_classes')
                 ->where('name', 'Grade 1')
                 ->where('academic_year', 2026)
