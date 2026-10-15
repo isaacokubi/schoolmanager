@@ -1,3 +1,5 @@
+// admin-live-search.js — client-side behavior for the school-management interface.
+// This script connects page events to UI updates; server-side validation remains authoritative.
 (() => {
     'use strict';
 
