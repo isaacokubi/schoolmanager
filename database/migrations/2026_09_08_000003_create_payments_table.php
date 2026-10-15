@@ -5,7 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this database migration by creating or changing the schema described below.
+     */
     public function up(): void {
+        // Create a new database table; the callback defines its columns and constraints.
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->nullable()->constrained()->nullOnDelete();
@@ -21,5 +25,8 @@ return new class extends Migration {
             $table->timestamps();
         });
     }
+    /**
+     * Reverse this migration's schema changes so it can be rolled back.
+     */
     public function down(): void { Schema::dropIfExists('payments'); }
 };
