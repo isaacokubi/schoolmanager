@@ -1,5 +1,14 @@
+{{--
+    PRESENTATION NOTE: home template.
+    This Blade view displays page content using data and state prepared by Laravel.
+    The directives below control reusable layout sections, loops, and conditional content.
+--}}
+
+{{-- Inherit the shared layout and its common structure. --}}
 @extends('layouts.public')
+{{-- Define the page content that the parent layout will render. --}}
 @section('title', ($settings['school_name'] ?? 'School Manager').' | Home')
+{{-- Define the page content that the parent layout will render. --}}
 @section('content')
 <section class="hero home-hero">
     <div class="container">
@@ -69,6 +78,7 @@
     </div>
 </section>
 
+{{-- Show this content only when the condition is true. --}}
 @if($announcements->count())
 <section class="section alt announcements-section">
     <div class="container">
@@ -77,6 +87,7 @@
             <a class="btn secondary" href="{{ route('contact') }}">Contact the school</a>
         </div>
         <div class="grid">
+            {{-- Render this block once for each item in the collection. --}}
             @foreach($announcements as $announcement)
                 <article class="card announcement-card"><span class="badge">Announcement</span><h3>{{ $announcement->title }}</h3><p>{{ $announcement->body }}</p>@if($announcement->published_at)<small class="muted">Published {{ Carbon\Carbon::parse($announcement->published_at)->format('d M Y') }}</small>@endif</article>
             @endforeach
@@ -85,6 +96,7 @@
 </section>
 @endif
 
+{{-- Show this content only when the condition is true. --}}
 @if($schoolMedia->count())
 <section class="section media-showcase" aria-labelledby="school-media-heading">
     <div class="container">
@@ -97,6 +109,7 @@
             <div class="media-showcase-meta" aria-label="Published media count"><span class="media-count">{{ $schoolMedia->count() }}</span><span>published {{ $schoolMedia->count() === 1 ? 'story' : 'stories' }}</span></div>
         </div>
         <div class="school-gallery" role="list">
+            {{-- Render this block once for each item in the collection. --}}
             @foreach($schoolMedia as $item)
                 @php
                     $mediaPath = ltrim((string) $item->path, '/');
@@ -108,6 +121,7 @@
                 @endphp
                 <article class="school-media-card {{ $isVideo ? 'is-video' : '' }}" role="listitem">
                     <div class="school-media-frame">
+                        {{-- Show this content only when the condition is true. --}}
                         @if($isVideo)
                             <video class="school-media-video" controls preload="metadata" playsinline aria-label="{{ $mediaAlt }}" onerror="this.closest('.school-media-frame').classList.add('media-failed');this.setAttribute('data-media-error','1');">
                                 <source src="{{ $mediaUrl }}" type="{{ $item->mime_type ?: 'video/mp4' }}">
@@ -122,7 +136,9 @@
                     </div>
                     <div class="school-media-content">
                         <div class="school-media-content-top"><span class="school-media-type">{{ $isVideo ? 'School video' : 'School life' }}</span>@if($isVideo)<span class="school-media-pill">Media</span>@endif</div>
+                        {{-- Show this content only when the condition is true. --}}
                         @if($mediaTitle)<h3>{{ $mediaTitle }}</h3>@endif
+                        {{-- Show this content only when the condition is true. --}}
                         @if($mediaCaption)<p>{{ $mediaCaption }}</p>@endif
                     </div>
                 </article>
@@ -217,6 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </style>
 @endif
 
+{{-- Show this content only when the condition is true. --}}
 @if($events->count())
 <section class="section calendar-preview">
     <div class="container">
@@ -225,6 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <a class="btn secondary" href="{{ route('contact') }}">Contact the office</a>
         </div>
         <div class="grid">
+            {{-- Render this block once for each item in the collection. --}}
             @foreach($events as $event)
                 <article class="card"><span class="badge">{{ Carbon\Carbon::parse($event->event_date)->format('d M') }}</span><h3>{{ $event->title }}</h3><p><strong>{{ Carbon\Carbon::parse($event->event_date)->format('l, d F Y') }}</strong>@if($event->location)<br>{{ $event->location }}@endif</p>@if($event->description)<p class="muted">{{ $event->description }}</p>@endif</article>
             @endforeach
