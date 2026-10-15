@@ -2,6 +2,7 @@
      Keep navigation limited to routes that exist in the simplified student-records/M-Pesa app. --}}
 @extends('layouts.app')
 
+{{-- Define a named content section for the parent layout to render. --}}
 @section('body')
 @php($site = $settings ?? ['school_name' => 'School Manager', 'school_phone' => '', 'school_email' => '', 'school_address' => ''])
 <nav class="nav" aria-label="Account navigation">
@@ -16,6 +17,7 @@
 </nav>
 
 <main id="main-content">
+    {{-- Insert the section content supplied by the child view. --}}
     @yield('content')
 </main>
 
