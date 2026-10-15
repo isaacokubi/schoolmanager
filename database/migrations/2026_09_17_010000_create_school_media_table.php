@@ -5,8 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to add the database structures required by the feature.
+     */
     public function up(): void
     {
+        // Create the table and define its database columns and constraints.
         Schema::create('school_media', function (Blueprint $table) {
             $table->id();
             $table->string('title', 160)->nullable();
@@ -24,8 +28,12 @@ return new class extends Migration {
         });
     }
 
+    /**
+     * Reverse the schema changes introduced by this migration.
+     */
     public function down(): void
     {
+        // Drop this table during rollback if it exists.
         Schema::dropIfExists('school_media');
     }
 };
