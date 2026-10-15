@@ -1,3 +1,9 @@
+{{--
+    PRESENTATION NOTE: payment view.
+    This Blade template presents data prepared by the application and may contain
+    reusable layout sections, loops, conditional blocks, and form controls.
+--}}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -114,6 +120,7 @@
             <td>{{ $student->name }}</td>
         </tr>
 
+        {{-- Conditionally render this block when the expression evaluates to true. --}}
         @if(!empty($student->admission_number))
         <tr>
             <td>Admission Number</td>
@@ -121,6 +128,7 @@
         </tr>
         @endif
 
+        {{-- Conditionally render this block when the expression evaluates to true. --}}
         @if(!empty($student->class_name))
         <tr>
             <td>Class</td>
@@ -139,6 +147,7 @@
             <td>{{ $parent->name ?? $student->parent_name ?? 'Parent/Sponsor' }}</td>
         </tr>
 
+        {{-- Conditionally render this block when the expression evaluates to true. --}}
         @if(!empty($parent->relationship))
         <tr>
             <td>Relationship</td>
