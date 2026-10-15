@@ -1,5 +1,13 @@
+{{--
+    PRESENTATION NOTE: about layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 @extends('layouts.public')
+{{-- Define a named content section for the parent layout to render. --}}
 @section('title','About | '.$settings['school_name'])
+{{-- Define a named content section for the parent layout to render. --}}
 @section('content')
 <section class="page-hero"><div class="container"><p class="eyebrow">About our school</p><h1>{{ $settings['school_name'] }}</h1><p>{{ $settings['vision'] }}</p></div></section>
 <section class="section"><div class="container"><div class="split"><div><p class="eyebrow">Our purpose</p><h2>Education that develops the whole learner.</h2><p class="muted">{{ $settings['mission'] }}</p></div><div class="notice"><strong>Our values</strong><p>{{ $settings['values'] }}</p></div></div></div></section>
