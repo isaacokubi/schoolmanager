@@ -7,11 +7,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+/**
+ * Controller for the admin search workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class AdminSearchController extends Controller
 {
     private const LIMIT = 8;
 
+    /**
+     * Handle the incoming request for this invokable controller and return the appropriate response.
+     */
     public function __invoke(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
@@ -19,11 +29,16 @@ class AdminSearchController extends Controller
         if (mb_strlen($query) < 1) return response()->json(['data' => []]);
 
         $allowed = ['global','students','admissions','parents','classes','teachers','subjects','attendance','exams','results','announcements','events','payments'];
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(in_array($scope, $allowed, true), 404);
 
+        // Build an HTTP response for the caller using the status and payload defined below.
         return response()->json(['data' => $scope === 'global' ? $this->global($query) : $this->search($scope, $query)]);
     }
 
+    /**
+     * Search the supported data sources and return matching results in the format expected by the caller.
+     */
     private function search(string $scope, string $term): array
     {
         $like = '%' . $term . '%';
@@ -42,6 +57,9 @@ class AdminSearchController extends Controller
         return [];
     }
 
+    /**
+     * Search across multiple supported sections of the application and combine the results.
+     */
     private function global(string $term): array
     {
         $like = '%' . $term . '%';
@@ -55,6 +73,9 @@ class AdminSearchController extends Controller
         return $results->take(self::LIMIT)->values()->all();
     }
 
+    /**
+     * Search student records using the supplied search term and return matching student data.
+     */
     private function students(string $like): array
     {
         return DB::table('students')->leftJoin('parents','parents.id','=','students.parent_id')->leftJoin('school_classes','school_classes.id','=','students.class_id')
@@ -63,6 +84,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->name,'subtitle'=>trim(($row->admission_number ?: 'No admission number').' · '.($row->class_name ? $row->class_name.($row->stream ? ' — '.$row->stream : '') : 'Unassigned')),'url'=>route('admin.students.edit',$row->id)]; })->all();
     }
 
+    /**
+     * Search admission records using the supplied search term and return matching admission data.
+     */
     private function admissions(string $like): array
     {
         return DB::table('admission_applications')->where(function($q) use ($like){ $q->where('student_name','like',$like)->orWhere('parent_name','like',$like)->orWhere('parent_phone','like',$like)->orWhere('requested_class','like',$like)->orWhere('status','like',$like); })
@@ -70,6 +94,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->student_name,'subtitle'=>'Admission · '.($row->requested_class ?: 'Class not specified').' · '.ucfirst((string)$row->status),'url'=>route('admin.admissions.index',['search'=>$row->student_name])]; })->all();
     }
 
+    /**
+     * Search class records using the supplied search term and return matching class data.
+     */
     private function classes(string $like): array
     {
         return DB::table('school_classes')->where(function($q) use ($like){ $q->where('name','like',$like)->orWhere('stream','like',$like)->orWhere('academic_year','like',$like); })
@@ -77,6 +104,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->name.($row->stream ? ' — '.$row->stream : ''),'subtitle'=>'Class / stream · '.($row->academic_year ?: 'Academic year not set'),'url'=>route('admin.operations',['section'=>'classes','search'=>$row->name])]; })->all();
     }
 
+    /**
+     * Search attendance records using the supplied search term and return matching attendance data.
+     */
     private function attendance(string $like): array
     {
         return DB::table('attendance')->leftJoin('students','students.id','=','attendance.student_id')->where(function($q) use ($like){ $q->where('students.name','like',$like)->orWhere('students.admission_number','like',$like)->orWhere('attendance.status','like',$like)->orWhere('attendance.attendance_date','like',$like); })
@@ -84,6 +114,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->student_name ?: 'Learner','subtitle'=>'Attendance · '.ucfirst((string)$row->status).' · '.$row->attendance_date,'url'=>route('admin.operations',['section'=>'attendance','search'=>$row->student_name])]; })->all();
     }
 
+    /**
+     * Search assessment/result records using the supplied search term and return matching result data.
+     */
     private function results(string $like): array
     {
         return DB::table('results')->leftJoin('students','students.id','=','results.student_id')->leftJoin('exams','exams.id','=','results.exam_id')->leftJoin('subjects','subjects.id','=','results.subject_id')
@@ -92,6 +125,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->student_name ?: 'Learner','subtitle'=>'Result · '.($row->exam_name ?: 'Assessment').' · '.($row->subject_name ?: 'Learning area'),'url'=>route('admin.operations',['section'=>'results','search'=>$row->student_name])]; })->all();
     }
 
+    /**
+     * Search payment records using the supplied search term and return matching payment data.
+     */
     private function payments(string $like): array
     {
         return DB::table('payments')->leftJoin('students','students.id','=','payments.student_id')->where(function($q) use ($like){ $q->where('students.name','like',$like)->orWhere('students.admission_number','like',$like)->orWhere('payments.parent_phone','like',$like)->orWhere('payments.mpesa_receipt','like',$like)->orWhere('payments.account_reference','like',$like)->orWhere('payments.status','like',$like); })
@@ -99,6 +135,9 @@ class AdminSearchController extends Controller
             ->map(function($row){ return ['title'=>$row->student_name ?: ($row->account_reference ?: 'Payment'),'subtitle'=>'Payment · KES '.number_format((float)$row->amount,2).' · '.ucfirst((string)$row->status),'url'=>route('admin.payments.index',['search'=>$row->student_name ?: ($row->account_reference ?: '')])]; })->all();
     }
 
+    /**
+     * Build a controlled search for a table using the supplied list of permitted columns and return matching rows.
+     */
     private function simpleTable(string $table, array $columns, string $like, string $label, string $section): array
     {
         $query = DB::table($table)->where(function($q) use ($columns,$like){ foreach($columns as $column) $q->orWhere($column,'like',$like); });
