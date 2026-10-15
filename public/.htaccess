@@ -1,3 +1,4 @@
+# Apache rewrite rules route eligible requests through Laravel's public entry point.
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
