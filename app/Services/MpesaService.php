@@ -4,9 +4,16 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+/**
+ * Defines the mpesa service component of the school-management application.
+ * This file contains service logic or database schema changes used by the application.
+ */
 
 class MpesaService
 {
+    /**
+     * Helper method baseUrl in MpesaService.php; it performs the named step for this service.
+     */
     private function baseUrl(): string
     {
         return env('MPESA_ENV', 'sandbox') === 'production'
@@ -14,6 +21,9 @@ class MpesaService
             : 'https://sandbox.safaricom.co.ke';
     }
 
+    /**
+     * Helper method accessToken in MpesaService.php; it performs the named step for this service.
+     */
     public function accessToken(): string
     {
         $key = trim((string) env('MPESA_CONSUMER_KEY'));
@@ -103,6 +113,9 @@ class MpesaService
         }
     }
 
+    /**
+     * Helper method stkPush in MpesaService.php; it performs the named step for this service.
+     */
     public function stkPush(string $phone, float $amount, string $accountReference, string $description = 'School fees')
     {
         $shortcode = trim((string) env('MPESA_SHORTCODE'));
