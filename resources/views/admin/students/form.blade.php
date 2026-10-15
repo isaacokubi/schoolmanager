@@ -1,6 +1,17 @@
+{{--
+    PRESENTATION NOTE: form view.
+    This Blade template renders the user interface. Blade expressions display data
+    prepared by controllers, while directives control layout, loops, conditions, and forms.
+    These comments are not sent to the browser as visible page content.
+--}}
+
+{{-- Reuse the shared layout so this page inherits the site's common structure and styling. --}}
 @extends('layouts.admin')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('title', $student ? 'Edit Student | School Manager' : 'Add Student | School Manager')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('page_title', $student ? 'Edit Student' : 'Add Student')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('admin_content')
 <div class="admin-page-head">
     <div>
@@ -11,6 +22,7 @@
     <div class="admin-actions"><a class="btn secondary" href="{{ route('admin.students.index') }}">← Back to students</a></div>
 </div>
 
+{{-- Render the following content only when this condition is true. --}}
 @if($errors->any())
     <div class="alert error" role="alert">
         <strong>Please correct the following:</strong>
@@ -19,8 +31,11 @@
 @endif
 
 <div class="card student-form-card">
+    {{-- Begin a form that sends the user's input to the route and HTTP method specified in its attributes. --}}
     <form method="post" action="{{ $student ? route('admin.students.update',$student->id) : route('admin.students.store') }}" novalidate>
+        {{-- Include Laravel's CSRF token so the form submission can be checked against cross-site request forgery. --}}
         @csrf
+        {{-- Render the following content only when this condition is true. --}}
         @if($student)<input type="hidden" name="_method" value="PUT">@endif
 
         <div class="form-section">
@@ -42,6 +57,7 @@
                 <label>Class / stream
                     <select name="class_id">
                         <option value="">Unassigned</option>
+                        {{-- Repeat this markup for each item in the supplied collection. --}}
                         @foreach($classes as $class)
                             <option value="{{ $class->id }}" {{ (string)old('class_id',$student->class_id ?? '')===(string)$class->id?'selected':'' }}>
                                 {{ $class->name }}{{ $class->stream ? ' — '.$class->stream : '' }}{{ $class->academic_year ? ' ('.$class->academic_year.')' : '' }}
@@ -59,6 +75,7 @@
                 <label>Parent / guardian
                     <select name="parent_id">
                         <option value="">Unassigned</option>
+                        {{-- Repeat this markup for each item in the supplied collection. --}}
                         @foreach($parents as $parent)
                             <option value="{{ $parent->id }}" {{ (string)old('parent_id',$student->parent_id ?? '')===(string)$parent->id?'selected':'' }}>{{ $parent->name }}{{ $parent->phone ? ' — '.$parent->phone : '' }}</option>
                         @endforeach
