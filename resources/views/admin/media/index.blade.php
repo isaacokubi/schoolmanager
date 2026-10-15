@@ -1,7 +1,16 @@
+{{--
+    PRESENTATION NOTE: index template.
+    This Blade view displays page content using data and state prepared by Laravel.
+    The directives below control reusable layout sections, loops, and conditional content.
+--}}
+
+{{-- Inherit the shared layout and its common structure. --}}
 @extends('layouts.admin')
 
+{{-- Define the page content that the parent layout will render. --}}
 @section('page_title', 'Website Media')
 
+{{-- Define the page content that the parent layout will render. --}}
 @section('admin_content')
 <div class="media-page">
     <div class="media-hero">
@@ -16,9 +25,11 @@
         </div>
     </div>
 
+    {{-- Show this content only when the condition is true. --}}
     @if(session('success'))
         <div class="media-alert success" role="status"><div class="alert-icon">✓</div><div><strong>Saved successfully</strong><span>{{ session('success') }}</span></div></div>
     @endif
+    {{-- Show this content only when the condition is true. --}}
     @if($errors->any())
         <div class="media-alert danger" role="alert"><div class="alert-icon">!</div><div><strong>Please review the upload</strong><span>{{ $errors->first() }}</span></div></div>
     @endif
@@ -29,6 +40,7 @@
             <div class="upload-security"><span>✓</span> Images up to 50 MB · videos up to {{ number_format(max(1, (int) env('VIDEO_UPLOAD_MAX_KB', 4300)) / 1000, 1) }} MB</div>
         </div>
         <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data" class="media-form" id="media-upload-form">
+            {{-- Include Laravel's CSRF token in the form. --}}
             @csrf
             <div class="media-form-grid">
                 <label><span>Media type</span><select name="type" id="media-type" required><option value="image">Photo / image</option><option value="video">Video</option></select></label>
@@ -50,8 +62,10 @@
         <div class="library-summary"><span class="summary-dot"></span><strong>{{ $media->total() }}</strong> {{ $media->total() === 1 ? 'item' : 'items' }}</div>
     </section>
 
+    {{-- Show this content only when the condition is true. --}}
     @if($media->count())
         <div class="media-library">
+            {{-- Render this block once for each item in the collection. --}}
             @foreach($media as $item)
                 @php
                     /* Always use the Laravel media endpoint. This works without public/storage and supports local + object storage deployments. */
@@ -69,6 +83,7 @@
                 @endphp
                 <article class="media-card">
                     <div class="media-preview {{ $item->type === 'video' ? 'is-video' : '' }}">
+                        {{-- Show this content only when the condition is true. --}}
                         @if($item->type === 'image')
                             <img src="{{ $mediaUrl }}" alt="{{ $item->title ?: 'School photo' }}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">
                             <div class="media-load-error" hidden>Image unavailable</div>
@@ -81,9 +96,11 @@
                     <div class="media-card-body">
                         <div class="media-card-top"><span class="media-type-icon {{ $item->type }}">{{ $item->type === 'image' ? 'IMG' : 'VID' }}</span><span class="media-status {{ $item->published ? 'published' : 'hidden' }}"><i></i>{{ $item->published ? 'Published' : 'Hidden' }}</span></div>
                         <h3>{{ $item->title ?: 'Untitled school media' }}</h3>
+                        {{-- Show this content only when the condition is true. --}}
                         @if($item->caption)<p class="media-caption">{{ $item->caption }}</p>@endif
                         <div class="media-meta">@if($sizeMb)<span>◉ {{ $sizeMb }}</span>@endif<span>↕ Order {{ $item->sort_order }}</span></div>
                         <form method="POST" action="{{ route('admin.media.update', $item->id) }}" class="media-edit-form">
+                            {{-- Include Laravel's CSRF token in the form. --}}
                             @csrf @method('PUT')
                             <label><span>Title</span><input type="text" name="title" value="{{ $item->title }}" maxlength="160" placeholder="Title"></label>
                             <label><span>Caption</span><textarea name="caption" rows="2" maxlength="1000" placeholder="Caption">{{ $item->caption }}</textarea></label>
@@ -95,6 +112,7 @@
                 </article>
             @endforeach
         </div>
+        {{-- Show this content only when the condition is true. --}}
         @if($media->hasPages())<div class="media-pagination">{{ $media->links() }}</div>@endif
     @else
         <div class="media-empty"><div class="media-empty-icon">▧</div><h3>Your media library is empty</h3><p>Upload the school's first photograph or video using the form above.</p></div>
