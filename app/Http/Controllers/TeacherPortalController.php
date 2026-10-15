@@ -4,9 +4,18 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Defines the teacher portal controller component of the application.
+ *
+ * This class coordinates its assigned HTTP, middleware, or framework lifecycle
+ * responsibility. The comments below describe the purpose of each method.
+ */
 
 class TeacherPortalController extends Controller
 {
+    /**
+     * Helper method learners in TeacherPortalController.php; it performs the step required by this component.
+     */
     public function learners(Request $request)
     {
         $teacher = $this->teacher($request);
@@ -56,6 +65,9 @@ class TeacherPortalController extends Controller
         return view('portal.teacher-learners', compact('teacher', 'subjects', 'students'));
     }
 
+    /**
+     * Helper method attendance in TeacherPortalController.php; it performs the step required by this component.
+     */
     public function attendance(Request $request)
     {
         $teacher = $this->teacher($request);
@@ -90,6 +102,9 @@ class TeacherPortalController extends Controller
         return view('portal.teacher-attendance', compact('teacher', 'subjects', 'students', 'date'));
     }
 
+    /**
+     * Helper method storeAttendance in TeacherPortalController.php; it performs the step required by this component.
+     */
     public function storeAttendance(Request $request)
     {
         $teacher = $this->teacher($request);
@@ -141,6 +156,9 @@ class TeacherPortalController extends Controller
             ->with('success', 'Attendance saved successfully for ' . count($data['attendance']) . ' learner(s).');
     }
 
+    /**
+     * Helper method teacher in TeacherPortalController.php; it performs the step required by this component.
+     */
     private function teacher(Request $request)
     {
         $profile = DB::table('portal_profiles')
@@ -159,6 +177,9 @@ class TeacherPortalController extends Controller
         return $teacher;
     }
 
+    /**
+     * Helper method subjects in TeacherPortalController.php; it performs the step required by this component.
+     */
     private function subjects($teacherId)
     {
         return DB::table('subjects')
@@ -168,6 +189,9 @@ class TeacherPortalController extends Controller
             ->get();
     }
 
+    /**
+     * Helper method classTeacherClassIds in TeacherPortalController.php; it performs the step required by this component.
+     */
     private function classTeacherClassIds($teacherId)
     {
         return DB::table('school_classes')
