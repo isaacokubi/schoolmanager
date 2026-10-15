@@ -5,9 +5,17 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Middleware component: portal role.
+ * Middleware inspects or transforms an incoming request before it reaches the controller,
+ * or applies the framework behavior associated with this request stage.
+ */
 
 class PortalRole
 {
+    /**
+     * Inspect or transform the incoming request, then either reject it or pass it to the next middleware/controller.
+     */
     public function handle(Request $request, Closure $next, ...$roles)
     {
         $user = $request->user();
