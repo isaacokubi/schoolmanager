@@ -5,8 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to add the database structures required by the feature.
+     */
     public function up(): void
     {
+        // Create the table and define its database columns and constraints.
         Schema::create('school_donations', function (Blueprint $table) {
             $table->id();
             $table->string('name', 160);
@@ -21,5 +25,8 @@ return new class extends Migration {
             $table->timestamps();
         });
     }
+    /**
+     * Reverse the schema changes introduced by this migration.
+     */
     public function down(): void { Schema::dropIfExists('school_donations'); }
 };
