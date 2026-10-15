@@ -7,6 +7,13 @@ use App\Services\CbcReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+/**
+ * Controller for the operations workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class OperationsController extends Controller
 {
@@ -16,9 +23,14 @@ class OperationsController extends Controller
         'results' => 'results', 'announcements' => 'announcements', 'events' => 'events',
     ];
 
+    /**
+     * Prepare the data needed by the page, apply any supported filters, and return the rendered listing or dashboard.
+     * Any request filters are read from the Request object and applied before data is returned.
+     */
     public function index(Request $request)
     {
         $section = $request->get('section', 'parents');
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(isset($this->tables[$section]), 404);
         $data = [
             'section' => $section,
@@ -28,9 +40,13 @@ class OperationsController extends Controller
             'exams' => DB::table('exams')->whereNull('archived_at')->orderByDesc('id')->get(),
         ];
         $data[$section] = $this->listing($section, $request);
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.operations.professional', $data);
     }
 
+    /**
+     * Build the listing for the requested school-management section, including its relevant filters and display data.
+     */
     private function listing($section, Request $request)
     {
         $table = $this->tables[$section];
@@ -103,15 +119,21 @@ class OperationsController extends Controller
         return $records;
     }
 
+    /**
+     * Handle submitted form data: validate it, prepare any required values, save the record, and return a response to the user.
+     * Validate user-controlled input before writing changes to the database.
+     */
     public function store(Request $request, CbcReportCardService $reportCards)
     {
         $section = $request->input('section');
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(isset($this->tables[$section]), 422);
         $validated = $request->validate($this->rules($section));
         $studentId = $section === 'parents' ? ($validated['student_id'] ?? null) : null;
         unset($validated['student_id']);
         $data = $this->prepare($section, $validated, $request);
         try {
+            // Run related database writes in one transaction so they succeed or roll back together.
             DB::transaction(function () use ($section, $data, $studentId) {
                 $id = DB::table($this->tables[$section])->insertGetId($data + ['created_at' => now(), 'updated_at' => now()]);
                 if ($section === 'parents' && $studentId) DB::table('students')->where('id', $studentId)->whereNull('archived_at')->update(['parent_id' => $id, 'updated_at' => now()]);
@@ -124,11 +146,17 @@ class OperationsController extends Controller
         return back()->with('success', $section === 'results' ? 'CBC assessment saved successfully.' : 'Record added successfully.');
     }
 
+    /**
+     * Validate submitted changes, update the matching record, and return a confirmation response.
+     * Validate user-controlled input before writing changes to the database.
+     */
     public function update(Request $request, $id, CbcReportCardService $reportCards)
     {
         $section = $request->input('section');
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(isset($this->tables[$section]), 404);
         $table = $this->tables[$section];
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(DB::table($table)->where('id', $id)->whereNull('archived_at')->exists(), 404);
         $validated = $request->validate($this->rules($section, $id));
 
@@ -136,6 +164,7 @@ class OperationsController extends Controller
             $studentId = $validated['student_id'] ?? null;
             unset($validated['student_id']);
             $validated['phone'] = $this->normalizeKenyanPhone($validated['phone'] ?? null);
+            // Run related database writes in one transaction so they succeed or roll back together.
             DB::transaction(function () use ($id, $validated, $studentId) {
                 DB::table('parents')->where('id', $id)->update($validated + ['updated_at' => now()]);
                 if ($studentId) {
@@ -148,34 +177,52 @@ class OperationsController extends Controller
             catch (\Throwable $e) { report($e); return back()->withErrors(['record' => 'The record could not be updated. Check the details and try again.'])->withInput(); }
             if ($section === 'results') { try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); } }
         }
+        // Redirect the browser to the next page and attach a one-time message when provided.
         return redirect()->route('admin.operations', ['section' => $section])->with('success', 'Record updated successfully.');
     }
 
+    /**
+     * Handle removal or archiving of the selected record while following the application's data-retention rules.
+     * Check the selected record and follow the existing retention/security behavior.
+     */
     public function destroy(Request $request, $id)
     {
         $section = $request->input('section');
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(isset($this->tables[$section]), 404);
         $table = $this->tables[$section];
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(DB::table($table)->where('id', $id)->whereNull('archived_at')->exists(), 404);
         DB::table($table)->where('id', $id)->update(['archived_at' => now(), 'updated_at' => now()]);
         return back()->with('success', 'Record archived successfully. It is no longer shown in active records.');
     }
 
+    /**
+     * Search attendance records using the supplied search term and return matching attendance data.
+     */
     public function attendance(Request $request)
     {
         $data = $request->validate($this->rules('attendance'));
+        // Run related database writes in one transaction so they succeed or roll back together.
         DB::transaction(function () use ($data) { DB::table('attendance')->updateOrInsert(['student_id' => $data['student_id'], 'attendance_date' => $data['attendance_date']], $data + ['archived_at' => null, 'updated_at' => now()]); });
         return back()->with('success', 'Attendance saved successfully.');
     }
 
+    /**
+     * Helper method for the OperationsController.php workflow. It performs the result step and returns or updates the data required by its caller.
+     */
     public function result(Request $request, CbcReportCardService $reportCards)
     {
         $data = $this->prepare('results', $request->validate($this->rules('results')), $request);
+        // Run related database writes in one transaction so they succeed or roll back together.
         DB::transaction(function () use ($data) { DB::table('results')->updateOrInsert(['exam_id' => $data['exam_id'], 'student_id' => $data['student_id'], 'subject_id' => $data['subject_id']], $data + ['archived_at' => null, 'updated_at' => now()]); });
         try { $reportCards->generateAndNotify((int) $data['student_id'], (int) $data['exam_id']); } catch (\Throwable $e) { report($e); }
         return back()->with('success', $data['assessment_status'] === 'missed' ? 'Missed assessment recorded.' : 'CBC result saved.');
     }
 
+    /**
+     * Helper method for the OperationsController.php workflow. It performs the rules step and returns or updates the data required by its caller.
+     */
     private function rules($section, $id = null)
     {
         $activeTeacher = Rule::exists('teachers', 'id')->whereNull('archived_at');
@@ -199,6 +246,9 @@ class OperationsController extends Controller
         return $rules[$section];
     }
 
+    /**
+     * Helper method for the OperationsController.php workflow. It performs the prepare step and returns or updates the data required by its caller.
+     */
     private function prepare($section, array $data, Request $request, $id = null)
     {
         if ($section === 'parents') $data['phone'] = $this->normalizeKenyanPhone($data['phone'] ?? null);
@@ -212,6 +262,9 @@ class OperationsController extends Controller
         return $data;
     }
 
+    /**
+     * Convert the supplied value into the format expected by the application.
+     */
     private function normalizeKenyanPhone(?string $phone): ?string
     {
         if (!$phone) return null;
