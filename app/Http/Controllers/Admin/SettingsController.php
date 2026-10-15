@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+/**
+ * Controller for the settings workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class SettingsController extends Controller
 {
@@ -28,13 +35,22 @@ class SettingsController extends Controller
         'head_of_institution_user_id' => '',
     ];
 
+    /**
+     * Prepare the data needed by the page, apply any supported filters, and return the rendered listing or dashboard.
+     * Any request filters are read from the Request object and applied before data is returned.
+     */
     public function index()
     {
         $settings = $this->values();
         $institutionHeads = DB::table('users')->whereIn('role', ['admin', 'manager'])->orderBy('name')->get(['id', 'name', 'email', 'role', 'signature_path']);
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.settings.index', compact('settings', 'institutionHeads'));
     }
 
+    /**
+     * Validate submitted changes, update the matching record, and return a confirmation response.
+     * Validate user-controlled input before writing changes to the database.
+     */
     public function update(Request $request)
     {
         $data = $request->validate([
@@ -82,10 +98,14 @@ class SettingsController extends Controller
         return back()->with('success', 'School settings, report-card branding and signing configuration saved successfully.');
     }
 
+    /**
+     * Validate and process an image-setting upload or removal request before saving the setting.
+     */
     private function processImageSetting(Request $request, string $key, string $removeKey): void
     {
         $current = DB::table('settings')->where('key', $key)->value('value');
         if ($request->boolean($removeKey) && $current) {
+            // Use Laravel's configured storage disk for this file operation.
             Storage::disk('public')->delete($current);
             $this->saveSetting($key, '');
             $current = '';
@@ -98,6 +118,9 @@ class SettingsController extends Controller
         }
     }
 
+    /**
+     * Persist a setting value using the application's settings-storage approach.
+     */
     private function saveSetting(string $key, string $value): void
     {
         $exists = DB::table('settings')->where('key', $key)->exists();
@@ -106,6 +129,9 @@ class SettingsController extends Controller
         DB::table('settings')->updateOrInsert(['key' => $key], $payload);
     }
 
+    /**
+     * Load and return the settings values needed by the settings page.
+     */
     private function values()
     {
         $values = $this->defaults;
