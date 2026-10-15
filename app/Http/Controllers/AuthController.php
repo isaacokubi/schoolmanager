@@ -6,15 +6,26 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+/**
+ * Controller for the auth workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class AuthController extends Controller
 {
     // Render the sign-in page; credential checking happens in login().
     public function showLogin()
     {
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('auth.login');
     }
 
+    /**
+     * Validate the submitted credentials and establish an authenticated session only when the credentials are accepted.
+     */
     public function login(Request $request)
     {
         // Validate submitted credentials before attempting authentication.
@@ -38,10 +49,12 @@ class AuthController extends Controller
         $user = $request->user();
 
         if (in_array($user->role, ['admin', 'manager'], true)) {
+            // Redirect the browser to the next page and attach a one-time message when provided.
             return redirect()->intended(route('admin.dashboard'));
         }
 
         if (in_array($user->role, ['pupil', 'parent', 'sponsor', 'teacher'], true)) {
+            // Redirect the browser to the next page and attach a one-time message when provided.
             return redirect()->intended(route('portal.dashboard'));
         }
 
@@ -56,6 +69,7 @@ class AuthController extends Controller
      */
     public function showChangeEmail()
     {
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.account.email');
     }
 
@@ -99,6 +113,7 @@ class AuthController extends Controller
         $user->email = $newEmail;
         $user->save();
 
+        // Redirect the browser to the next page and attach a one-time message when provided.
         return redirect()
             ->route('admin.account.email')
             ->with('success', 'Your registered email address has been updated. Use the new address the next time you sign in or request a password reset.');
@@ -110,6 +125,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        // Redirect the browser to the next page and attach a one-time message when provided.
         return redirect()->route('login');
     }
 }
