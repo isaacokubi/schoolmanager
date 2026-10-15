@@ -5,9 +5,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to create or update the database schema required by this feature.
+     */
     public function up(): void
     {
         if (!Schema::hasTable('sessions')) {
+            // Create a new table; the callback below defines its fields and constraints.
             Schema::create('sessions', function (Blueprint $table) {
                 $table->string('id')->primary();
                 $table->foreignId('user_id')->nullable()->index();
@@ -19,6 +23,7 @@ return new class extends Migration {
         }
 
         if (!Schema::hasTable('cache')) {
+            // Create a new table; the callback below defines its fields and constraints.
             Schema::create('cache', function (Blueprint $table) {
                 $table->string('key')->primary();
                 $table->mediumText('value');
@@ -27,6 +32,7 @@ return new class extends Migration {
         }
 
         if (!Schema::hasTable('jobs')) {
+            // Create a new table; the callback below defines its fields and constraints.
             Schema::create('jobs', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->string('queue')->index();
@@ -39,6 +45,7 @@ return new class extends Migration {
         }
 
         if (!Schema::hasTable('failed_jobs')) {
+            // Create a new table; the callback below defines its fields and constraints.
             Schema::create('failed_jobs', function (Blueprint $table) {
                 $table->id();
                 $table->string('uuid')->unique();
@@ -50,6 +57,7 @@ return new class extends Migration {
             });
         }
 
+        // Alter an existing table without dropping its existing records.
         Schema::table('payments', function (Blueprint $table) {
             if (!Schema::hasColumn('payments', 'verification_status')) {
                 $table->string('verification_status', 30)->default('pending')->after('status')->index();
@@ -60,6 +68,7 @@ return new class extends Migration {
         });
 
         if (!Schema::hasTable('payment_audits')) {
+            // Create a new table; the callback below defines its fields and constraints.
             Schema::create('payment_audits', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('payment_id')->constrained('payments')->cascadeOnDelete();
@@ -71,9 +80,14 @@ return new class extends Migration {
         }
     }
 
+    /**
+     * Reverse the schema changes introduced by this migration.
+     */
     public function down(): void
     {
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('payment_audits');
+        // Alter an existing table without dropping its existing records.
         Schema::table('payments', function (Blueprint $table) {
             if (Schema::hasColumn('payments', 'verification_status')) {
                 $table->dropIndex(['verification_status']);
@@ -83,9 +97,13 @@ return new class extends Migration {
                 $table->dropColumn('failure_reason');
             }
         });
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('failed_jobs');
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('jobs');
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('cache');
+        // Remove this table when rolling back, if it exists.
         Schema::dropIfExists('sessions');
     }
 };
