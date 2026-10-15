@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    /**
+     * Apply this migration to update the schema for the feature named in this file.
+     */
     public function up(): void
     {
         if (!Schema::hasTable('results') || !Schema::hasColumn('results', 'achievement_level')) return;
@@ -33,6 +36,9 @@ return new class extends Migration {
         }
     }
 
+    /**
+     * Reverse the schema changes made by this migration.
+     */
     public function down(): void
     {
         // Keep the wider column on rollback so valid MISSED values are not lost.
