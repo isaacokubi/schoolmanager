@@ -5,6 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+/**
+ * Defines the vercel cron controller component of the application.
+ *
+ * This class coordinates its assigned HTTP, middleware, or framework lifecycle
+ * responsibility. The comments below describe the purpose of each method.
+ */
 
 class VercelCronController extends Controller
 {
