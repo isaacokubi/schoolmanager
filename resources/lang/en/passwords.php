@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: passwords.php.
+// This file provides framework language strings, test assertions, or the Laravel CLI entry point.
+// The comments describe the purpose of the file without changing executable behavior.
+
 return [
     'reset' => 'Your password has been reset successfully.',
     'sent' => 'A password reset link has been sent to your email address.',
