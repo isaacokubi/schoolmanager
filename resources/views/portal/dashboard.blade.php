@@ -1,5 +1,15 @@
+{{--
+    PRESENTATION NOTE: dashboard template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
+{{-- Extend the shared layout to keep navigation and page structure consistent. --}}
 @extends('layouts.app')
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('title', ($profile->portal_type ?? $user->role) === 'teacher' ? 'Teacher Dashboard | '.config('app.name') : ucfirst($user->role).' Portal | '.config('app.name'))
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('body')
 @php
     $portalType = $profile->portal_type ?? $user->role;
@@ -18,6 +28,7 @@
         </a>
         <nav class="portal-actions" aria-label="Portal actions">
             <a class="btn secondary" href="{{ route('account.email') }}">Account email</a>
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($isTeacher)
                 <a class="btn secondary" href="{{ route('portal.teacher-learners') }}">My learners</a>
                 <a class="btn secondary" href="{{ route('portal.teacher-attendance') }}">Class register</a>
@@ -31,9 +42,11 @@
     </header>
 
     <main class="portal-main">
+        {{-- Render this section only when the condition is satisfied. --}}
         @if(session('success'))
             <div class="flash success"><strong>Saved successfully</strong><span>{{ session('success') }}</span></div>
         @endif
+        {{-- Render this section only when the condition is satisfied. --}}
         @if($errors->any())
             <div class="flash danger"><strong>Please review the request</strong><span>{{ $errors->first() }}</span></div>
         @endif
@@ -47,12 +60,15 @@
             <span class="account {{ $profile && $profile->active ? 'on' : 'off' }}"><i></i>{{ $profile && $profile->active ? 'Account active' : 'Account inactive' }}</span>
         </section>
 
+        {{-- Render this section only when the condition is satisfied. --}}
         @if(!$profile || !$profile->active)
             <div class="alert"><strong>Portal access requires an active profile.</strong><span>Please contact the school office if your account should have access.</span></div>
         @endif
 
+        {{-- Render this section only when the condition is satisfied. --}}
         @if($isTeacher)
             <section class="stats teacher-stats">
+                {{-- Repeat the following markup for each item in the collection. --}}
                 @foreach($dashboardStats as $stat)
                     <a class="stat-card" href="{{ route($stat['route']) }}"><span>{{ $stat['label'] }}</span><strong>{{ is_numeric($stat['value']) ? number_format((int)$stat['value']) : $stat['value'] }}</strong><small>{{ $stat['meta'] }}</small><b>Open →</b></a>
                 @endforeach
@@ -76,11 +92,13 @@
             </section>
             <section class="card"><div class="heading"><div><span class="eyebrow">CBC academic activity</span><h2>Recent achievement records</h2><p class="muted">Achievement levels, points and remarks use the configured CBC scale. Missed assessments are not treated as zero.</p></div><a class="btn small primary" href="{{ route('portal.teacher-assessments') }}">View all assessments</a></div>@if($recentResults->isNotEmpty())<div class="table-wrap"><table><thead><tr><th>Learner</th><th>Learning area</th><th>Assessment</th><th>Marks</th><th>Achievement</th><th>Points</th><th>Teacher remark</th><th>Report card</th></tr></thead><tbody>@foreach($recentResults as $result)<tr><td><strong>{{ $result->student_name }}</strong><small class="code">{{ $result->admission_number }}</small></td><td><strong>{{ $result->subject_name }}</strong><small class="code">{{ $result->subject_code ?: 'CBC learning area' }}</small></td><td>{{ $result->exam_name }}<small class="code">{{ trim(($result->exam_term??'').' '.($result->academic_year??'')) }}</small></td><td>{{ $result->marks===null?'—':number_format((float)$result->marks,1).'/100' }}</td><td><span class="achievement">{{ $result->cbc_code }}</span><small class="code">{{ $result->cbc_label }}</small></td><td>{{ $result->cbc_points===null?'—':$result->cbc_points }}</td><td>{{ $result->cbc_remark }}</td><td><a class="btn small" href="{{ route('portal.report-cards.show',[$result->student_id,$result->exam_id]) }}">View</a><a class="btn secondary small" href="{{ route('portal.report-cards.download',[$result->student_id,$result->exam_id]) }}">PDF</a></td></tr>@endforeach</tbody></table></div>@else<div class="empty">No CBC assessments have been recorded for your learning areas yet.</div>@endif</section>
         @elseif($isLearnerPortal)
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($canPayFees)
                 <section class="payment-cta"><div><span class="eyebrow">School fees</span><h2>Manage school fees securely</h2><p>Start an M-Pesa STK prompt, authorize it with your M-Pesa PIN and track the resulting receipt.</p></div><a class="btn primary" href="{{ route('portal.payments') }}">Open M-Pesa payments →</a></section>
             @endif
 
             <section class="stats learner-stats">
+                {{-- Repeat the following markup for each item in the collection. --}}
                 @foreach($dashboardStats as $stat)
                     <article class="stat-card"><span>{{ $stat['label'] }}</span><strong>{{ is_numeric($stat['value']) ? number_format((int)$stat['value']) : $stat['value'] }}</strong><small>{{ $stat['meta'] }}</small></article>
                 @endforeach
@@ -89,9 +107,11 @@
             <section class="profile-card">
                 <div class="profile-heading">
                     <div><span class="eyebrow">{{ $portalType==='pupil' ? 'Academic profile' : 'Learner overview' }}</span><h2>{{ $portalType==='pupil' ? 'My learner record' : 'Linked learners' }}</h2><p>{{ $portalType==='pupil' ? 'Your current school identity, attendance and fee information.' : 'Learners connected to this portal account.' }}</p></div>
+                    {{-- Render this section only when the condition is satisfied. --}}
                     @if($portalType!=='pupil')<span class="pill strong-pill">{{ $students->count() }} linked</span>@endif
                 </div>
                 <div class="learners">
+                    {{-- Iterate through the collection and render the empty state when it has no items. --}}
                     @forelse($students as $student)
                         @php($m=$studentMetrics[$student->id]??['attendance'=>['present'=>0,'absent'=>0,'late'=>0,'excused'=>0],'results'=>0])
                         @php($total=array_sum($m['attendance']))
@@ -112,19 +132,24 @@
                 </div>
             </section>
 
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($recentResults->isNotEmpty())
                 <section class="card academic-card">
                     <div class="heading"><div><span class="eyebrow">CBC academic activity</span><h2>Achievement record</h2><p class="muted">Learning areas are grouped by assessment period so progress is easier to review.</p></div></div>
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach($learnerResultGroups as $studentId => $studentResults)
                         @php($studentName=$studentResults->first()->student_name)
                         @php($studentAdmission=$studentResults->first()->admission_number)
                         <div class="student-academic-block">
+                            {{-- Render this section only when the condition is satisfied. --}}
                             @if($portalType!=='pupil')<div class="student-label"><strong>{{ $studentName }}</strong><span>{{ $studentAdmission }}</span></div>@endif
+                            {{-- Repeat the following markup for each item in the collection. --}}
                             @foreach($studentResults->groupBy('exam_id') as $examId => $examResults)
                                 @php($exam=$examResults->first())
                                 <div class="exam-card">
                                     <div class="exam-heading"><div><span class="term-label">{{ $exam->exam_term }} · {{ $exam->academic_year }}</span><h3>{{ $exam->exam_name }}</h3><small>{{ $examResults->count() }} learning areas recorded</small></div><div class="exam-actions"><a class="btn small" href="{{ route('portal.report-cards.show',[$exam->student_id,$exam->exam_id]) }}">View report card</a><a class="btn secondary small" href="{{ route('portal.report-cards.download',[$exam->student_id,$exam->exam_id]) }}">Download PDF</a></div></div>
                                     <div class="achievement-grid">
+                                        {{-- Repeat the following markup for each item in the collection. --}}
                                         @foreach($examResults as $result)
                                             <article class="achievement-item">
                                                 <div class="achievement-subject"><strong>{{ $result->subject_name }}</strong><small>{{ $result->subject_code ?: 'CBC learning area' }}</small></div>
