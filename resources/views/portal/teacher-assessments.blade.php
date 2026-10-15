@@ -1,8 +1,19 @@
+{{--
+    PRESENTATION NOTE: teacher assessments view.
+    This Blade template presents data prepared by the application and may contain
+    reusable layout sections, loops, conditional blocks, and form controls.
+--}}
+
+{{-- Reuse the parent layout and its shared navigation and styling. --}}
 @extends('layouts.app')
+{{-- Define content for a named section of the parent layout. --}}
 @section('title','CBC Assessment Entry | '.config('app.name'))
+{{-- Define content for a named section of the parent layout. --}}
 @section('body')
 <div class="teacher-shell"><header class="teacher-header"><div><span class="kicker">Teacher portal</span><h1>CBC Assessment Entry</h1><p>Enter the learner's score and professional teacher remark. Achievement level and points are calculated automatically.</p></div><div class="actions"><a class="btn secondary" href="{{ route('portal.dashboard') }}">← Dashboard</a><a class="btn secondary" href="{{ route('portal.signature.index') }}">My signature</a></div></header>
+{{-- Conditionally render this block when the expression evaluates to true. --}}
 @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
+{{-- Conditionally render this block when the expression evaluates to true. --}}
 @if($errors->any())<div class="alert error">{{ $errors->first() }}</div>@endif
 <section class="card rule"><div><strong>Teacher controls</strong><span>You can enter only the assessment information: assessment, learner, learning area, status, score and remark. The system controls the CBC achievement level and points.</span></div><div class="scale"><span>EE1 90–100 · 8</span><span>EE2 75–89 · 7</span><span>ME1 58–74 · 6</span><span>ME2 41–57 · 5</span><span>AE1 31–40 · 4</span><span>AE2 21–30 · 3</span><span>BE1 11–20 · 2</span><span>BE2 0–10 · 1</span></div></section>
 <section class="card"><div class="section-head"><div><span class="kicker">Record assessment</span><h2>Enter learner performance</h2><p>Use <strong>Missed assessment</strong> only when the learner did not take the assessment. A missed assessment is never converted to zero.</p></div></div><form method="POST" action="{{ route('portal.teacher-assessments.store') }}" class="form-grid">@csrf
