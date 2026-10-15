@@ -1,3 +1,10 @@
+{{--
+    PRESENTATION NOTE: admin template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
 @if ($paginator->hasPages())
     <nav class="admin-pagination" role="navigation" aria-label="Pagination">
         <div class="admin-pagination__summary">
