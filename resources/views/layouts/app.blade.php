@@ -1,3 +1,9 @@
+{{--
+    PRESENTATION NOTE: app layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,6 +22,7 @@ img,svg,video,canvas,iframe{max-width:100%;height:auto}.table-wrap,.table-respon
 </style>
 </head>
 <body>
+{{-- Insert the section content supplied by the child view. --}}
 @yield('body')
 <script src="{{ asset('js/mobile-responsive.js') }}" defer></script>
 </body>
