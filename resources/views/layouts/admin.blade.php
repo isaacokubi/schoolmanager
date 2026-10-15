@@ -1,7 +1,15 @@
+{{--
+    PRESENTATION NOTE: admin layout/page.
+    Layouts provide shared page structure; content pages provide the information shown
+    to visitors. Blade comments document the template without appearing in rendered HTML.
+--}}
+
 @extends('layouts.app')
 
+{{-- Define a named content section for the parent layout to render. --}}
 @section('title', 'School Manager')
 
+{{-- Define a named content section for the parent layout to render. --}}
 @section('body')
 {{-- Shared admin shell: individual screens render inside the content section below. --}}
 @php
@@ -44,6 +52,7 @@
 
         <main class="admin-main">
             <div class="admin-breadcrumb">School Manager <span>/</span> @yield('page_title', 'Home')</div>
+            {{-- Insert the section content supplied by the child view. --}}
             @yield('admin_content')
         </main>
     </div>
