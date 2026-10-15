@@ -1,6 +1,17 @@
+{{--
+    PRESENTATION NOTE: form view.
+    This Blade template renders the user interface. Blade expressions display data
+    prepared by controllers, while directives control layout, loops, conditions, and forms.
+    These comments are not sent to the browser as visible page content.
+--}}
+
+{{-- Reuse the shared layout so this page inherits the site's common structure and styling. --}}
 @extends('layouts.admin')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('title', 'M-Pesa Fee Payment | School Manager')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('page_title', 'M-Pesa fee payment')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('admin_content')
 {{-- Feature 2: ask Safaricom to send an STK prompt to the guardian's phone. --}}
 <div class="admin-page-head">
@@ -11,15 +22,20 @@
     <a class="btn secondary" href="{{ route('admin.payments.index') }}">Payment history</a>
 </div>
 
+{{-- Render the following content only when this condition is true. --}}
 @if(session('success'))<div class="alert success" role="status">{{ session('success') }}</div>@endif
+{{-- Render the following content only when this condition is true. --}}
 @if($errors->any())<div class="alert error" role="alert">{{ $errors->first() }}</div>@endif
 
 <div class="card" style="max-width:680px">
+    {{-- Begin a form that sends the user's input to the route and HTTP method specified in its attributes. --}}
     <form id="mpesa-stk-form" method="post" action="{{ route('admin.payments.mpesa') }}">
+        {{-- Include Laravel's CSRF token so the form submission can be checked against cross-site request forgery. --}}
         @csrf
         <label>Student
             <select name="student_id" required>
                 <option value="">Select a student</option>
+                {{-- Repeat this markup for each item in the supplied collection. --}}
                 @foreach($students as $student)
                     <option value="{{ $student->id }}" {{ (string)old('student_id') === (string)$student->id ? 'selected' : '' }}>
                         {{ $student->admission_number }} — {{ $student->name }} (balance KES {{ number_format((float)$student->fee_balance, 2) }})
