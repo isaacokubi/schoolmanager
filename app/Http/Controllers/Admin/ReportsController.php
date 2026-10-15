@@ -6,14 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Services\CbcReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+/**
+ * Controller for the reports workflow.
+ *
+ * This class receives HTTP requests, coordinates validation and application
+ * logic, and returns responses or views. The method comments below explain
+ * the purpose of each action and how it fits into the workflow.
+ */
 
 class ReportsController extends Controller
 {
     private const REPORT_PAGE_SIZE = 25;
 
+    /**
+     * Prepare the data needed by the page, apply any supported filters, and return the rendered listing or dashboard.
+     * Any request filters are read from the Request object and applied before data is returned.
+     */
     public function index(Request $request, CbcReportCardService $cbc)
     {
         $report = $request->get('report', 'overview');
+        // Stop the request with the specified HTTP error when the required condition is not met.
         abort_unless(in_array($report, ['overview', 'students', 'fees', 'attendance', 'results', 'admissions'], true), 404);
 
         $data = [
@@ -56,9 +68,13 @@ class ReportsController extends Controller
             $this->loadAdmissionsReport($data);
         }
 
+        // Render the Blade template and pass it the data prepared by this controller.
         return view('admin.reports.index', $data);
     }
 
+    /**
+     * Populate the report data used by the executive overview, including summary totals and counts.
+     */
     private function loadExecutiveOverview(array &$data): void
     {
         $amountColumn = $this->paymentAmountColumn();
@@ -98,6 +114,9 @@ class ReportsController extends Controller
             ->get();
     }
 
+    /**
+     * Populate the report data for school fees and recorded payments.
+     */
     private function loadFeesReport(array &$data): void
     {
         $amountColumn = $this->paymentAmountColumn();
@@ -114,6 +133,9 @@ class ReportsController extends Controller
         $data['outstanding'] = $this->studentBalanceTotal();
     }
 
+    /**
+     * Populate the report data for attendance records and attendance summaries.
+     */
     private function loadAttendanceReport(array &$data): void
     {
         $data['attendance'] = DB::table('attendance')
@@ -129,6 +151,9 @@ class ReportsController extends Controller
             ->pluck('total', 'status');
     }
 
+    /**
+     * Populate the report data for student assessment results, including any CBC-specific presentation data.
+     */
     private function loadResultsReport(array &$data, CbcReportCardService $cbc): void
     {
         $resultsQuery = DB::table('results')
@@ -157,6 +182,9 @@ class ReportsController extends Controller
         });
     }
 
+    /**
+     * Populate the report data for admission applications and their current states.
+     */
     private function loadAdmissionsReport(array &$data): void
     {
         $data['applications'] = DB::table('admission_applications')
@@ -169,6 +197,9 @@ class ReportsController extends Controller
             ->pluck('total', 'status');
     }
 
+    /**
+     * Group or summarize assessment results by the relevant CBC achievement level.
+     */
     private function cbcLevelSummary($resultsQuery)
     {
         $summaryQuery = clone $resultsQuery;
@@ -188,6 +219,9 @@ class ReportsController extends Controller
         });
     }
 
+    /**
+     * Count rows in the requested table while handling database errors according to this helper's fallback behavior.
+     */
     private function countTable($table)
     {
         try {
@@ -197,6 +231,9 @@ class ReportsController extends Controller
         }
     }
 
+    /**
+     * Determine which supported payment amount column is available in the current database schema.
+     */
     private function paymentAmountColumn()
     {
         try {
@@ -207,6 +244,9 @@ class ReportsController extends Controller
         return null;
     }
 
+    /**
+     * Calculate the aggregate student fee balance using the available database fields.
+     */
     private function studentBalanceTotal()
     {
         try {
