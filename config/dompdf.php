@@ -1,5 +1,9 @@
 <?php
 
+// PRESENTATION NOTE: dompdf configuration.
+// This file returns settings that Laravel reads when booting or using this service.
+// Environment variables keep deployment-specific values outside the application code.
+
 return [
 
     /*
@@ -13,6 +17,7 @@ return [
     */
     'show_warnings' => false,   // Throw an Exception on warnings from dompdf
 
+    // Set the public path endpoint or location for this service.
     'public_path' => null,  // Override the public path if needed
 
     /*
@@ -20,6 +25,7 @@ return [
      */
     'convert_entities' => true,
 
+    // Configure the options option for this Laravel component.
     'options' => [
         /**
          * The location of the DOMPDF font directory
@@ -91,8 +97,11 @@ return [
          * @var array
          */
         'allowed_protocols' => [
+            // Configure the file:// option for this Laravel component.
             'file://' => ['rules' => []],
+            // Configure the http:// option for this Laravel component.
             'http://' => ['rules' => []],
+            // Configure the https:// option for this Laravel component.
             'https://' => ['rules' => []],
         ],
 
