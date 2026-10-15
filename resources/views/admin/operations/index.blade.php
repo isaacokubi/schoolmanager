@@ -1,8 +1,19 @@
+{{--
+    PRESENTATION NOTE: index template.
+    This view is responsible for presenting data to the user. Controllers prepare the
+    data; Blade expressions and directives render it, loop through records, and show
+    conditional states. Comments in this file are not rendered as visible HTML.
+--}}
+
+{{-- Extend the shared layout to keep navigation and page structure consistent. --}}
 @extends('layouts.admin')
 
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('title', 'School Operations | ' . config('app.name'))
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('page_title', 'Operations')
 
+{{-- Begin a named section that the parent layout renders in its matching location. --}}
 @section('admin_content')
 <div class="admin-page-head">
     <div>
@@ -13,15 +24,18 @@
     <a class="btn secondary" href="{{ route('admin.dashboard') }}">← Dashboard</a>
 </div>
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if(session('success'))
     <div class="alert success">{{ session('success') }}</div>
 @endif
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($errors->any())
     <div class="alert error">{{ $errors->first() }}</div>
 @endif
 
 <div class="ops-nav">
+    {{-- Repeat the following markup for each item in the collection. --}}
     @foreach([
         'parents' => 'Parents',
         'classes' => 'Classes',
@@ -105,6 +119,7 @@
     $records = ${$section};
 @endphp
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if(isset($configs[$section]))
     @php($cfg = $configs[$section])
     <div class="card form-card">
@@ -116,12 +131,15 @@
         </div>
 
         <form method="POST" action="{{ route('admin.operations.store') }}" class="grid-form">
+            {{-- Include Laravel's CSRF protection token in the form. --}}
             @csrf
             <input type="hidden" name="section" value="{{ $section }}">
 
+            {{-- Repeat the following markup for each item in the collection. --}}
             @foreach($cfg['fields'] as $field)
                 <label>
                     {{ $field[1] }}
+                    {{-- Render this section only when the condition is satisfied. --}}
                     @if($field[2] === 'textarea')
                         <textarea name="{{ $field[0] }}" {{ $field[3] ? 'required' : '' }}>{{ old($field[0]) }}</textarea>
                     @else
@@ -135,11 +153,13 @@
                 </label>
             @endforeach
 
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($section === 'subjects')
                 <label>
                     Teacher
                     <select name="teacher_id">
                         <option value="">Unassigned</option>
+                        {{-- Repeat the following markup for each item in the collection. --}}
                         @foreach($teachers as $teacher)
                             <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
                         @endforeach
@@ -147,6 +167,7 @@
                 </label>
             @endif
 
+            {{-- Render this section only when the condition is satisfied. --}}
             @if($section === 'announcements')
                 <label class="check">
                     <input type="checkbox" name="published" value="1" checked>
@@ -159,6 +180,7 @@
     </div>
 @endif
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section === 'attendance')
     <div class="card form-card">
         <div class="section-head">
@@ -170,11 +192,13 @@
         </div>
 
         <form method="POST" action="{{ route('admin.operations.attendance') }}" class="grid-form">
+            {{-- Include Laravel's CSRF protection token in the form. --}}
             @csrf
             <label>
                 Student
                 <select name="student_id" required>
                     <option value="">Select student</option>
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach($students as $student)
                         <option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>
                     @endforeach
@@ -206,6 +230,7 @@
     </div>
 @endif
 
+{{-- Render this section only when the condition is satisfied. --}}
 @if($section === 'results')
     <div class="card form-card cbc-entry">
         <div class="section-head">
@@ -223,12 +248,14 @@
         </div>
 
         <form method="POST" action="{{ route('admin.operations.results') }}" class="grid-form" id="cbc-form">
+            {{-- Include Laravel's CSRF protection token in the form. --}}
             @csrf
 
             <label>
                 Assessment
                 <select name="exam_id" required>
                     <option value="">Select assessment</option>
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach($exams as $exam)
                         <option value="{{ $exam->id }}">{{ $exam->name }} — {{ $exam->term }} {{ $exam->academic_year }}</option>
                     @endforeach
@@ -239,6 +266,7 @@
                 Learner
                 <select name="student_id" required>
                     <option value="">Select learner</option>
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach($students as $student)
                         <option value="{{ $student->id }}">{{ $student->name }} — {{ $student->admission_number }}</option>
                     @endforeach
@@ -249,6 +277,7 @@
                 Learning area
                 <select name="subject_id" required>
                     <option value="">Select learning area</option>
+                    {{-- Repeat the following markup for each item in the collection. --}}
                     @foreach($subjects as $subject)
                         <option value="{{ $subject->id }}">{{ $subject->name }}</option>
                     @endforeach
@@ -326,6 +355,7 @@
         <input type="hidden" name="section" value="{{ $section }}">
         <input name="search" value="{{ request('search') }}" placeholder="Search...">
         <button type="submit">Search</button>
+        {{-- Render this section only when the condition is satisfied. --}}
         @if(request('search'))
             <a href="{{ route('admin.operations', ['section' => $section]) }}">Clear</a>
         @endif
@@ -341,10 +371,12 @@
                 </tr>
             </thead>
             <tbody>
+                {{-- Iterate through the collection and render the empty state when it has no items. --}}
                 @forelse($records as $row)
                     <tr>
                         <td>{{ $row->id }}</td>
                         <td>
+                            {{-- Render this section only when the condition is satisfied. --}}
                             @if($section === 'attendance')
                                 <strong>{{ $row->student_name }}</strong>
                                 <br>
@@ -355,15 +387,19 @@
                                 <small>{{ $row->subject_name }} · {{ $row->exam_name }}</small>
                                 <div class="cbc-result">
                                     <b>{{ $row->assessment_status === 'missed' ? 'MISSED' : ($row->achievement_level ?: '—') }}</b>
+                                    {{-- Render this section only when the condition is satisfied. --}}
                                     @if($row->marks !== null)
                                         <span>{{ number_format((float) $row->marks, 2) }}/100</span>
                                     @endif
+                                    {{-- Render this section only when the condition is satisfied. --}}
                                     @if($row->achievement_points)
                                         <span>{{ $row->achievement_points }} pts</span>
                                     @endif
                                 </div>
                             @else
+                                {{-- Repeat the following markup for each item in the collection. --}}
                                 @foreach((array) $row as $key => $value)
+                                    {{-- Render this section only when the condition is satisfied. --}}
                                     @if(!in_array($key, ['id', 'created_at', 'updated_at'], true))
                                         <strong>{{ ucwords(str_replace('_', ' ', $key)) }}:</strong>
                                         {{ \Illuminate\Support\Str::limit((string) $value, 100) }} ·
@@ -372,10 +408,12 @@
                             @endif
                         </td>
                         <td>
+                            {{-- Render this section only when the condition is satisfied. --}}
                             @if($section === 'results')
                                 <a class="btn ghost small" href="{{ route('admin.report-cards.show', [$row->student_id, $row->exam_id]) }}">View report</a>
                                 <a class="btn secondary small" href="{{ route('admin.report-cards.download', [$row->student_id, $row->exam_id]) }}">Download</a>
                                 <form method="POST" action="{{ route('admin.report-cards.notify', [$row->student_id, $row->exam_id]) }}" style="display:inline">
+                                    {{-- Include Laravel's CSRF protection token in the form. --}}
                                     @csrf
                                     <button class="btn secondary small" type="submit">Send</button>
                                 </form>
