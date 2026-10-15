@@ -1,6 +1,16 @@
+{{--
+    PRESENTATION NOTE: manager dashboard template.
+    This Blade view displays page content using data and state prepared by Laravel.
+    The directives below control reusable layout sections, loops, and conditional content.
+--}}
+
+{{-- Inherit the shared layout and its common structure. --}}
 @extends('layouts.admin')
+{{-- Define the page content that the parent layout will render. --}}
 @section('title', config('app.name').' | Manager Dashboard')
+{{-- Define the page content that the parent layout will render. --}}
 @section('page_title','Manager Dashboard')
+{{-- Define the page content that the parent layout will render. --}}
 @section('admin_content')
 <div class="manager-page">
     <div class="admin-page-head manager-head">
@@ -24,12 +34,14 @@
         <div class="manager-date"><small>Today</small><strong>{{ now()->format('D, d M Y') }}</strong></div>
     </div>
 
+    {{-- Show this content only when the condition is true. --}}
     @if((int) ($stats['attendance_today'] ?? 0) === 0 || (int) ($stats['applications'] ?? 0) > 0)
         <div class="manager-attention" role="status">
             <div class="attention-icon">!</div>
             <div class="attention-copy">
                 <strong>Operational attention</strong>
                 <span>
+                    {{-- Show this content only when the condition is true. --}}
                     @if((int) ($stats['attendance_today'] ?? 0) === 0 && (int) ($stats['applications'] ?? 0) > 0)
                         No attendance records are showing for today, and there are {{ number_format((int) $stats['applications']) }} admission application{{ (int) $stats['applications'] === 1 ? '' : 's' }} to review.
                     @elseif((int) ($stats['attendance_today'] ?? 0) === 0)
@@ -40,7 +52,9 @@
                 </span>
             </div>
             <div class="attention-actions">
+                {{-- Show this content only when the condition is true. --}}
                 @if((int) ($stats['attendance_today'] ?? 0) === 0)<a href="{{ route('admin.operations',['section'=>'attendance']) }}">Open attendance</a>@endif
+                {{-- Show this content only when the condition is true. --}}
                 @if((int) ($stats['applications'] ?? 0) > 0)<a href="{{ route('admin.admissions.index',['status'=>'pending']) }}">Review admissions</a>@endif
             </div>
         </div>
@@ -68,6 +82,7 @@
         <section class="card dashboard-card">
             <div class="section-head"><div><span class="page-kicker">Academic monitoring</span><h2>Recent CBC achievements</h2><p>Latest learner outcomes requiring routine academic follow-up.</p></div><a class="btn ghost" href="{{ route('admin.operations',['section'=>'results']) }}">Manage results</a></div>
             <div class="table-wrap"><table class="table manager-results-table"><thead><tr><th>Learner</th><th>Learning area</th><th>Assessment</th><th>Achievement</th><th>Points</th></tr></thead><tbody>
+            {{-- Iterate over the collection and render an alternative when it is empty. --}}
             @forelse($cbcRecentResults as $result)
                 <tr><td><strong>{{ $result->student_name }}</strong><small>{{ $result->admission_number }}</small></td><td>{{ $result->subject_name }}</td><td>{{ $result->exam_name }}</td><td><span class="achievement">{{ $result->cbc_code }}</span><small>{{ $result->cbc_label }}</small></td><td><strong>{{ $result->cbc_points===null?'—':$result->cbc_points }}</strong></td></tr>
             @empty
@@ -78,6 +93,7 @@
 
         <section class="card dashboard-card">
             <div class="section-head"><div><span class="page-kicker">School calendar</span><h2>Upcoming events</h2><p>Plan ahead for the next school activities.</p></div><a class="btn ghost" href="{{ route('admin.operations',['section'=>'events']) }}">View calendar</a></div>
+            {{-- Iterate over the collection and render an alternative when it is empty. --}}
             @forelse($upcomingEvents as $event)
                 <div class="dashboard-list"><div class="date-chip"><strong>{{ \Carbon\Carbon::parse($event->event_date)->format('d') }}</strong><small>{{ \Carbon\Carbon::parse($event->event_date)->format('M') }}</small></div><div><strong>{{ $event->title }}</strong><span>{{ $event->location ?: 'School campus' }}</span></div></div>
             @empty
