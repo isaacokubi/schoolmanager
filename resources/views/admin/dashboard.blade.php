@@ -1,6 +1,17 @@
+{{--
+    PRESENTATION NOTE: dashboard view.
+    This Blade template renders the user interface. Blade expressions display data
+    prepared by controllers, while directives control layout, loops, conditions, and forms.
+    These comments are not sent to the browser as visible page content.
+--}}
+
+{{-- Reuse the shared layout so this page inherits the site's common structure and styling. --}}
 @extends('layouts.admin')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('title', config('app.name').' | Dashboard')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('page_title','Dashboard')
+{{-- Begin a named layout section; the parent layout inserts this content into the matching yield. --}}
 @section('admin_content')
 <div class="admin-page-head"><div><span class="page-kicker">School overview</span><h1>Good day, {{ auth()->user()->name ?? 'Administrator' }}</h1><p>Monitor learner records, school operations, CBC achievement and fee collection from one place.</p></div><div class="admin-actions"><a class="btn secondary" href="{{ route('admin.reports',['report'=>'results']) }}">Report cards</a><a class="btn" href="{{ route('admin.students.create') }}">+ Add learner</a></div></div>
 <div class="dashboard-banner"><div><span>School operations</span><strong>{{ $settings['school_name'] ?? config('app.name') }}</strong><p>Current operational and competency-based academic snapshot.</p></div><div class="banner-date">{{ now()->format('D, d M Y') }}</div></div>
