@@ -11,6 +11,12 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
+/**
+ * Defines the send payment receipt job component of the school-management application.
+ *
+ * This file contains application logic, framework configuration, or schema
+ * changes. The method comments describe each operation's purpose and lifecycle.
+ */
 
 class SendPaymentReceiptJob implements ShouldQueue
 {
@@ -27,16 +33,25 @@ class SendPaymentReceiptJob implements ShouldQueue
      */
     public $paymentId;
 
+    /**
+     * Helper method for SendPaymentReceiptJob.php; it performs the __construct step and returns or updates the data needed by its caller.
+     */
     public function __construct($paymentId)
     {
         $this->paymentId = (int) $paymentId;
     }
 
+    /**
+     * Helper method for SendPaymentReceiptJob.php; it performs the backoff step and returns or updates the data needed by its caller.
+     */
     public function backoff()
     {
         return [30, 120, 300];
     }
 
+    /**
+     * Execute the job or request processing logic and coordinate the operations described in this method.
+     */
     public function handle(PaymentReceiptService $receiptService)
     {
         $result = $receiptService->sendForPayment($this->paymentId);
@@ -58,6 +73,9 @@ class SendPaymentReceiptJob implements ShouldQueue
         );
     }
 
+    /**
+     * Helper method for SendPaymentReceiptJob.php; it performs the failed step and returns or updates the data needed by its caller.
+     */
     public function failed(Throwable $exception)
     {
         DB::table('payment_audits')->insert([
